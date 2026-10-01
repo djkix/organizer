@@ -312,6 +312,7 @@ Chaque item reçoit une nature, puis les attributs de sa nature.
 | Importance | `haute`, `normale`, `basse` |
 | Effort | `moins_5min`, `moins_30min`, `plus_1h`, `multi_session` |
 | Contexte | `appel`, `achat`, `maison`, `administratif`, `avec_quelquun`, `autre` |
+| Alarme (actions `datee`) | `true` si L la demande en parlant, sinon `false` ; jamais déduite de l'importance |
 | Personnes | liste de prénoms détectés |
 | Thème | libellé court, réutilisé s'il existe déjà |
 | Tonalité (pensées) | `constat`, `question`, `inquietude`, `elan` |
@@ -364,7 +365,7 @@ erDiagram
 | --- | --- |
 | `capture` | id, utilisateur, canal, audio\_path, duree\_s, texte\_brut, confiance\_stt, emis\_le, recu\_le, etat |
 | `item` | id, capture\_id, texte, nature, confiance, theme, fil\_id, version\_prompt, cree\_le, archive\_le |
-| `action` | item\_id, echeance\_type, echeance\_date, fenetre\_debut, fenetre\_fin, importance, effort, contexte, fait\_le, reporte\_n |
+| `action` | item\_id, echeance\_type, echeance\_date, fenetre\_debut, fenetre\_fin, importance, effort, contexte, alarme, fait\_le, reporte\_n |
 | `pensee` | item\_id, tonalite, visibilite, vecteur |
 | `fil` | id, libelle, type, dernier\_item\_le, epingle |
 | `personne` | id, prenom, alias, note |
