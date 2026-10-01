@@ -253,6 +253,7 @@ Les trois seuils sont réglables par utilisateur et désactivables d'un seul ré
 | Transcription en échec | Entrée conservée en état `a_transcrire`, audio intact, reprise automatique |
 | Classification en échec | Entrée versée dans la corbeille `à revoir`, sans relance |
 | File saturée | Ingestion maintenue, traitement différé, ordre préservé |
+| Crédit Gemini épuisé (HTTP 402) ou plafond atteint | Traitement suspendu, captures en file dans l'ordre, ni `à revoir` ni relance ; alerte à l'administrateur seul |
 
 ### Budget de latence
 
@@ -533,7 +534,12 @@ Hypothèses : audio facturé 0,50 $ par million de tokens en entrée, texte 0,25
 | Pointe soutenue | 50 | 2,30 $ |
 | Rattrapage exceptionnel | 200 sur une journée | 0,30 $ pour la journée |
 
-Un plafond de dépense est posé à 10 $ par mois dans la console Cloud, avec alerte à 5 $. Un dépassement signale une boucle de reprise, pas un usage réel.
+Deux plafonds se superposent, tous deux bloquants :
+
+1. **Prépaiement, sans recharge automatique.** Le projet est au palier payé en mode Prépaiement : le crédit est versé à l'avance et la consommation y est déduite en temps quasi réel. À zéro, toutes les clés des projets liés au compte de facturation répondent HTTP 402 jusqu'au prochain versement. Le crédit versé est donc un plafond strict. Il expire au bout de 12 mois : on verse peu, de l'ordre d'une année d'usage. Seul le projet Organizer est lié à ce compte de facturation, pour qu'un épuisement ne coupe rien d'autre.
+2. **Budget Cloud avec plafond de dépenses appliqué**, à 9 € par mois (environ 10 $), sur le seul service Gemini API du projet, avec alertes à 50, 80 et 100 %. Il met l'API en pause une fois le montant atteint. La fonction est en Preview chez Google : si elle disparaît, le repli est un quota de requêtes par jour sur le palier du projet.
+
+Un plafond atteint n'est pas une erreur de classement : le worker traite HTTP 402 et la pause du budget comme une indisponibilité temporaire. Les captures restent en file, dans l'ordre, sans passer en `à revoir` ni déclencher de relance, et repartent dès le crédit rétabli. L'administrateur est alerté ; L ne l'est jamais. Un dépassement signale une boucle de reprise, pas un usage réel.
 
 ### Ce que ce choix fait gagner et perdre
 
@@ -606,7 +612,7 @@ L'API est le seul point d'envoi de messages vers L : le scheduler déclenche une
 | `organizer.djkix.ovh` | `web:80` puis `api:3000` sur `/api` | Publique, HTTPS |
 | `organizer-bot.djkix.ovh` | `api:3000` sur `/telegram/webhook` | Publique, restreinte aux plages IP Telegram |
 
-Bot Telegram : `@organizer_lud`. API Gemini : projet Google Cloud sur le compte Google personnel de Franck, facturation activée, plafond à 10 $ par mois et alerte à 5 $. Les identifiants de compte restent hors du dépôt.
+Bot Telegram : `@organizer_lud`. API Gemini : projet Google Cloud sur le compte Google personnel de Franck, palier payé en Prépaiement sans recharge automatique, plus un plafond de dépenses appliqué à 9 € par mois sur la Gemini API, alertes à 50, 80 et 100 %. Les identifiants de compte restent hors du dépôt.
 
 Certificats Let's Encrypt gérés par le Nginx Proxy Manager. HSTS activé, HTTP/2, redirection HTTP vers HTTPS, taille de requête plafonnée à 30 Mo pour les envois audio.
 
@@ -756,6 +762,7 @@ Objectifs de reprise : RPO de 24 heures, RTO de 4 heures. Un test de restauratio
 | Âge de la dernière sauvegarde | Plus de 30 heures | Telegram admin |
 | Espace disque du volume audio | Moins de 15 % libre | Telegram admin |
 | Latence de classification | Moyenne supérieure à 120 s sur 1 heure | Telegram admin |
+| Crédit Gemini épuisé | Première réponse HTTP 402 | Telegram admin |
 | Aucune capture reçue | 10 jours | Information, sans alerte |
 
 La dernière ligne est volontairement passive : l'absence d'usage n'est pas un incident et ne doit jamais être signalée à L.
