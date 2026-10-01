@@ -25,3 +25,6 @@ coverage/
 # Local
 .DS_Store
 .claude/settings.local.json
+
+# Maquettes : contiennent des prénoms réels, à anonymiser avant tout ajout
+design/maquettes.html
