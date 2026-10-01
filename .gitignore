@@ -1,0 +1,27 @@
+# Secrets — dépôt public, aucune exception
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Données de L — ne doivent jamais être versionnées
+corpus/
+data/
+audio/
+*.ogg
+*.opus
+*.m4a
+transcriptions/
+
+# Build et dépendances
+node_modules/
+dist/
+build/
+.svelte-kit/
+coverage/
+*.tsbuildinfo
+
+# Local
+.DS_Store
+.claude/settings.local.json

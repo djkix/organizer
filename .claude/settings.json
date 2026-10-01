@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./corpus/**)",
+      "Read(./data/**)"
+    ],
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(npx prisma:*)",
+      "Bash(docker compose:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}

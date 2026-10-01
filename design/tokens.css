@@ -1,0 +1,51 @@
+/* Organizer — tokens de design. Source de vérité des couleurs et des formes. */
+:root {
+  --bg: #FAF9F7;
+  --surface: #FFFFFF;
+  --surface-alt: #F2F0EC;
+  --text: #1C1B1F;
+  --muted: #6B6875;
+  --accent: #2F7A78;
+  --accent-soft: #E3EFEE;
+  --private: #5B4B8A;
+  --private-soft: #EDE9F6;
+  --alarm: #B7791F;
+  --line: #ECEAE6;
+
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --touch-min: 48px;
+  --font-body: 17px;
+  --font-meta: 14px;
+  --font-title: 24px;
+  --line-height: 1.5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16151A;
+    --surface: #201F26;
+    --surface-alt: #2A2831;
+    --text: #EDEBF0;
+    --muted: #A09DAB;
+    --accent: #4FA5A2;
+    --accent-soft: #1E3634;
+    --private: #8B7BC4;
+    --private-soft: #2A2340;
+    --alarm: #D9A441;
+    --line: #2C2A33;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16151A;
+  --surface: #201F26;
+  --surface-alt: #2A2831;
+  --text: #EDEBF0;
+  --muted: #A09DAB;
+  --accent: #4FA5A2;
+  --accent-soft: #1E3634;
+  --private: #8B7BC4;
+  --private-soft: #2A2340;
+  --alarm: #D9A441;
+  --line: #2C2A33;
+}
+/* Aucun token rouge n'existe : c'est volontaire. */

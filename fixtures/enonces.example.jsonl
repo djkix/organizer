@@ -1,0 +1,5 @@
+{"texte":"faut que j'appelle le garage jeudi matin","nature":"action","echeance_type":"jour","importance":"normale","effort":"moins_5min","contexte":"appel","personnes":[],"theme":"voiture"}
+{"texte":"penser à commander les trucs pour la fête avant fin octobre","nature":"action","echeance_type":"fenetre","importance":"normale","effort":"moins_30min","contexte":"achat","personnes":[],"theme":"fete"}
+{"texte":"je crois que je confonds être disponible et être utile","nature":"pensee","tonalite":"constat","personnes":[],"theme":"moi"}
+{"texte":"rendez-vous mardi 14 à 10h, faut vraiment pas que je le rate","nature":"action","echeance_type":"datee","importance":"haute","alarme":true,"contexte":"rendez_vous","personnes":[],"theme":"sante"}
+{"texte":"vendredi ou samedi je sais plus","nature":"ambigu"}
