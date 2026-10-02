@@ -31,7 +31,9 @@ services:
       - { source: prompt, target: /app/system.md }
       - { source: schema, target: /app/response-schema.json }
     volumes:
-      - data:/home/node/data
+      # Monté sur /home/node, qui existe dans l'image et appartient à node :
+      # Docker reprend ce propriétaire. Un dossier absent de l'image serait à root.
+      - data:/home/node
     logging:
       driver: json-file
       options: { max-size: 10m, max-file: "3" }
