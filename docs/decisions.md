@@ -21,7 +21,7 @@
 | 17 | Widget d'accueil | Home Assistant, silencieux, livré au lot 2 |
 | 18 | Modèle | gemini-3.1-flash-lite par défaut |
 | 19 | Nom | Organizer |
-| 20 | Bot Telegram | @mon_organizer |
+| 20 | Bot Telegram | @mon_organizer_bot |
 
 ## Points encore ouverts
 
