@@ -24,7 +24,7 @@ TETE = """\
 #   ALLOWED_CHAT_IDS=           (vide au premier lancement : le bot donne l'identifiant)
 #
 # Un seul conteneur, aucun port exposé, aucune préparation sur l'hôte.
-# Données (audio + captures.jsonl) dans le volume organizer-terrain_data.
+# Données (audio + captures.jsonl) dans le volume organizer-terrain_donnees.
 
 name: organizer-terrain
 
@@ -50,7 +50,7 @@ services:
     volumes:
       # Monté sur /home/node, qui existe dans l'image et appartient à node :
       # Docker reprend ce propriétaire. Un dossier absent de l'image serait à root.
-      - data:/home/node
+      - donnees:/home/node
     logging:
       driver: json-file
       options: { max-size: 10m, max-file: "3" }
@@ -60,7 +60,7 @@ services:
           memory: 256m
 
 volumes:
-  data:
+  donnees:
 
 configs:
 """
