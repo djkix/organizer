@@ -120,7 +120,8 @@ async function handle(u) {
     await say(m.chat.id, 'Accès non autorisé. Ton identifiant : ' + chat);
     return;
   }
-  const voice = m.voice || m.audio;
+  // Une vidéo ronde envoyée par erreur est traitée comme un vocal : Gemini en lit la piste son.
+  const voice = m.voice || m.audio || (m.video_note && { ...m.video_note, mime_type: 'video/mp4' });
   if (!voice && !m.text) return;
   if (m.text === '/start') return say(m.chat.id, 'Prêt. Envoie un vocal.');
   if (m.text?.startsWith('/')) return;
