@@ -25,3 +25,6 @@ coverage/
 # Local
 .DS_Store
 .claude/settings.local.json
+
+# Secrets de la stack de production
+infra/secrets/
