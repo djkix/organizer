@@ -12,8 +12,8 @@
 | 8 | Visibilité des pensées | Visibles aussi par Franck |
 | 9 | Compte de l'API Gemini | Compte Google personnel de Franck, facturation activée |
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
-| 11 | Sauvegarde | NAS Synology seul, pas de copie hors site |
-| 12 | Disque et audio | 50 Go plafonnés pour la stack, rotation de l'audio ordinaire déjà transcrit |
+| 11 | Sauvegarde | Aucune au démarrage. Sauvegarde vers le NAS Synology au lot 2 |
+| 12 | Disque et audio | 50 Go maximum pour la stack, en volumes Docker simples. Rotation de l'audio ordinaire déjà transcrit au-delà de 40 Go |
 | 13 | Hébergement | Hôte Docker existant du homelab, stack pilotée par Dockge |
 | 14 | Publication | organizer.djkix.ovh |
 | 15 | Dépôt | GitHub personnel djkix, public |

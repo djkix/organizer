@@ -51,8 +51,8 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 8 | Visibilité des pensées | Visibles aussi par Franck |
 | 9 | Compte de l'API Gemini | Compte Google personnel de Franck, avec facturation Cloud activée |
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
-| 11 | Sauvegarde | NAS Synology seul, pas de copie hors site |
-| 12 | Disque et audio | 50 Go plafonnés pour toute la stack. Rotation de l'audio ordinaire déjà transcrit, du plus ancien au plus récent. Audio privé jamais purgé |
+| 11 | Sauvegarde | Aucune au démarrage, pour rester simple. Sauvegarde vers le NAS Synology au lot 2 |
+| 12 | Disque et audio | 50 Go maximum pour toute la stack, en volumes Docker simples. Rotation de l'audio ordinaire déjà transcrit au-delà de 40 Go, du plus ancien au plus récent. Audio privé jamais purgé |
 | 13 | Hébergement | Hôte Docker existant du homelab, stack pilotée par Dockge |
 | 14 | Publication | `organizer.djkix.ovh` |
 | 15 | Dépôt | GitHub personnel djkix, **public** |
@@ -414,19 +414,19 @@ Une action dormante disparaît des listes mais reste consultable et recherchable
 
 ### Rotation de l'audio
 
-Décision 12 : toute la stack tient dans un système de fichiers de 50 Go, de taille fixe. Seul l'audio ordinaire y tourne ; tout le reste est conservé.
+Décision 12 : la stack ne dépasse pas 50 Go, avec des volumes Docker ordinaires et aucune préparation de l'hôte. L'audio est le seul volume qui grossit vraiment : la rotation le tient sous 40 Go. La base (moins de 5 Go à un an) et les petits volumes (moins de 2 Go) laissent la marge. Seul l'audio ordinaire tourne ; tout le reste est conservé.
 
 | Règle | Valeur |
 | --- | --- |
-| Exécution | Job quotidien du scheduler à 4h, après la sauvegarde. Idempotent |
-| Déclenchement | Occupation du système de fichiers de la stack au-delà de 85 % (42,5 Go) |
-| Cible | Purger jusqu'à repasser sous 75 % (37,5 Go) |
+| Exécution | Job quotidien du scheduler à 4h. Idempotent |
+| Déclenchement | Taille du dossier audio au-delà de 40 Go |
+| Cible | Purger jusqu'à repasser sous 35 Go |
 | Ordre | Du plus ancien au plus récent, selon `emis_le` |
 | Éligible | Capture ordinaire dont la transcription est stockée, émise il y a plus de 30 jours |
 | Jamais éligible | Capture privée ; capture en `a_transcrire`, en file ou en échec |
 | Effet | Fichier supprimé, `audio_path` mis à nul, `audio_purge_le` renseigné. Transcription et items intacts |
 | Côté L | Rien. Aucun message ; le bouton de réécoute disparaît simplement |
-| Côté admin | Alerte si l'occupation dépasse 90 % alors que plus rien n'est éligible |
+| Côté admin | Alerte si l'audio reste au-dessus de 40 Go faute d'éligible, ou si la base dépasse 8 Go |
 
 Aux volumes estimés (20 à 45 Go d'audio par an), la rotation garde environ un à deux ans d'audio ordinaire.
 
@@ -598,9 +598,8 @@ Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dock
 | `web` | `caddy:2-alpine` | 80 | `web-dist` | — |
 | `db` | `pgvector/pgvector:pg17` | 5432 | `pgdata` | — |
 | `queue` | `valkey/valkey:8-alpine` | 6379 | `valkeydata` | — |
-| `backup` | `offen/docker-volume-backup` | — | tous, en lecture | — |
 
-Sept services, contre neuf dans le plan initial : les conteneurs de transcription et de modèle local ont disparu, et avec eux 9 Go de modèles et les deux tiers de la RAM.
+Six services, contre neuf dans le plan initial : les conteneurs de transcription et de modèle local ont disparu, et avec eux 9 Go de modèles et les deux tiers de la RAM.
 
 ### Réseaux
 
@@ -620,26 +619,14 @@ L'API est le seul point d'envoi de messages vers L : le scheduler déclenche une
 
 | Volume | Contenu | Taille | Sauvegarde |
 | --- | --- | --- | --- |
-| `pgdata` | Base complète | 2 à 5 Go à 1 an | Quotidienne, vitale |
-| `audio` | Enregistrements d'origine | Jusqu'à 37,5 Go, tenu par la rotation | Hebdomadaire |
+| `pgdata` | Base complète | 2 à 5 Go à 1 an | Lot 2 |
+| `audio` | Enregistrements d'origine | 40 Go maximum, tenu par la rotation | Lot 2 |
 | `models-emb` | Modèle d'embeddings | 130 Mo | Aucune, retéléchargeable |
 | `valkeydata` | File de jobs | Moins de 1 Go | Aucune, reconstructible |
 | `web-dist` | Build du front | 50 Mo | Aucune |
 | `caddy-data` | État de Caddy | Quelques Mo | Aucune |
 
-Tous ces volumes vivent dans `/srv/organizer`, un système de fichiers ext4 de 50 Go monté depuis une image pré-allouée sur le disque de l'hôte. Le plafond est donc physique : Organizer ne peut pas remplir le disque de l'hôte, et un autre service (Sabnzbd, par exemple) ne peut pas lui prendre son espace. Il faut 50 Go libres sur l'hôte au moment de la création.
-
-```bash
-sudo fallocate -l 50G /srv/organizer.img
-sudo mkfs.ext4 -m 0 /srv/organizer.img
-sudo mkdir -p /srv/organizer
-echo '/srv/organizer.img /srv/organizer ext4 loop,nofail 0 2' | sudo tee -a /etc/fstab
-sudo mount /srv/organizer
-cd /srv/organizer && sudo mkdir pgdata audio models-emb valkeydata web-dist caddy-data
-sudo chown 1000:1000 audio models-emb web-dist
-```
-
-Si le montage échoue au démarrage, les sous-dossiers n'existent pas et Docker refuse de lancer la stack : rien n'est jamais écrit par erreur sur le disque de l'hôte.
+Des volumes Docker nommés, sans préparation sur l'hôte. Le plafond de 50 Go est tenu par la rotation de l'audio, pas par le système de fichiers.
 
 ### Publication et TLS
 
@@ -758,7 +745,7 @@ Décision 3 : se repérer par la date et l'heure suffit. C'est ce qui permet de 
 
 - En transit : TLS 1.2 minimum, 1.3 privilégié, sur toutes les surfaces publiques.
 - Au repos : chiffrement du disque qui porte les volumes de la stack sur l'hôte Docker.
-- Sauvegardes : chiffrement GPG avant dépôt sur le NAS, clé conservée hors du serveur.
+- Sauvegardes, au lot 2 : chiffrement GPG avant dépôt sur le NAS, clé conservée hors du serveur.
 - Chiffrement applicatif colonne par colonne écarté : il empêcherait la recherche vectorielle, pour un gain faible face au chiffrement disque.
 
 ### Données concernant des tiers
@@ -775,18 +762,11 @@ L'exploitation doit être nulle en régime normal : aucune action mensuelle, auc
 
 ### Sauvegarde
 
-| Élément | Fréquence | Rétention | Destination |
-| --- | --- | --- | --- |
-| Dump PostgreSQL | Quotidienne, 3h | 30 jours glissants, 12 mensuels | NAS Synology (VM 103) |
-| Volume audio | Hebdomadaire, incrémentale | Miroir du volume : un fichier purgé par la rotation quitte aussi la copie | NAS Synology |
-| Fichiers de configuration et `.env` | À chaque modification | Illimitée | Hors dépôt, gestionnaire de mots de passe |
-| Snapshot de l'hôte Docker | Hebdomadaire | 4 semaines | Proxmox, si l'hôte est une VM |
+Décision 11 : aucune sauvegarde dédiée au démarrage, pour garder une stack simple. Seule protection : le snapshot Proxmox de la VM 105, s'il est en place. Une panne de disque avant le lot 2 peut donc perdre des données ; c'est un risque accepté pour démarrer.
 
-Décision 11 : pas de copie hors site. Le NAS est dans la même maison que le serveur, donc un incendie ou un vol emporte les deux. C'est un risque accepté, pas un oubli. Le chiffrement GPG des sauvegardes reste en place, la clé étant conservée ailleurs que sur le serveur.
+Prévu au lot 2 : dump PostgreSQL quotidien chiffré GPG vers le NAS Synology (VM 103), copie de l'audio, test de restauration complète. Les fichiers de configuration et les secrets sont conservés dans le gestionnaire de mots de passe dès maintenant.
 
-Décision 12 : la stack est plafonnée à 50 Go et l'audio ordinaire tourne (voir « Rotation de l'audio »). Aucune intervention n'est nécessaire pour tenir le plafond.
-
-Objectifs de reprise : RPO de 24 heures, RTO de 4 heures. Un test de restauration complète est réalisé au lot 2, puis une fois par an, et sa réussite conditionne la mise en service.
+Objectifs de reprise, à partir du lot 2 : RPO de 24 heures, RTO de 4 heures. Un test de restauration complète est réalisé au lot 2, puis une fois par an.
 
 ### Supervision
 
@@ -795,8 +775,7 @@ Objectifs de reprise : RPO de 24 heures, RTO de 4 heures. Un test de restauratio
 | Disponibilité de `organizer.djkix.ovh` | 2 échecs consécutifs | Uptime Kuma vers Telegram admin |
 | Profondeur de la file | Plus de 50 jobs en attente | Telegram admin |
 | Jobs en échec | Plus de 3 par heure | Telegram admin |
-| Âge de la dernière sauvegarde | Plus de 30 heures | Telegram admin |
-| Occupation du disque de la stack | Plus de 90 % alors que la rotation n'a plus rien à purger | Telegram admin |
+| Taille de la stack | Audio au-dessus de 40 Go malgré la rotation, ou base au-dessus de 8 Go | Telegram admin |
 | Latence de classification | Moyenne supérieure à 120 s sur 1 heure | Telegram admin |
 | Crédit Gemini épuisé | Première réponse HTTP 402 | Telegram admin |
 | Aucune capture reçue | 10 jours | Information, sans alerte |
@@ -823,7 +802,7 @@ Ces indicateurs sont consultés par l'administrateur uniquement. Aucune statisti
 
 ## Exigences non fonctionnelles et dimensionnement
 
-Le système est dimensionné pour deux utilisateurs et une cinquantaine de captures par jour en pointe. Ni la charge ni la mémoire ne sont contraignantes depuis que l'intelligence est déportée sur Gemini : le seul modèle local pèse 130 Mo. Le facteur dimensionnant était le volume d'audio ; il est désormais tenu par le plafond de 50 Go et la rotation.
+Le système est dimensionné pour deux utilisateurs et une cinquantaine de captures par jour en pointe. Ni la charge ni la mémoire ne sont contraignantes depuis que l'intelligence est déportée sur Gemini : le seul modèle local pèse 130 Mo. Le facteur dimensionnant était le volume d'audio ; il est désormais tenu sous 50 Go par la rotation.
 
 ### Hypothèses de charge
 
@@ -842,7 +821,7 @@ Le système est dimensionné pour deux utilisateurs et une cinquantaine de captu
 | --- | --- | --- |
 | CPU disponibles | 2 | 4 |
 | RAM libre | 2 Go | 3 Go |
-| Espace pour les volumes | 50 Go, fixe | 50 Go, fixe |
+| Espace pour les volumes | 50 Go | 50 Go |
 
 Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo pour le worker et son modèle d'embeddings, 256 Mo pour le scheduler, 128 Mo pour la file, 64 Mo pour le front, soit environ 2,7 Go au total. À ce volume, deux utilisatrices et une cinquantaine de captures par jour, c'est suffisant. Déporter l'intelligence sur Gemini évite les 16 Go qu'exigeraient des modèles locaux. La stack tourne sur l'hôte Docker existant (décision 13), sans VM dédiée : les limites mémoire par service et les réseaux Docker l'isolent des autres services de l'hôte.
 
@@ -903,7 +882,7 @@ Critère de sortie : au moins 60 énoncés réels annotés et une typologie de t
 - Projet Google Cloud avec facturation, clé d'API et plafond de dépense.
 - PWA en lecture : listes Aujourd'hui, Cette semaine, Horizons, cochage.
 - Correction manuelle d'un classement.
-- Sauvegardes et supervision de base.
+- Supervision de base.
 
 Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses anciennes habitudes.
 
@@ -914,7 +893,7 @@ Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses
 - **Widget Home Assistant**, remonté du lot 3 : sans lui, plus rien ne rappelle quoi que ce soit.
 - Fils de pensées, rattachement vectoriel, vue Pensées avec filtres.
 - Question de désambiguïsation dans Telegram.
-- Test de restauration complète.
+- Sauvegarde vers le NAS et test de restauration complète.
 
 ### Lot 3 — Confort
 
