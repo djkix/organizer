@@ -44,9 +44,9 @@ services:
       SHOW_RESULT: ${SHOW_RESULT:-true}
       TZ: Europe/Paris
     configs:
-      - { source: bot, target: /app/bot.mjs }
-      - { source: prompt, target: /app/system.md }
-      - { source: schema, target: /app/response-schema.json }
+      - { source: bot, target: /app/bot.mjs, uid: "1000", gid: "1000", mode: 0444 }
+      - { source: prompt, target: /app/system.md, uid: "1000", gid: "1000", mode: 0444 }
+      - { source: schema, target: /app/response-schema.json, uid: "1000", gid: "1000", mode: 0444 }
     volumes:
       # Monté sur /home/node, qui existe dans l'image et appartient à node :
       # Docker reprend ce propriétaire. Un dossier absent de l'image serait à root.
