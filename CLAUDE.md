@@ -15,7 +15,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 2. **Le système ne sollicite jamais de lui-même.** Pas de point du matin, pas de résumé hebdo, pas de relance sur une échéance floue. Une alarme ne sonne que si L l'a activée sur cet item précis.
 3. **Zéro culpabilisation.** Aucun compteur de retard, aucun pourcentage, aucune série, aucun graphique, aucune mention « en retard », aucune couleur d'alerte.
 4. **Aucun rouge dans l'interface.** Ni retard, ni urgence, ni suppression.
-5. **Rien ne se perd.** Une capture non classifiable va en « à revoir » sans déclencher de relance. L'audio d'origine est conservé sans limite de durée.
+5. **Rien ne se perd.** Une capture non classifiable va en « à revoir » sans déclencher de relance. La transcription est conservée sans limite. L'audio ordinaire tourne quand le disque de la stack (50 Go) dépasse 85 % ; l'audio privé, seule trace de la capture, n'est jamais purgé.
 6. **Le mode privé est décidé par le point d'entrée, jamais par le contenu.** Une capture faite avec le bouton privé est marquée privée avant d'exister en base. Aucun chemin de code ne peut l'envoyer vers Gemini.
 7. **Pas d'emoji dans l'interface**, pas d'illustration de personnage, pas d'état vide félicitant.
 8. **Palier payé obligatoire sur l'API Gemini.** Le worker vérifie au démarrage que le projet Cloud est facturé et refuse de tourner sinon.
