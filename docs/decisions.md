@@ -14,7 +14,7 @@
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
 | 11 | Sauvegarde | NAS seul, pas de copie hors site |
 | 12 | Purge de l'audio | Jamais |
-| 13 | Hébergement | VM dédiée sur hôte |
+| 13 | Hébergement | Hôte Docker existant du homelab, stack pilotée par Dockge |
 | 14 | Publication | organizer.example.org |
 | 15 | Dépôt | GitHub personnel djkix, public |
 | 16 | Comptes | Deux : L et djkix |
