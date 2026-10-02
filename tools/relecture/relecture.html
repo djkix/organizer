@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relecture Organizer</title>
+<style>
+/*TOKENS*/
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: var(--font-body)/var(--line-height) system-ui, sans-serif; }
+header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; }
+header h1 { font-size: 20px; margin: 0; }
+.meta { color: var(--muted); font-size: var(--font-meta); }
+.stats { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--font-meta); color: var(--muted); }
+.stats b { color: var(--text); font-weight: 600; }
+.filtres { margin-left: auto; display: flex; gap: 8px; }
+main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+.capture { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 16px; }
+.capture.relue { border-color: var(--accent); }
+.entete { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.entete audio { height: 36px; max-width: 100%; }
+.transcription { margin: 12px 0; padding: 12px; background: var(--surface-alt); border-radius: 12px; white-space: pre-wrap; }
+.erreur { color: var(--alarm); font-size: var(--font-meta); }
+.item { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; display: grid; gap: 8px; }
+.ligne { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+label { display: grid; gap: 2px; font-size: var(--font-meta); color: var(--muted); }
+label.change { color: var(--accent); font-weight: 600; }
+label.change :is(input, select, textarea) { border-color: var(--accent); background: var(--accent-soft); }
+input, select, textarea { font: inherit; font-size: 15px; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; width: 100%; }
+textarea { min-height: 2.6em; resize: vertical; }
+.avant { font-size: 12px; color: var(--muted); font-weight: 400; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+button { font: inherit; font-size: 15px; min-height: 40px; padding: 0 16px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface-alt); color: var(--text); cursor: pointer; }
+button.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.discret { background: none; border: none; color: var(--muted); padding: 0 8px; }
+.vide { text-align: center; color: var(--muted); padding: 48px 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Relecture</h1>
+  <div class="stats" id="stats"></div>
+  <div class="filtres">
+    <select id="filtre" aria-label="Filtrer">
+      <option value="a_relire">À relire</option>
+      <option value="toutes">Toutes</option>
+      <option value="relues">Relues</option>
+    </select>
+  </div>
+</header>
+<main id="liste"></main>
+<datalist id="themes"></datalist>
+
+<script>
+const OPTIONS = {
+  nature: ['action', 'pensee', 'information', 'ambigu'],
+  echeance_type: ['', 'datee', 'jour', 'fenetre', 'relative', 'aucune'],
+  importance: ['', 'haute', 'normale', 'basse'],
+  effort: ['', 'moins_5min', 'moins_30min', 'plus_1h', 'multi_session'],
+  contexte: ['', 'appel', 'achat', 'maison', 'administratif', 'avec_quelquun', 'autre'],
+  alarme: ['', 'true', 'false'],
+  tonalite: ['', 'constat', 'question', 'inquietude', 'elan'],
+};
+// Champs affichés selon la nature : une pensée n'a pas d'échéance, une action pas de tonalité.
+const PAR_NATURE = {
+  action: ['echeance_type', 'echeance_expr', 'echeance_date', 'fenetre_debut', 'fenetre_fin', 'importance', 'effort', 'contexte', 'alarme', 'alarme_expr'],
+  pensee: ['tonalite'],
+  information: [],
+  ambigu: [],
+};
+const COMMUNS = ['theme', 'personnes', 'remarque'];
+const COMPARES = ['nature', 'echeance_type', 'importance', 'contexte', 'alarme', 'theme', 'tonalite'];
+
+let captures = [];
+const brouillons = {};   // capture id -> items en cours d'édition
+
+const vers = (v) => v === null || v === undefined ? '' : Array.isArray(v) ? v.join(', ') : String(v);
+const depuis = (champ, v) => {
+  if (champ === 'personnes') return v.split(',').map((s) => s.trim()).filter(Boolean);
+  if (champ === 'alarme') return v === '' ? null : v === 'true';
+  return v === '' ? null : v;
+};
+const pareil = (a, b) => vers(a) === vers(b);
+const dateLisible = (iso) => new Date(iso).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+function itemsDe(c) {
+  if (!brouillons[c.id]) {
+    const base = c.annotations.length ? c.annotations : c.gemini;
+    brouillons[c.id] = base.map((it) => ({ ...it, personnes: it.personnes || [] }));
+  }
+  return brouillons[c.id];
+}
+
+function champ(c, i, nom) {
+  const it = itemsDe(c)[i];
+  const orig = c.gemini[i];
+  const change = orig ? !pareil(it[nom], orig[nom]) : true;
+  const label = document.createElement('label');
+  if (change && nom !== 'remarque') label.className = 'change';
+  label.append(nom.replace('_', ' '));
+  if (change && orig && nom !== 'remarque') {
+    const avant = document.createElement('span');
+    avant.className = 'avant';
+    avant.textContent = 'Gemini : ' + (vers(orig[nom]) || 'vide');
+    label.append(avant);
+  }
+  let el;
+  if (OPTIONS[nom]) {
+    el = document.createElement('select');
+    for (const o of OPTIONS[nom]) el.add(new Option(o || '—', o));
+  } else if (nom === 'texte' || nom === 'remarque') {
+    el = document.createElement('textarea');
+  } else {
+    el = document.createElement('input');
+    if (nom === 'theme') el.setAttribute('list', 'themes');
+  }
+  el.value = vers(it[nom]);
+  el.addEventListener('change', () => {
+    it[nom] = depuis(nom, el.value);
+    rendreCapture(c);
+  });
+  label.append(el);
+  return label;
+}
+
+function rendreCapture(c, carte) {
+  carte = carte || document.getElementById('c-' + c.id);
+  carte.className = 'capture' + (c.annotations.length ? ' relue' : '');
+  carte.replaceChildren();
+
+  const entete = document.createElement('div');
+  entete.className = 'entete';
+  const info = document.createElement('div');
+  info.innerHTML = '<b></b> <span class="meta"></span>';
+  info.querySelector('b').textContent = dateLisible(c.emis_le);
+  info.querySelector('.meta').textContent = [c.duree_s ? c.duree_s + ' s' : 'écrit', c.modele, c.annotations.length ? 'relue' : ''].filter(Boolean).join(' · ');
+  entete.append(info);
+  if (c.audio) {
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.preload = 'none';
+    audio.src = '/audio/' + c.audio.split('/').pop();
+    entete.append(audio);
+  }
+  carte.append(entete);
+
+  if (c.erreur) {
+    const e = document.createElement('p');
+    e.className = 'erreur';
+    e.textContent = 'Tri en échec : ' + c.erreur;
+    carte.append(e);
+  }
+  const tr = document.createElement('div');
+  tr.className = 'transcription';
+  tr.textContent = c.transcription || '(pas de transcription)';
+  carte.append(tr);
+
+  itemsDe(c).forEach((it, i) => {
+    const bloc = document.createElement('div');
+    bloc.className = 'item';
+    const l1 = document.createElement('div');
+    l1.className = 'ligne';
+    l1.append(champ(c, i, 'nature'));
+    bloc.append(l1, champ(c, i, 'texte'));
+    const l2 = document.createElement('div');
+    l2.className = 'ligne';
+    for (const n of [...(PAR_NATURE[it.nature] || []), ...COMMUNS]) l2.append(champ(c, i, n));
+    bloc.append(l2);
+    const suppr = document.createElement('button');
+    suppr.className = 'discret';
+    suppr.textContent = 'Retirer cet item';
+    suppr.onclick = () => { itemsDe(c).splice(i, 1); rendreCapture(c); };
+    bloc.append(suppr);
+    carte.append(bloc);
+  });
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  const ok = document.createElement('button');
+  ok.className = 'principal';
+  ok.textContent = c.annotations.length ? 'Enregistrer à nouveau' : 'Valider';
+  ok.onclick = () => enregistrer(c);
+  const ajout = document.createElement('button');
+  ajout.textContent = 'Ajouter un item';
+  ajout.onclick = () => { itemsDe(c).push({ texte: '', nature: 'ambigu', personnes: [] }); rendreCapture(c); };
+  const raz = document.createElement('button');
+  raz.className = 'discret';
+  raz.textContent = 'Revenir à Gemini';
+  raz.onclick = () => { brouillons[c.id] = c.gemini.map((it) => ({ ...it })); rendreCapture(c); };
+  actions.append(ok, ajout, raz);
+  carte.append(actions);
+}
+
+async function enregistrer(c) {
+  const r = await fetch('/api/annotation', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ capture: c.id, items: itemsDe(c) }) });
+  if (!r.ok) return alert('Enregistrement impossible : ' + (await r.text()));
+  c.annotations = itemsDe(c).map((it, i) => ({ ...it, position: i + 1 }));
+  rendreCapture(c);
+  rendreStats();
+  if (document.getElementById('filtre').value === 'a_relire') {
+    document.getElementById('c-' + c.id).remove();
+    if (!document.querySelector('.capture')) rendre();
+  }
+}
+
+function rendreStats() {
+  const relues = captures.filter((c) => c.annotations.length);
+  const nbItems = relues.reduce((n, c) => n + c.annotations.length, 0);
+  const memeDecoupage = relues.filter((c) => c.annotations.length === c.gemini.length).length;
+  const parts = [
+    ['Captures relues', relues.length + ' / ' + captures.length],
+    ['Items annotés', nbItems],
+    ['Découpage identique', relues.length ? Math.round(100 * memeDecoupage / relues.length) + ' %' : '—'],
+  ];
+  // Accord avec Gemini, champ par champ, sur les captures dont le découpage n'a pas changé.
+  for (const f of COMPARES) {
+    let n = 0, ok = 0;
+    for (const c of relues) {
+      if (c.annotations.length !== c.gemini.length) continue;
+      c.annotations.forEach((a, i) => { n++; if (pareil(a[f], c.gemini[i][f])) ok++; });
+    }
+    parts.push([f.replace('_', ' '), n ? Math.round(100 * ok / n) + ' %' : '—']);
+  }
+  const s = document.getElementById('stats');
+  s.replaceChildren(...parts.map(([k, v]) => { const e = document.createElement('span'); e.innerHTML = '<b></b> '; e.querySelector('b').textContent = v; e.append(k); return e; }));
+}
+
+function rendre() {
+  const filtre = document.getElementById('filtre').value;
+  const liste = document.getElementById('liste');
+  const visibles = captures.filter((c) => filtre === 'toutes' || (filtre === 'relues') === (c.annotations.length > 0));
+  liste.replaceChildren();
+  if (!visibles.length) {
+    liste.innerHTML = '<p class="vide"></p>';
+    liste.firstChild.textContent = filtre === 'a_relire' ? 'Rien à relire.' : 'Aucune capture.';
+  }
+  for (const c of visibles) {
+    const carte = document.createElement('section');
+    carte.id = 'c-' + c.id;
+    liste.append(carte);
+    rendreCapture(c, carte);
+  }
+  const themes = new Set(captures.flatMap((c) => [...c.gemini, ...c.annotations].map((i) => i.theme)).filter(Boolean));
+  document.getElementById('themes').replaceChildren(...[...themes].sort().map((t) => new Option(t)));
+  rendreStats();
+}
+
+document.getElementById('filtre').onchange = rendre;
+fetch('/api/captures').then((r) => r.json()).then((d) => { captures = d; rendre(); });
+</script>
+</body>
+</html>
