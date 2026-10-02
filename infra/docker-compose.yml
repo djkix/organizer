@@ -1,0 +1,229 @@
+# Stack Organizer — déployée par Dockge, publiée par le Nginx Proxy Manager existant.
+# Référence : docs/cahier-des-charges.md, section « Déploiement Docker ».
+#
+# Aucun modèle d'IA ne tourne ici, sauf les embeddings bge-small dans le worker.
+# Les secrets ne sont jamais dans ce fichier : .env pour la configuration,
+# infra/secrets/ (ignoré par Git) pour les clés.
+
+name: organizer
+
+x-app: &app
+  restart: unless-stopped
+  user: "1000:1000"
+  read_only: true
+  tmpfs:
+    - /tmp
+  # Pas d'env_file : les clés passent uniquement par les secrets ci-dessous.
+  environment: &app-env
+    NODE_ENV: production
+    TZ: Europe/Paris
+    DATABASE_URL: postgresql://organizer:${POSTGRES_PASSWORD:?}@db:5432/organizer
+    REDIS_URL: redis://queue:6379
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  # Migrations Prisma jouées avant le démarrage de l'API.
+  migrate:
+    <<: *app
+    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:?}
+    restart: "no"
+    command: ["pnpm", "prisma", "migrate", "deploy"]
+    networks: [core]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:?}
+    environment:
+      <<: *app-env
+      TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token
+      TELEGRAM_WEBHOOK_SECRET_FILE: /run/secrets/telegram_webhook_secret
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY_FILE: /run/secrets/vapid_private_key
+      HOME_ASSISTANT_WEBHOOK_URL_FILE: /run/secrets/home_assistant_webhook_url
+      AUDIO_STORAGE_PATH: /data/audio
+    secrets: [telegram_bot_token, telegram_webhook_secret, vapid_private_key, home_assistant_webhook_url]
+    volumes:
+      - audio:/data/audio
+    # Joignable uniquement par le Nginx Proxy Manager : filtrage au pare-feu de l'hôte.
+    ports:
+      - "3000:3000"
+    networks: [edge, core, egress]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      queue:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  worker:
+    <<: *app
+    image: ghcr.io/djkix/organizer-worker:${ORGANIZER_VERSION:?}
+    environment:
+      <<: *app-env
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GEMINI_MODEL_FALLBACK: ${GEMINI_MODEL_FALLBACK:-gemini-3.8-flash}
+      AUDIO_STORAGE_PATH: /data/audio
+      # Plafond de concurrence : ne pas saturer le quota Gemini en rattrapage.
+      WORKER_CONCURRENCY: "2"
+      EMBEDDINGS_CACHE_DIR: /models
+    secrets: [gemini_api_key]
+    volumes:
+      - audio:/data/audio:ro
+      - models-emb:/models
+    networks: [core, egress]
+    depends_on:
+      db:
+        condition: service_healthy
+      queue:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  scheduler:
+    <<: *app
+    image: ghcr.io/djkix/organizer-scheduler:${ORGANIZER_VERSION:?}
+    environment:
+      <<: *app-env
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/google_oauth_client_secret
+      GOOGLE_CALENDAR_SCOPE: https://www.googleapis.com/auth/calendar.app.created
+    secrets: [google_oauth_client_secret]
+    networks: [core, egress]
+    depends_on:
+      db:
+        condition: service_healthy
+      queue:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  web:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    read_only: true
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - web-dist:/srv:ro
+      - caddy-data:/data
+    tmpfs:
+      - /config
+    ports:
+      - "8080:80"
+    networks: [edge]
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  db:
+    image: pgvector/pgvector:0.8.0-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: organizer
+      POSTGRES_DB: organizer
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      TZ: Europe/Paris
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [core]
+    labels:
+      # Base arrêtée pendant la sauvegarde nocturne, pour une copie cohérente.
+      - docker-volume-backup.stop-during-backup=true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U organizer -d organizer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  queue:
+    image: valkey/valkey:8.1-alpine
+    restart: unless-stopped
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - valkeydata:/data
+    networks: [core]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  # Dump quotidien de la base vers le NAS, chiffré GPG.
+  backup:
+    image: offen/docker-volume-backup:v2
+    restart: unless-stopped
+    environment:
+      BACKUP_CRON_EXPRESSION: "0 3 * * *"
+      BACKUP_FILENAME: organizer-pgdata-%Y-%m-%dT%H-%M-%S.tar.gz
+      BACKUP_RETENTION_DAYS: "30"
+      GPG_PASSPHRASE: ${BACKUP_GPG_PASSPHRASE:?}
+      TZ: Europe/Paris
+    volumes:
+      - pgdata:/backup/pgdata:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${BACKUP_ARCHIVE_DIR:?}:/archive
+    logging: *logging
+
+networks:
+  # Seul réseau publié vers le reverse proxy.
+  edge: {}
+  # Réseau interne : aucune route vers Internet.
+  core:
+    internal: true
+  # Sortie Internet pour api, worker et scheduler.
+  # Docker ne filtre pas par domaine : la liste fermée du cahier
+  # (Telegram, FCM, Gemini, Google Agenda) est appliquée par un proxy sortant, au lot 1.
+  egress: {}
+
+volumes:
+  pgdata:
+  audio:
+  models-emb:
+  valkeydata:
+  web-dist:
+  caddy-data:
+
+secrets:
+  gemini_api_key:
+    file: ./secrets/gemini_api_key
+  telegram_bot_token:
+    file: ./secrets/telegram_bot_token
+  telegram_webhook_secret:
+    file: ./secrets/telegram_webhook_secret
+  vapid_private_key:
+    file: ./secrets/vapid_private_key
+  home_assistant_webhook_url:
+    file: ./secrets/home_assistant_webhook_url
+  google_oauth_client_secret:
+    file: ./secrets/google_oauth_client_secret
