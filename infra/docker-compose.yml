@@ -4,8 +4,8 @@
 # Dans Dockge : ce fichier est le compose.yaml de la stack « organizer »
 # (/opt/stacks/organizer/), avec .env, Caddyfile et secrets/ dans le même dossier.
 #
-# Tous les volumes vivent dans ${ORGANIZER_DATA_DIR}, un ext4 de 50 Go monté
-# depuis une image pré-allouée : plafond physique, voir le cahier (décision 12).
+# 50 Go maximum pour toute la stack, tenus par la rotation de l'audio (décision 12).
+# Pas de sauvegarde au démarrage (décision 11) : elle arrive au lot 2.
 #
 # Aucun modèle d'IA ne tourne ici, sauf les embeddings bge-small dans le worker.
 # Les secrets ne sont jamais dans ce fichier : .env pour la configuration,
@@ -113,8 +113,8 @@ services:
       GOOGLE_CALENDAR_SCOPE: https://www.googleapis.com/auth/calendar.app.created
       # Rotation de l'audio ordinaire déjà transcrit, chaque nuit à 4h (décision 12).
       AUDIO_STORAGE_PATH: /data/audio
-      AUDIO_ROTATION_HIGH_PCT: ${AUDIO_ROTATION_HIGH_PCT:-85}
-      AUDIO_ROTATION_LOW_PCT: ${AUDIO_ROTATION_LOW_PCT:-75}
+      AUDIO_ROTATION_MAX_GB: ${AUDIO_ROTATION_MAX_GB:-40}
+      AUDIO_ROTATION_TARGET_GB: ${AUDIO_ROTATION_TARGET_GB:-35}
       AUDIO_ROTATION_MIN_AGE_DAYS: ${AUDIO_ROTATION_MIN_AGE_DAYS:-30}
     secrets: [google_oauth_client_secret]
     volumes:
@@ -162,9 +162,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks: [core]
-    labels:
-      # Base arrêtée pendant la sauvegarde nocturne, pour une copie cohérente.
-      - docker-volume-backup.stop-during-backup=true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U organizer -d organizer"]
       interval: 10s
@@ -194,22 +191,6 @@ services:
         limits:
           memory: 128m
 
-  # Dump quotidien de la base vers le NAS, chiffré GPG.
-  backup:
-    image: offen/docker-volume-backup:v2
-    restart: unless-stopped
-    environment:
-      BACKUP_CRON_EXPRESSION: "0 3 * * *"
-      BACKUP_FILENAME: organizer-pgdata-%Y-%m-%dT%H-%M-%S.tar.gz
-      BACKUP_RETENTION_DAYS: "30"
-      GPG_PASSPHRASE: ${BACKUP_GPG_PASSPHRASE:?}
-      TZ: Europe/Paris
-    volumes:
-      - pgdata:/backup/pgdata:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${BACKUP_ARCHIVE_DIR:?}:/archive
-    logging: *logging
-
 networks:
   # Seul réseau publié vers le reverse proxy.
   edge: {}
@@ -221,30 +202,13 @@ networks:
   # (Telegram, FCM, Gemini, Google Agenda) est appliquée par un proxy sortant, au lot 1.
   egress: {}
 
-# Bind mounts nommés : les noms restent utilisables par le service backup,
-# les données restent dans le système de fichiers plafonné.
-x-bind: &bind
-  driver: local
-
 volumes:
   pgdata:
-    <<: *bind
-    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/pgdata" }
   audio:
-    <<: *bind
-    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/audio" }
   models-emb:
-    <<: *bind
-    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/models-emb" }
   valkeydata:
-    <<: *bind
-    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/valkeydata" }
   web-dist:
-    <<: *bind
-    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/web-dist" }
   caddy-data:
-    <<: *bind
-    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/caddy-data" }
 
 secrets:
   gemini_api_key:
