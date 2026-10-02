@@ -512,7 +512,7 @@ Le back-end reste en TypeScript/NestJS, par cohérence avec le projet d'inventai
 | Enregistrement privé | MediaRecorder, format Opus | — | Enregistreur natif du navigateur, envoi direct à l'API |
 | PWA | Workbox | 7.x | Service worker, cache, file hors ligne, raccourcis Android |
 | Serveur front | Caddy | 2.x | Image légère, en-têtes et compression par défaut |
-| Reverse proxy | Nginx Proxy Manager existant | — | Déjà en place (VM N), certificats Let's Encrypt automatiques |
+| Reverse proxy | Nginx Proxy Manager existant | — | Déjà en place (conteneur N), certificats Let's Encrypt automatiques |
 | Supervision | Uptime Kuma + Loki | — | Déjà pertinent à l'échelle du homelab |
 
 ### Avertissement : l'abonnement Gemini ne donne pas l'API
@@ -565,7 +565,7 @@ Pas d'environnement de recette intermédiaire : le volume ne le justifie pas. Le
 
 ## Déploiement Docker
 
-Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (décision 13), publiée par le Nginx Proxy Manager existant (VM N). Aucun conteneur n'expose de port sur l'extérieur.
+Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (VM N, décision 13), publiée par le Nginx Proxy Manager existant (conteneur N). Aucun conteneur n'expose de port sur l'extérieur.
 
 ### Services
 
