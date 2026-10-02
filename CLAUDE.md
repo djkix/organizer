@@ -102,3 +102,10 @@ avant que le prompt de tri soit validé sur ce corpus.
 Jalon du lot 0 franchi le 2 octobre 2026 : L confirme le besoin et accepte que ses
 vocaux ordinaires passent par Gemini en palier payé. Le prompt peut donc être testé
 sur le corpus réel une fois l'annotation faite (format : @docs/guide-annotation.md).
+
+Banc d'essai terrain (décidé par Franck le 2 octobre 2026, en dérogation à « aucun code
+avant validation du prompt ») : `infra/terrain/`, un bot Telegram seul qui envoie chaque
+vocal à Gemini avec le prompt de tri et garde audio et résultats sur le serveur. Il sert
+à éprouver le prompt en conditions réelles et à constituer le corpus du lot 0. Ce n'est
+pas l'application : il sera retiré quand le lot 1 sera livré. `compose.yaml` est généré
+par `genere.py`.

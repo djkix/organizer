@@ -1,0 +1,380 @@
+# Organizer — banc d'essai terrain. FICHIER GÉNÉRÉ par genere.py, ne pas éditer à la main.
+#
+# Dans Dockge : nouvelle stack « organizer-terrain », coller ce fichier, puis dans
+# l'onglet .env :
+#   TELEGRAM_BOT_TOKEN=...
+#   GEMINI_API_KEY=...          (projet Google Cloud AVEC facturation)
+#   ALLOWED_CHAT_IDS=           (vide au premier lancement : le bot donne l'identifiant)
+#
+# Un seul conteneur, aucun port exposé, aucune préparation sur l'hôte.
+# Données (audio + captures.jsonl) dans le volume organizer-terrain_data.
+
+name: organizer-terrain
+
+services:
+  bot:
+    image: node:22-alpine
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    command: ["node", "/app/bot.mjs"]
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?}
+      ALLOWED_CHAT_IDS: ${ALLOWED_CHAT_IDS:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GEMINI_MODEL_FALLBACK: ${GEMINI_MODEL_FALLBACK:-gemini-3.8-flash}
+      SHOW_RESULT: ${SHOW_RESULT:-true}
+      TZ: Europe/Paris
+    configs:
+      - { source: bot, target: /app/bot.mjs }
+      - { source: prompt, target: /app/system.md }
+      - { source: schema, target: /app/response-schema.json }
+    volumes:
+      - data:/home/node/data
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: "3" }
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+volumes:
+  data:
+
+configs:
+  bot:
+    content: |
+      // Organizer — banc d'essai terrain.
+      // Bot Telegram en long polling : chaque vocal part à Gemini avec le prompt de tri,
+      // l'audio et le résultat sont gardés dans /home/node/data. Aucun package npm.
+      // Pas de signe dollar dans ce fichier : il est embarqué dans le compose, qui l'interpréterait.
+
+      import { readFile, writeFile, appendFile, mkdir } from 'node:fs/promises';
+      import { existsSync } from 'node:fs';
+
+      const env = process.env;
+      const TZ = env.TZ || 'Europe/Paris';
+      const MODEL = env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+      const FALLBACK = env.GEMINI_MODEL_FALLBACK || 'gemini-3.8-flash';
+      const ALLOWED = (env.ALLOWED_CHAT_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
+      const SHOW_RESULT = env.SHOW_RESULT !== 'false';
+      const PROMPT_VERSION = 'tri/v1';
+      const DATA = '/home/node/data';
+      const LOG = DATA + '/captures.jsonl';
+      const OFFSET = DATA + '/offset';
+
+      if (!env.TELEGRAM_BOT_TOKEN || !env.GEMINI_API_KEY) {
+        console.error('TELEGRAM_BOT_TOKEN et GEMINI_API_KEY sont obligatoires.');
+        process.exit(1);
+      }
+
+      const TG = 'https://api.telegram.org/bot' + env.TELEGRAM_BOT_TOKEN;
+      const TG_FILE = 'https://api.telegram.org/file/bot' + env.TELEGRAM_BOT_TOKEN + '/';
+      const SYSTEM = await readFile('/app/system.md', 'utf8');
+      const SCHEMA = JSON.parse(await readFile('/app/response-schema.json', 'utf8'));
+      await mkdir(DATA + '/audio', { recursive: true });
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      async function tg(method, body) {
+        const r = await fetch(TG + '/' + method, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body || {}),
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error('Telegram ' + method + ' : ' + j.description);
+        return j.result;
+      }
+
+      const say = (chatId, text, replyTo) =>
+        tg('sendMessage', { chat_id: chatId, text, reply_parameters: replyTo ? { message_id: replyTo } : undefined });
+
+      // Date ISO 8601 avec le décalage du fuseau, ex. 2026-10-06T08:12:00+02:00
+      function isoLocal(date) {
+        const p = Object.fromEntries(
+          new Intl.DateTimeFormat('en-CA', {
+            timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZoneName: 'longOffset',
+          }).formatToParts(date).map((x) => [x.type, x.value]),
+        );
+        const off = p.timeZoneName === 'GMT' ? '+00:00' : p.timeZoneName.replace('GMT', '');
+        return p.year + '-' + p.month + '-' + p.day + 'T' + p.hour + ':' + p.minute + ':' + p.second + off;
+      }
+
+      const jourSemaine = (date) => new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, weekday: 'long' }).format(date);
+      const dateCourte = (iso) =>
+        new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+          .format(new Date(iso)).replace(' 00:00', '');
+
+      // Thèmes et prénoms déjà sortis, réinjectés pour stabiliser les libellés.
+      async function connus() {
+        const themes = new Set();
+        const prenoms = new Set();
+        if (existsSync(LOG)) {
+          for (const line of (await readFile(LOG, 'utf8')).split('\n')) {
+            if (!line) continue;
+            try {
+              for (const it of JSON.parse(line).resultat?.items || []) {
+                if (it.theme) themes.add(it.theme);
+                for (const p of it.personnes || []) prenoms.add(p);
+              }
+            } catch {}
+          }
+        }
+        const aucun = "aucun pour l'instant";
+        return { themes: [...themes].join(', ') || aucun, prenoms: [...prenoms].join(', ') || aucun };
+      }
+
+      async function gemini(model, system, parts) {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{ role: 'user', parts }],
+            generationConfig: { temperature: 0.2, responseMimeType: 'application/json', responseSchema: SCHEMA },
+          }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error('Gemini ' + model + ' ' + r.status + ' : ' + (j.error?.message || 'réponse illisible'));
+        const text = (j.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
+        const out = JSON.parse(text);
+        if (typeof out.transcription !== 'string' || !Array.isArray(out.items)) throw new Error('Sortie hors schéma');
+        return { out, usage: j.usageMetadata };
+      }
+
+      const LABEL = { action: 'À faire', pensee: 'Pensée', information: 'Info', ambigu: 'À revoir' };
+
+      function resume(out) {
+        if (!out.items.length) return 'Rien à classer. Gardé tel quel.';
+        return out.items.map((it) => {
+          const extra = [];
+          const quand = it.echeance_date || it.fenetre_fin;
+          if (it.echeance_expr) extra.push(it.echeance_expr + (quand ? ' → ' + dateCourte(quand) : ''));
+          if (it.alarme) extra.push('alarme');
+          if (it.theme) extra.push(it.theme);
+          return '- ' + (LABEL[it.nature] || it.nature) + ' : ' + it.texte + (extra.length ? '\n  ' + extra.join(' · ') : '');
+        }).join('\n');
+      }
+
+      async function handle(u) {
+        const m = u.message;
+        if (!m) return;
+        const chat = String(m.chat.id);
+        if (!ALLOWED.includes(chat)) {
+          await say(m.chat.id, 'Accès non autorisé. Ton identifiant : ' + chat);
+          return;
+        }
+        const voice = m.voice || m.audio;
+        if (!voice && !m.text) return;
+        if (m.text === '/start') return say(m.chat.id, 'Prêt. Envoie un vocal.');
+        if (m.text?.startsWith('/')) return;
+
+        const emis = new Date(m.date * 1000);
+        const id = chat + '_' + m.message_id;
+        const capture = {
+          id, chat, message_id: m.message_id, emis_le: isoLocal(emis), recu_le: isoLocal(new Date()),
+          duree_s: voice?.duration ?? null, audio: null, texte_ecrit: m.text ?? null,
+          version_prompt: PROMPT_VERSION, modele: null, etat: 'recue', erreur: null, resultat: null, usage: null,
+        };
+
+        let parts;
+        if (voice) {
+          const f = await tg('getFile', { file_id: voice.file_id });
+          const buf = Buffer.from(await (await fetch(TG_FILE + f.file_path)).arrayBuffer());
+          capture.audio = 'audio/' + id + '.' + (f.file_path.split('.').pop() || 'ogg');
+          await writeFile(DATA + '/' + capture.audio, buf);
+          parts = [{ inlineData: { mimeType: voice.mime_type || 'audio/ogg', data: buf.toString('base64') } }, { text: 'Voici le vocal.' }];
+        } else {
+          parts = [{ text: "Message écrit, pas de vocal. Ce texte est la transcription :\n" + m.text }];
+        }
+        await say(m.chat.id, 'Reçu.', m.message_id);
+
+        const k = await connus();
+        const vars = {
+          '{{emis_le}}': capture.emis_le, '{{jour_semaine}}': jourSemaine(emis), '{{fuseau}}': TZ,
+          '{{themes_connus}}': k.themes, '{{prenoms_connus}}': k.prenoms, '{{exemples}}': '',
+        };
+        let system = SYSTEM;
+        for (const [key, val] of Object.entries(vars)) system = system.replaceAll(key, () => val);
+
+        for (const model of [MODEL, FALLBACK]) {
+          try {
+            const { out, usage } = await gemini(model, system, parts);
+            Object.assign(capture, { modele: model, etat: 'classee', erreur: null, resultat: out, usage });
+            break;
+          } catch (e) {
+            console.error(id + ' : ' + e.message);
+            Object.assign(capture, { modele: model, etat: 'a_revoir', erreur: e.message });
+          }
+        }
+        await appendFile(LOG, JSON.stringify(capture) + '\n');
+
+        if (capture.etat !== 'classee') await say(m.chat.id, 'Le tri a échoué. Le vocal est gardé.');
+        else if (SHOW_RESULT) await say(m.chat.id, resume(capture.resultat));
+      }
+
+      await tg('deleteWebhook', { drop_pending_updates: false });
+      let offset = existsSync(OFFSET) ? Number(await readFile(OFFSET, 'utf8')) : 0;
+      console.log('Organizer terrain démarré. Modèle ' + MODEL + ', repli ' + FALLBACK + ', ' + ALLOWED.length + ' conversation(s) autorisée(s).');
+
+      for (;;) {
+        let updates;
+        try {
+          updates = await tg('getUpdates', { offset, timeout: 50, allowed_updates: ['message'] });
+        } catch (e) {
+          console.error(e.message);
+          await sleep(5000);
+          continue;
+        }
+        for (const u of updates) {
+          // Trois essais avant d'abandonner un message : une panne réseau ne doit pas le perdre.
+          for (let essai = 1; essai <= 3; essai++) {
+            try {
+              await handle(u);
+              break;
+            } catch (e) {
+              console.error('Message ' + u.update_id + ', essai ' + essai + ' : ' + e.message);
+              await sleep(5000 * essai);
+            }
+          }
+          offset = u.update_id + 1;
+          await writeFile(OFFSET, String(offset));
+        }
+      }
+  prompt:
+    content: |
+      Tu reçois un message vocal en français, enregistré par une personne qui parle vite
+      pour ne rien oublier. Tu le transcris, tu le découpes en items, tu classes chaque
+      item. Tu ne réponds rien d'autre que le JSON demandé.
+
+      ## Contexte
+
+      - Date et heure d'émission du vocal : {{emis_le}} ({{jour_semaine}}), fuseau {{fuseau}}.
+      - Thèmes déjà utilisés : {{themes_connus}}
+      - Prénoms déjà connus : {{prenoms_connus}}
+
+      ## 1. Transcription
+
+      Transcris tout ce qui est dit, mot pour mot, hésitations utiles comprises.
+      Ne corrige pas le style, ne résume pas. Un passage inaudible devient « [inaudible] ».
+
+      ## 2. Découpage
+
+      Un item = un sujet. Garde les mots d'origine de chaque morceau.
+      **Dans le doute, ne découpe pas.** Deux sujets fusionnés valent mieux qu'une
+      pensée coupée en deux moitiés incompréhensibles.
+
+      ## 3. Classement
+
+      ### Nature (toujours)
+
+      - `action` : quelque chose à faire, même sans date.
+      - `pensee` : une réflexion, un ressenti, une idée. Elle ne se coche pas.
+      - `information` : un fait à garder (un code, une adresse, une taille).
+      - `ambigu` : impossible de trancher sans demander. Préfère `ambigu` à un classement forcé.
+
+      ### Échéance (actions uniquement)
+
+      | `echeance_type` | Quand | Champs datés |
+      | --- | --- | --- |
+      | `datee` | jour et heure dits | `echeance_date` avec l'heure |
+      | `jour` | un jour sans heure | `echeance_date` à minuit |
+      | `fenetre` | « avant Noël », « courant mars » | `fenetre_debut`, `fenetre_fin` |
+      | `relative` | « sous quinze jours », « dans trois jours » | `echeance_date` calculée depuis la date d'émission |
+      | `aucune` | rien n'est dit | tout à `null` |
+
+      Résous les dates à partir de la date d'émission, pas d'aujourd'hui. « Jeudi » =
+      le prochain jeudi ; si on est jeudi, c'est aujourd'hui. Dates au format ISO 8601
+      avec le décalage du fuseau. Recopie l'expression dite dans `echeance_expr`.
+
+      ### Autres attributs des actions
+
+      - `importance` : `haute` seulement si c'est dit ou évident (santé, administration
+        avec date limite). Sinon `normale`. `basse` si c'est dit (« si j'ai le temps »).
+      - `effort` : `moins_5min`, `moins_30min`, `plus_1h`, `multi_session`, ou `null` si pas évident.
+      - `contexte` : `appel`, `achat`, `maison`, `administratif`, `avec_quelquun`, `autre`.
+      - `alarme` : `true` **uniquement** si la personne demande à être prévenue
+        (« mets-moi une alarme », « faut pas que je le rate », « préviens-moi »).
+        Jamais déduite de l'importance. Uniquement pour `datee` ; sinon `null`.
+        Recopie la formulation dans `alarme_expr`.
+
+      ### Attributs des pensées
+
+      - `tonalite` : `constat`, `question`, `inquietude`, `elan`.
+
+      ### Pour tous les items
+
+      - `personnes` : prénoms cités, orthographiés comme dans la liste connue s'ils y
+        sont. `[]` si aucun.
+      - `theme` : un mot ou deux, en minuscules, sans accent. **Réutilise un thème
+        connu** dès qu'il convient ; n'en crée un nouveau que si aucun ne va.
+      - `confiance` : de 0 à 1 pour la nature, l'échéance et le thème. Baisse-la dès
+        que tu hésites ; c'est ce qui déclenche une question plutôt qu'une erreur.
+
+      ## Règles absolues
+
+      1. **N'invente rien.** Un attribut que la personne n'a pas dit reste `null`.
+         Une date, une importance, une personne ne se devinent pas.
+      2. Les attributs qui ne concernent pas la nature de l'item valent `null`
+         (pas d'échéance pour une pensée, pas de tonalité pour une action).
+      3. Si le vocal est vide ou inaudible, renvoie la transcription telle quelle et `items: []`.
+
+      {{exemples}}
+  schema:
+    content: |
+      {
+        "type": "OBJECT",
+        "properties": {
+          "transcription": { "type": "STRING" },
+          "items": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "position": { "type": "INTEGER" },
+                "texte": { "type": "STRING" },
+                "nature": { "type": "STRING", "enum": ["action", "pensee", "information", "ambigu"] },
+                "echeance_type": { "type": "STRING", "nullable": true, "enum": ["datee", "jour", "fenetre", "relative", "aucune"] },
+                "echeance_expr": { "type": "STRING", "nullable": true },
+                "echeance_date": { "type": "STRING", "nullable": true, "format": "date-time" },
+                "fenetre_debut": { "type": "STRING", "nullable": true, "format": "date-time" },
+                "fenetre_fin": { "type": "STRING", "nullable": true, "format": "date-time" },
+                "importance": { "type": "STRING", "nullable": true, "enum": ["haute", "normale", "basse"] },
+                "effort": { "type": "STRING", "nullable": true, "enum": ["moins_5min", "moins_30min", "plus_1h", "multi_session"] },
+                "contexte": { "type": "STRING", "nullable": true, "enum": ["appel", "achat", "maison", "administratif", "avec_quelquun", "autre"] },
+                "alarme": { "type": "BOOLEAN", "nullable": true },
+                "alarme_expr": { "type": "STRING", "nullable": true },
+                "tonalite": { "type": "STRING", "nullable": true, "enum": ["constat", "question", "inquietude", "elan"] },
+                "personnes": { "type": "ARRAY", "items": { "type": "STRING" } },
+                "theme": { "type": "STRING" },
+                "confiance": {
+                  "type": "OBJECT",
+                  "properties": {
+                    "nature": { "type": "NUMBER" },
+                    "echeance": { "type": "NUMBER", "nullable": true },
+                    "theme": { "type": "NUMBER" }
+                  },
+                  "required": ["nature", "echeance", "theme"],
+                  "propertyOrdering": ["nature", "echeance", "theme"]
+                }
+              },
+              "required": [
+                "position", "texte", "nature", "echeance_type", "echeance_expr", "echeance_date",
+                "fenetre_debut", "fenetre_fin", "importance", "effort", "contexte", "alarme",
+                "alarme_expr", "tonalite", "personnes", "theme", "confiance"
+              ],
+              "propertyOrdering": [
+                "position", "texte", "nature", "echeance_type", "echeance_expr", "echeance_date",
+                "fenetre_debut", "fenetre_fin", "importance", "effort", "contexte", "alarme",
+                "alarme_expr", "tonalite", "personnes", "theme", "confiance"
+              ]
+            }
+          }
+        },
+        "required": ["transcription", "items"],
+        "propertyOrdering": ["transcription", "items"]
+      }
