@@ -38,6 +38,8 @@ incompréhensibles.
 | `nature` | `action`, `pensee`, `information`, `ambigu` | toujours |
 | `echeance_type` | `datee`, `jour`, `fenetre`, `relative`, `aucune` | actions |
 | `echeance_expr` | l'expression telle que dite, ex. « avant Noël » | si une échéance est dite |
+| `echeance_date` | date résolue, ISO 8601, ex. `2026-10-08T00:00:00+02:00` | `datee`, `jour`, `relative` |
+| `fenetre_debut`, `fenetre_fin` | bornes résolues, ISO 8601 | `fenetre` |
 | `importance` | `haute`, `normale`, `basse` | actions |
 | `effort` | `moins_5min`, `moins_30min`, `plus_1h`, `multi_session` | actions, si évident |
 | `contexte` | `appel`, `achat`, `maison`, `administratif`, `avec_quelquun`, `autre` | actions |
@@ -59,9 +61,8 @@ incompréhensibles.
    sujet ne doit pas avoir trois libellés.
 4. **`ambigu` plutôt qu'un classement forcé.** C'est ce que le système fera :
    une question unique, ou `à revoir`.
-5. **Transcription locale uniquement**, à la main ou avec un outil qui tourne
-   sur le poste (whisper.cpp). Pas de Gemini tant que L n'a pas donné son
-   accord.
+5. **Transcription** à la main, avec whisper.cpp en local, ou par Gemini en
+   palier payé : L a donné son accord le 2 octobre 2026.
 
 ## Exemple (énoncés fabriqués)
 

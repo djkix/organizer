@@ -1,0 +1,52 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "transcription": { "type": "STRING" },
+    "items": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "position": { "type": "INTEGER" },
+          "texte": { "type": "STRING" },
+          "nature": { "type": "STRING", "enum": ["action", "pensee", "information", "ambigu"] },
+          "echeance_type": { "type": "STRING", "nullable": true, "enum": ["datee", "jour", "fenetre", "relative", "aucune"] },
+          "echeance_expr": { "type": "STRING", "nullable": true },
+          "echeance_date": { "type": "STRING", "nullable": true, "format": "date-time" },
+          "fenetre_debut": { "type": "STRING", "nullable": true, "format": "date-time" },
+          "fenetre_fin": { "type": "STRING", "nullable": true, "format": "date-time" },
+          "importance": { "type": "STRING", "nullable": true, "enum": ["haute", "normale", "basse"] },
+          "effort": { "type": "STRING", "nullable": true, "enum": ["moins_5min", "moins_30min", "plus_1h", "multi_session"] },
+          "contexte": { "type": "STRING", "nullable": true, "enum": ["appel", "achat", "maison", "administratif", "avec_quelquun", "autre"] },
+          "alarme": { "type": "BOOLEAN", "nullable": true },
+          "alarme_expr": { "type": "STRING", "nullable": true },
+          "tonalite": { "type": "STRING", "nullable": true, "enum": ["constat", "question", "inquietude", "elan"] },
+          "personnes": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "theme": { "type": "STRING" },
+          "confiance": {
+            "type": "OBJECT",
+            "properties": {
+              "nature": { "type": "NUMBER" },
+              "echeance": { "type": "NUMBER", "nullable": true },
+              "theme": { "type": "NUMBER" }
+            },
+            "required": ["nature", "echeance", "theme"],
+            "propertyOrdering": ["nature", "echeance", "theme"]
+          }
+        },
+        "required": [
+          "position", "texte", "nature", "echeance_type", "echeance_expr", "echeance_date",
+          "fenetre_debut", "fenetre_fin", "importance", "effort", "contexte", "alarme",
+          "alarme_expr", "tonalite", "personnes", "theme", "confiance"
+        ],
+        "propertyOrdering": [
+          "position", "texte", "nature", "echeance_type", "echeance_expr", "echeance_date",
+          "fenetre_debut", "fenetre_fin", "importance", "effort", "contexte", "alarme",
+          "alarme_expr", "tonalite", "personnes", "theme", "confiance"
+        ]
+      }
+    }
+  },
+  "required": ["transcription", "items"],
+  "propertyOrdering": ["transcription", "items"]
+}
