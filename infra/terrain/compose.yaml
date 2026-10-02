@@ -16,7 +16,7 @@ services:
     image: node:22-alpine
     restart: unless-stopped
     user: "1000:1000"
-    read_only: true
+    # Pas de read_only : Compose copie les configs « content » dans le conteneur.
     command: ["node", "/app/bot.mjs"]
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?}
