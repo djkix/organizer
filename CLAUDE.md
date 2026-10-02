@@ -98,3 +98,7 @@ pnpm prisma migrate dev
 
 Lot 0 : collecte d'une semaine de captures réelles et annotation. Aucun code applicatif
 avant que le prompt de tri soit validé sur ce corpus.
+
+Jalon du lot 0 franchi le 2 octobre 2026 : L confirme le besoin et accepte que ses
+vocaux ordinaires passent par Gemini en palier payé. Le prompt peut donc être testé
+sur le corpus réel une fois l'annotation faite (format : @docs/guide-annotation.md).

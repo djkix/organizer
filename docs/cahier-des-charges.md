@@ -892,12 +892,12 @@ Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses
 
 ### Jalons de décision
 
-| Fin de lot | Décision à prendre |
-| --- | --- |
-| Lot 0 | Le besoin est-il confirmé par L, et accepte-t-elle que ses pensées transitent par Gemini ? |
-| Lot 1 | Le classement par Gemini est-il assez bon et assez stable pour se passer de relecture ? |
-| Lot 2 | Les rappels sont-ils utiles ou vécus comme une pression ? |
-| Lot 3 | Les fonctions de confort ont-elles trouvé leur usage, ou faut-il en retirer ? |
+| Fin de lot | Décision à prendre | Résultat |
+| --- | --- | --- |
+| Lot 0 | Le besoin est-il confirmé par L, et accepte-t-elle que ses pensées transitent par Gemini ? | Oui aux deux, validé par L le 2 octobre 2026 |
+| Lot 1 | Le classement par Gemini est-il assez bon et assez stable pour se passer de relecture ? | — |
+| Lot 2 | Les rappels sont-ils utiles ou vécus comme une pression ? | — |
+| Lot 3 | Les fonctions de confort ont-elles trouvé leur usage, ou faut-il en retirer ? | — |
 
 ## Risques et points ouverts
 
@@ -910,7 +910,7 @@ Le risque principal n'est pas technique : c'est l'abandon après deux semaines s
 | Abandon par manque de fluidité | Projet inutile | Lot 0 de collecte réelle, mesure du délai de capture dès le lot 1 |
 | Tri jugé mauvais par L | Perte de confiance immédiate | Corriger en deux gestes, jeu de test issu de ses propres énoncés |
 | Rappels vécus comme une pression | Rejet émotionnel de l'outil | Silence par défaut, alarme uniquement sur demande, aucun compteur |
-| Refus de L d'envoyer ses pensées à Gemini | Retour au tout local, 16 Go de RAM | Question tranchée au lot 0 ; interface `ClassificationProvider` interchangeable |
+| Refus de L d'envoyer ses pensées à Gemini | Retour au tout local, 16 Go de RAM | Question tranchée le 2 octobre 2026 : L accepte. Interface `ClassificationProvider` gardée interchangeable si elle change d'avis |
 | Démarrage par erreur en palier gratuit | Contenu intime utilisé pour entraîner des modèles | Vérification de la facturation avant la première requête, test au déploiement |
 | Changement de tarif ou d'API Gemini | Coût ou réécriture | Modèle épinglé, plafond de dépense, abstraction du fournisseur |
 | Panne ou quota de l'API Gemini | Classement en retard | File conservée, reprise automatique, captures jamais perdues |
