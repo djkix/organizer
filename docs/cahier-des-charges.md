@@ -12,7 +12,7 @@ L'outil doit encaisser une pensée en moins de cinq secondes, puis la ranger san
 
 Le besoin vient de L : ses idées arrivent plus vite qu'elle ne peut les écrire, et le temps de choisir où les noter, elles sont perdues. Les outils de notes classiques échouent parce qu'ils demandent de classer au moment de la saisie. Ici, le classement est différé et automatique.
 
-L'hébergement est entièrement auto-hébergé sur le homelab Proxmox existant (nœud pve01), derrière le Nginx Proxy Manager déjà en place, avec une consultation mobile quotidienne.
+L'hébergement est entièrement auto-hébergé sur le homelab Proxmox existant (nœud pve), derrière le Nginx Proxy Manager déjà en place, avec une consultation mobile quotidienne.
 
 ### Objectifs et critères de succès
 
@@ -512,7 +512,7 @@ Le back-end reste en TypeScript/NestJS, par cohérence avec le projet d'inventai
 | Enregistrement privé | MediaRecorder, format Opus | — | Enregistreur natif du navigateur, envoi direct à l'API |
 | PWA | Workbox | 7.x | Service worker, cache, file hors ligne, raccourcis Android |
 | Serveur front | Caddy | 2.x | Image légère, en-têtes et compression par défaut |
-| Reverse proxy | Nginx Proxy Manager existant | — | Déjà en place (VM 102), certificats Let's Encrypt automatiques |
+| Reverse proxy | Nginx Proxy Manager existant | — | Déjà en place (conteneur 101), certificats Let's Encrypt automatiques |
 | Supervision | Uptime Kuma + Loki | — | Déjà pertinent à l'échelle du homelab |
 
 ### Avertissement : l'abonnement Gemini ne donne pas l'API
@@ -565,7 +565,7 @@ Pas d'environnement de recette intermédiaire : le volume ne le justifie pas. Le
 
 ## Déploiement Docker
 
-Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (décision 13), publiée par le Nginx Proxy Manager existant (VM 102). Aucun conteneur n'expose de port sur l'extérieur.
+Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (VM 105, décision 13), publiée par le Nginx Proxy Manager existant (conteneur 101). Aucun conteneur n'expose de port sur l'extérieur.
 
 ### Services
 
@@ -741,7 +741,7 @@ L'exploitation doit être nulle en régime normal : aucune action mensuelle, auc
 
 | Élément | Fréquence | Rétention | Destination |
 | --- | --- | --- | --- |
-| Dump PostgreSQL | Quotidienne, 3h | 30 jours glissants, 12 mensuels | NAS Synology (VM 101) |
+| Dump PostgreSQL | Quotidienne, 3h | 30 jours glissants, 12 mensuels | NAS Synology (VM 103) |
 | Volume audio | Hebdomadaire, incrémentale | Illimitée, jamais purgée | NAS Synology |
 | Fichiers de configuration et `.env` | À chaque modification | Illimitée | Hors dépôt, gestionnaire de mots de passe |
 | Snapshot de l'hôte Docker | Hebdomadaire | 4 semaines | Proxmox, si l'hôte est une VM |
