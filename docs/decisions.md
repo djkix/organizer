@@ -13,7 +13,7 @@
 | 9 | Compte de l'API Gemini | Compte Google personnel de Franck, facturation activée |
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
 | 11 | Sauvegarde | NAS Synology seul, pas de copie hors site |
-| 12 | Purge de l'audio | Jamais |
+| 12 | Disque et audio | 50 Go plafonnés pour la stack, rotation de l'audio ordinaire déjà transcrit |
 | 13 | Hébergement | Hôte Docker existant du homelab, stack pilotée par Dockge |
 | 14 | Publication | organizer.djkix.ovh |
 | 15 | Dépôt | GitHub personnel djkix, public |

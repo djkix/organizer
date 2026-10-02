@@ -1,6 +1,12 @@
 # Stack Organizer — déployée par Dockge, publiée par le Nginx Proxy Manager existant.
 # Référence : docs/cahier-des-charges.md, section « Déploiement Docker ».
 #
+# Dans Dockge : ce fichier est le compose.yaml de la stack « organizer »
+# (/opt/stacks/organizer/), avec .env, Caddyfile et secrets/ dans le même dossier.
+#
+# Tous les volumes vivent dans ${ORGANIZER_DATA_DIR}, un ext4 de 50 Go monté
+# depuis une image pré-allouée : plafond physique, voir le cahier (décision 12).
+#
 # Aucun modèle d'IA ne tourne ici, sauf les embeddings bge-small dans le worker.
 # Les secrets ne sont jamais dans ce fichier : .env pour la configuration,
 # infra/secrets/ (ignoré par Git) pour les clés.
@@ -105,7 +111,14 @@ services:
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/google_oauth_client_secret
       GOOGLE_CALENDAR_SCOPE: https://www.googleapis.com/auth/calendar.app.created
+      # Rotation de l'audio ordinaire déjà transcrit, chaque nuit à 4h (décision 12).
+      AUDIO_STORAGE_PATH: /data/audio
+      AUDIO_ROTATION_HIGH_PCT: ${AUDIO_ROTATION_HIGH_PCT:-85}
+      AUDIO_ROTATION_LOW_PCT: ${AUDIO_ROTATION_LOW_PCT:-75}
+      AUDIO_ROTATION_MIN_AGE_DAYS: ${AUDIO_ROTATION_MIN_AGE_DAYS:-30}
     secrets: [google_oauth_client_secret]
+    volumes:
+      - audio:/data/audio
     networks: [core, egress]
     depends_on:
       db:
@@ -208,13 +221,30 @@ networks:
   # (Telegram, FCM, Gemini, Google Agenda) est appliquée par un proxy sortant, au lot 1.
   egress: {}
 
+# Bind mounts nommés : les noms restent utilisables par le service backup,
+# les données restent dans le système de fichiers plafonné.
+x-bind: &bind
+  driver: local
+
 volumes:
   pgdata:
+    <<: *bind
+    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/pgdata" }
   audio:
+    <<: *bind
+    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/audio" }
   models-emb:
+    <<: *bind
+    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/models-emb" }
   valkeydata:
+    <<: *bind
+    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/valkeydata" }
   web-dist:
+    <<: *bind
+    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/web-dist" }
   caddy-data:
+    <<: *bind
+    driver_opts: { type: none, o: bind, device: "${ORGANIZER_DATA_DIR:?}/caddy-data" }
 
 secrets:
   gemini_api_key:
