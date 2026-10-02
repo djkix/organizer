@@ -53,7 +53,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
 | 11 | Sauvegarde | NAS Synology seul, pas de copie hors site |
 | 12 | Purge de l'audio | Jamais. Conservation illimitée |
-| 13 | Hébergement | VM dédiée sur pve01 |
+| 13 | Hébergement | Hôte Docker existant du homelab, stack pilotée par Dockge |
 | 14 | Publication | `organizer.djkix.ovh` |
 | 15 | Dépôt | GitHub personnel djkix, **public** |
 | 16 | Comptes | Deux : L et Franck |
@@ -559,13 +559,13 @@ Le pipeline reste écrit derrière une interface `ClassificationProvider`. Bascu
 | Environnement | Hébergement | Données |
 | --- | --- | --- |
 | Local | Docker Compose sur poste de dev | Jeu de données fictif |
-| Production | VM dédiée sur pve01 | Données réelles |
+| Production | Hôte Docker existant du homelab | Données réelles |
 
 Pas d'environnement de recette intermédiaire : le volume ne le justifie pas. Les migrations sont testées en local sur une copie anonymisée.
 
 ## Déploiement Docker
 
-Une seule stack Docker Compose, déployée via Dockge sur une VM dédiée du nœud pve01, publiée par le Nginx Proxy Manager existant (VM 102). Aucun conteneur n'expose de port sur l'extérieur.
+Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (décision 13), publiée par le Nginx Proxy Manager existant (VM 102). Aucun conteneur n'expose de port sur l'extérieur.
 
 ### Services
 
@@ -643,7 +643,7 @@ Mesures : `.gitignore` strict dès le premier commit, analyse de secrets activé
 flowchart LR
   GIT[Depot Git] --> CI[GitHub Actions]
   CI --> REG[Registre GHCR]
-  REG --> DOCKGE[Dockge sur pve01]
+  REG --> DOCKGE[Dockge sur l'hôte Docker]
   DOCKGE --> STACK[Stack organizer]
 ```
 
@@ -721,7 +721,7 @@ Décision 3 : se repérer par la date et l'heure suffit. C'est ce qui permet de 
 ### Chiffrement
 
 - En transit : TLS 1.2 minimum, 1.3 privilégié, sur toutes les surfaces publiques.
-- Au repos : chiffrement au niveau du disque de la VM Proxmox.
+- Au repos : chiffrement du disque qui porte les volumes de la stack sur l'hôte Docker.
 - Sauvegardes : chiffrement GPG avant dépôt sur le NAS, clé conservée hors du serveur.
 - Chiffrement applicatif colonne par colonne écarté : il empêcherait la recherche vectorielle, pour un gain faible face au chiffrement disque.
 
@@ -744,7 +744,7 @@ L'exploitation doit être nulle en régime normal : aucune action mensuelle, auc
 | Dump PostgreSQL | Quotidienne, 3h | 30 jours glissants, 12 mensuels | NAS Synology (VM 101) |
 | Volume audio | Hebdomadaire, incrémentale | Illimitée, jamais purgée | NAS Synology |
 | Fichiers de configuration et `.env` | À chaque modification | Illimitée | Hors dépôt, gestionnaire de mots de passe |
-| Snapshot de la VM | Hebdomadaire | 4 semaines | Proxmox, pool local-lvm |
+| Snapshot de l'hôte Docker | Hebdomadaire | 4 semaines | Proxmox, si l'hôte est une VM |
 
 Décision 11 : pas de copie hors site. Le NAS est dans la même maison que le serveur, donc un incendie ou un vol emporte les deux. C'est un risque accepté, pas un oubli. Le chiffrement GPG des sauvegardes reste en place, la clé étant conservée ailleurs que sur le serveur.
 
@@ -800,16 +800,15 @@ Le système est dimensionné pour deux utilisateurs et une cinquantaine de captu
 | Notifications par jour (alarmes demandées uniquement) | 3 | 6 |
 | Volume audio par an | 20 Go | 45 Go |
 
-### Dimensionnement de la VM
+### Ressources à réserver sur l'hôte Docker
 
 | Ressource | Minimum | Recommandé |
 | --- | --- | --- |
-| vCPU | 2 | 4 |
-| RAM | 4 Go | 6 Go |
-| Disque système | 20 Go | 40 Go |
-| Disque données | 100 Go | 200 Go |
+| CPU disponibles | 2 | 4 |
+| RAM libre | 4 Go | 6 Go |
+| Espace pour les volumes | 100 Go | 200 Go |
 
-Répartition de la RAM recommandée : 2 Go pour PostgreSQL, 1 Go pour l'API, 1 Go pour le worker et son modèle d'embeddings, le reste pour le système et la file. Déporter l'intelligence sur Gemini divise le besoin en mémoire par trois : une VM de 4 à 6 Go suffit là où il en fallait 16. La VM dédiée reste le choix retenu (décision 13), par isolement et par simplicité de sauvegarde. Le pool local-lvm de 1,7 To du nœud pve01 absorbe sans difficulté le disque de données.
+Répartition de la RAM recommandée : 2 Go pour PostgreSQL, 1 Go pour l'API, 1 Go pour le worker et son modèle d'embeddings, le reste pour le système et la file. Déporter l'intelligence sur Gemini divise le besoin en mémoire par trois : 4 à 6 Go suffisent là où il en fallait 16. La stack tourne sur l'hôte Docker existant (décision 13), sans VM dédiée : les limites mémoire par service et les réseaux Docker l'isolent des autres services de l'hôte.
 
 ### Performance
 
