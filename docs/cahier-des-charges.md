@@ -60,7 +60,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 17 | Widget d'accueil | Home Assistant, silencieux, surface principale de rappel, livré au lot 2 |
 | 18 | Modèle | `gemini-3.1-flash-lite` par défaut |
 | 19 | Nom | Organizer |
-| 20 | Bot Telegram | `@organizer_lud` |
+| 20 | Bot Telegram | `@organizer_lud_bot` |
 
 ## Périmètre fonctionnel
 
@@ -612,7 +612,7 @@ L'API est le seul point d'envoi de messages vers L : le scheduler déclenche une
 | `organizer.djkix.ovh` | `web:80` puis `api:3000` sur `/api` | Publique, HTTPS |
 | `organizer-bot.djkix.ovh` | `api:3000` sur `/telegram/webhook` | Publique, restreinte aux plages IP Telegram |
 
-Bot Telegram : `@organizer_lud`. API Gemini : projet Google Cloud sur le compte Google personnel de Franck, palier payé en Prépaiement sans recharge automatique, plus un plafond de dépenses appliqué à 9 € par mois sur la Gemini API, alertes à 50, 80 et 100 %. Les identifiants de compte restent hors du dépôt.
+Bot Telegram : `@organizer_lud_bot`. API Gemini : projet Google Cloud sur le compte Google personnel de Franck, palier payé en Prépaiement sans recharge automatique, plus un plafond de dépenses appliqué à 9 € par mois sur la Gemini API, alertes à 50, 80 et 100 %. Les identifiants de compte restent hors du dépôt.
 
 Certificats Let's Encrypt gérés par le Nginx Proxy Manager. HSTS activé, HTTP/2, redirection HTTP vers HTTPS, taille de requête plafonnée à 30 Mo pour les envois audio.
 
@@ -695,7 +695,7 @@ Séparer les deux captures par le point d'entrée, et non par le contenu, suppri
 
 | Élément | Choix |
 | --- | --- |
-| Capture ordinaire | Vocal envoyé au bot `@organizer_lud` dans Telegram |
+| Capture ordinaire | Vocal envoyé au bot `@organizer_lud_bot` dans Telegram |
 | Capture privée | Bouton dédié dans la PWA, doublé d'un raccourci Android sur l'écran d'accueil qui ouvre directement l'enregistreur privé |
 | Distinction visuelle | Écran d'enregistrement privé de couleur distincte, cadenas permanent, mention « reste sur le serveur » avant et pendant l'enregistrement |
 | Traitement | Stockée telle quelle, jamais envoyée, jamais transcrite, jamais classée |
