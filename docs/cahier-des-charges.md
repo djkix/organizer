@@ -805,10 +805,10 @@ Le système est dimensionné pour deux utilisateurs et une cinquantaine de captu
 | Ressource | Minimum | Recommandé |
 | --- | --- | --- |
 | CPU disponibles | 2 | 4 |
-| RAM libre | 4 Go | 6 Go |
+| RAM libre | 2 Go | 3 Go |
 | Espace pour les volumes | 100 Go | 200 Go |
 
-Répartition de la RAM recommandée : 2 Go pour PostgreSQL, 1 Go pour l'API, 1 Go pour le worker et son modèle d'embeddings, le reste pour le système et la file. Déporter l'intelligence sur Gemini divise le besoin en mémoire par trois : 4 à 6 Go suffisent là où il en fallait 16. La stack tourne sur l'hôte Docker existant (décision 13), sans VM dédiée : les limites mémoire par service et les réseaux Docker l'isolent des autres services de l'hôte.
+Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo pour le worker et son modèle d'embeddings, 256 Mo pour le scheduler, 128 Mo pour la file, 64 Mo pour le front, soit environ 2,7 Go au total. À ce volume, deux utilisatrices et une cinquantaine de captures par jour, c'est suffisant. Déporter l'intelligence sur Gemini évite les 16 Go qu'exigeraient des modèles locaux. La stack tourne sur l'hôte Docker existant (décision 13), sans VM dédiée : les limites mémoire par service et les réseaux Docker l'isolent des autres services de l'hôte.
 
 ### Performance
 

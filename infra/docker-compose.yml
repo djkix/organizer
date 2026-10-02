@@ -68,7 +68,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: 512m
 
   worker:
     <<: *app
@@ -95,7 +95,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: 768m
 
   scheduler:
     <<: *app
@@ -134,7 +134,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128m
+          memory: 64m
 
   db:
     image: pgvector/pgvector:0.8.0-pg17
@@ -144,6 +144,8 @@ services:
       POSTGRES_DB: organizer
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       TZ: Europe/Paris
+    # Réglé pour une limite de 1 Go : deux utilisateurs, une cinquantaine de captures par jour.
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "effective_cache_size=512MB", "-c", "work_mem=8MB", "-c", "max_connections=30"]
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks: [core]
@@ -159,12 +161,12 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2g
+          memory: 1g
 
   queue:
     image: valkey/valkey:8.1-alpine
     restart: unless-stopped
-    command: ["valkey-server", "--appendonly", "yes"]
+    command: ["valkey-server", "--appendonly", "yes", "--maxmemory", "96mb", "--maxmemory-policy", "noeviction"]
     volumes:
       - valkeydata:/data
     networks: [core]
@@ -177,7 +179,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256m
+          memory: 128m
 
   # Dump quotidien de la base vers le NAS, chiffré GPG.
   backup:
