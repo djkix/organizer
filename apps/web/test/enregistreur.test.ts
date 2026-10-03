@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EnregistrementVide } from '../src/lib/prive/file.js';
-import { creerEnregistreur, DEBIT_PRIVE, MIME_PRIVE } from '../src/lib/prive/enregistreur.js';
+import { creerEnregistreur, DEBIT_PRIVE, DUREE_MAX_S, MIME_PRIVE } from '../src/lib/prive/enregistreur.js';
 
 class FauxRecorder extends EventTarget {
   static accepte = true;
+  static muet = false;
   static dernier: FauxRecorder;
   static isTypeSupported = (t: string): boolean => FauxRecorder.accepte && t === MIME_PRIVE;
   state: RecordingState = 'inactive';
@@ -14,6 +15,7 @@ class FauxRecorder extends EventTarget {
   get mimeType(): string { return this.options.mimeType ?? ''; }
   start(): void { this.state = 'recording'; }
   stop(): void {
+    if (FauxRecorder.muet) return; // Un navigateur qui ne dit jamais « stop ».
     this.donnees('fin');
     this.state = 'inactive';
     this.dispatchEvent(new Event('stop'));
@@ -25,12 +27,13 @@ class FauxRecorder extends EventTarget {
   }
 }
 
-function monter(surInterruption?: () => void) {
+function monter(surInterruption?: () => void, surLimite?: () => void) {
   const piste = Object.assign(new EventTarget(), { stop: vi.fn() });
   const flux = { getTracks: () => [piste] } as unknown as MediaStream;
   let t = new Date('2026-10-06T21:00:00.000Z');
   const e = creerEnregistreur({
     surInterruption,
+    surLimite,
     media: { getUserMedia: async () => flux },
     Recorder: FauxRecorder as unknown as typeof MediaRecorder,
     maintenant: () => t,
@@ -95,5 +98,69 @@ describe('enregistreur', () => {
     const e = creerEnregistreur({ media: { getUserMedia: async () => flux }, Recorder: Casse as unknown as typeof MediaRecorder });
     await expect(e.demarrer()).rejects.toThrow('non');
     expect(piste.stop).toHaveBeenCalled();
+  });
+
+  it('une heure : la limite est signalée, une seule fois', async () => {
+    vi.useFakeTimers();
+    try {
+      const limite = vi.fn();
+      const { e } = monter(undefined, limite);
+      await e.demarrer();
+      vi.advanceTimersByTime(DUREE_MAX_S * 1000 - 1);
+      expect(limite).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(limite).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(10_000);
+      expect(limite).toHaveBeenCalledTimes(1);
+      FauxRecorder.dernier.stop();
+      await e.arreter();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('deux demarrer() simultanés : un seul flux, le second ne fait rien', async () => {
+    const piste = Object.assign(new EventTarget(), { stop: vi.fn() });
+    const flux = { getTracks: () => [piste] } as unknown as MediaStream;
+    const ouvrir = vi.fn(async () => flux);
+    const e = creerEnregistreur({ media: { getUserMedia: ouvrir }, Recorder: FauxRecorder as unknown as typeof MediaRecorder });
+    await Promise.all([e.demarrer(), e.demarrer()]);
+    await e.demarrer();
+    expect(ouvrir).toHaveBeenCalledTimes(1);
+    await e.arreter();
+    expect(piste.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('un échec de demarrer() permet de recommencer', async () => {
+    let n = 0;
+    const piste = Object.assign(new EventTarget(), { stop: vi.fn() });
+    const flux = { getTracks: () => [piste] } as unknown as MediaStream;
+    const e = creerEnregistreur({
+      media: { getUserMedia: async () => { if (n++ === 0) throw new DOMException('pris', 'NotReadableError'); return flux; } },
+      Recorder: FauxRecorder as unknown as typeof MediaRecorder,
+    });
+    await expect(e.demarrer()).rejects.toThrow('pris');
+    await e.demarrer();
+    expect(n).toBe(2);
+    await e.arreter();
+  });
+
+  it('si « stop » ne vient jamais, on garde ce qui a été reçu', async () => {
+    vi.useFakeTimers();
+    try {
+      FauxRecorder.muet = true;
+      const { e, avancer } = monter();
+      await e.demarrer();
+      FauxRecorder.dernier.donnees('debut');
+      avancer(7_000);
+      const p = e.arreter();
+      await vi.advanceTimersByTimeAsync(10_000);
+      const r = await p;
+      expect(await r.blob.text()).toBe('debut');
+      expect(r.dureeS).toBe(7);
+    } finally {
+      FauxRecorder.muet = false;
+      vi.useRealTimers();
+    }
   });
 });

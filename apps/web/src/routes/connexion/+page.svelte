@@ -14,7 +14,7 @@
   let enAttente = $state(false);
   onMount(async () => {
     try {
-      enAttente = (await filePrivee.lister()).length > 0;
+      enAttente = (await filePrivee.lister()).some((c) => !c.refuse);
     } catch {
       enAttente = false;
     }
