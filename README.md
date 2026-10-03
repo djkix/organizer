@@ -143,6 +143,7 @@ docs/             cahier des charges, décisions, guide d'annotation, plans
 | `AUDIO_STORAGE_PATH` | dossier de l'audio, commun à l'API et au worker |
 | `PROMPTS_DIR`, `PROMPT_VERSION` | dossier des prompts (défaut `prompts`) et version (défaut `tri/v1`) |
 | `GEMINI_TIERS_PAYES` | valeurs de `serviceTier` acceptées comme palier payé |
+| `TRUSTED_PROXY` | adresse du proxy dont l'API croit `X-Forwarded-For` (défaut `loopback`) ; sert à la limitation de débit par IP |
 
 Chaque variable peut aussi être lue depuis un fichier, par `<NOM>_FILE` (secrets Docker).
 
@@ -151,6 +152,17 @@ L'API expose :
 - `GET /health` : répond `{ "ok": true }`, pour la sonde de santé ;
 - `POST /telegram/webhook` : le webhook Telegram, en mode `webhook` seulement (404 en mode `polling`).
   Une erreur de traitement répond 500 : Telegram relivre, et l'ingestion est idempotente.
+
+Routes de la PWA, sous `/api`, toutes protégées par la session sauf sa création :
+
+- `POST /api/session` : connexion (mot de passe), cookie de 90 jours ; `DELETE /api/session` : déconnexion ;
+  `GET /api/session/moi` : le compte connecté ;
+- `GET /api/vues/aujourdhui`, `/semaine`, `/horizons`, `/a-revoir` : les vues, communes aux deux comptes ;
+- `POST /api/items/:id/fait` : cocher ; `DELETE /api/items/:id/fait` : décocher ;
+  `PATCH /api/items/:id` : corriger la nature ou l'échéance ;
+- `GET /api/captures/:id/audio` : réécouter l'audio d'origine ;
+- `POST /api/captures/privees` : déposer une capture privée ; `GET /api/captures/privees` : les lister par jour ;
+  `PATCH /api/captures/privees/:id` : poser ou retirer l'étiquette.
 
 En mode `polling`, si le polling s'arrête sur une erreur (jeton refusé, autre processus sur le
 même bot), l'API s'arrête volontairement.
@@ -166,6 +178,15 @@ palier payé.
 
 Au démarrage puis chaque heure, le worker remet en file les captures perdues en route.
 
+## Mode privé
+
+Une capture faite par le bouton privé de la PWA, ou juste après le bouton « Prochaine capture privée » de Telegram, reste sur le serveur.
+Elle n'est jamais transcrite, jamais classée, jamais envoyée à Gemini.
+On la retrouve par date et heure, avec une étiquette facultative.
+
+Dans Telegram, le bouton arme la capture suivante, vocal ou texte, une seule fois.
+Le bot répond « Reçu. Elle reste sur le serveur. »
+
 ## Administration
 
 Aucune inscription libre : les comptes se créent en ligne de commande. La CLI lit le `.env` racine.
@@ -174,6 +195,7 @@ Aucune inscription libre : les comptes se créent en ligne de commande. La CLI l
 | --- | --- |
 | `pnpm --filter @organizer/api cli creer-utilisateur <nom> [--admin]` | crée un compte ; `--admin` reçoit les alertes techniques |
 | `pnpm --filter @organizer/api cli code-liaison <nom>` | affiche un code à usage unique, valable 10 minutes, à envoyer au bot par `/start <code>` |
+| `pnpm --filter @organizer/api cli mot-de-passe <nom>` | pose ou change le mot de passe (Argon2id, 12 caractères minimum, saisie masquée et confirmée) ; révoque les sessions du compte |
 | `pnpm --filter @organizer/api cli delier <nom>` | retire le lien entre un compte et son chat Telegram (une liaison ne remplace jamais un lien existant) |
 
 ## Commandes

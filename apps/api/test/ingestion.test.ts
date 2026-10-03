@@ -50,7 +50,7 @@ describe('IngestionService', () => {
     const a = await service.recevoir(utilisateurId, vocal());
     const b = await service.recevoir(utilisateurId, vocal());
     expect(a.nouvelle).toBe(true);
-    expect(b).toEqual({ id: a.id, nouvelle: false });
+    expect(b).toEqual({ id: a.id, nouvelle: false, prive: false });
     expect(await prisma.capture.count()).toBe(1);
   });
 
@@ -109,5 +109,45 @@ describe('IngestionService', () => {
     const chemin = await new StockageAudio(racine).ecrire('abc', new Date('2026-01-15T00:00:00Z'), Buffer.from('x'), '../../etc', 'ordinaire');
     expect(chemin).toBe('ordinaire/2026/01/abc.bin');
     expect(existsSync(join(racine, chemin))).toBe(true);
+  });
+});
+
+describe('prochaine capture privée', () => {
+  it('le drapeau armé rend la capture suivante privée, une seule fois', async () => {
+    await service.armerPrivee(utilisateurId);
+    const a = await service.recevoir(utilisateurId, vocal('tg:7:1'));
+    const b = await service.recevoir(utilisateurId, vocal('tg:7:2'));
+    expect([a.prive, b.prive]).toEqual([true, false]);
+    expect(await prisma.capture.findUniqueOrThrow({ where: { id: a.id } })).toMatchObject({ prive: true, etat: 'privee', canal: 'telegram' });
+    expect((await prisma.utilisateur.findUniqueOrThrow({ where: { id: utilisateurId } })).prochainePrivee).toBe(false);
+  });
+
+  it('une création en échec rend le drapeau ; la relivraison reste privée', async () => {
+    await service.armerPrivee(utilisateurId);
+    await service.recevoir(utilisateurId, vocal('tg:7:1'));
+    await service.armerPrivee(utilisateurId);
+    // Même référence : la création échoue (P2002), la transaction rend le drapeau.
+    const relivree = await service.recevoir(utilisateurId, vocal('tg:7:1'));
+    expect(relivree).toMatchObject({ nouvelle: false, prive: true });
+    expect((await prisma.utilisateur.findUniqueOrThrow({ where: { id: utilisateurId } })).prochainePrivee).toBe(true);
+  });
+
+  it('finaliserPrivee range l\'audio dans prive/ et n\'enfile jamais', async () => {
+    await service.armerPrivee(utilisateurId);
+    const { id } = await service.recevoir(utilisateurId, vocal());
+    await service.finaliserPrivee(id);
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id } });
+    expect(c.audioPath).toBe(`prive/2026/10/${id}.oga`);
+    expect(c.etat).toBe('privee');
+    expect(file.ids).toEqual([]);
+    await expect(service.finaliser(id)).rejects.toThrow('privée');
+  });
+
+  it('reprendre télécharge les privées restées sans audio, sans les enfiler', async () => {
+    await service.armerPrivee(utilisateurId);
+    const { id } = await service.recevoir(utilisateurId, vocal());
+    expect(await service.reprendre(new Date(Date.now() + 5 * 60_000))).toBe(1);
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id } })).audioPath).not.toBeNull();
+    expect(file.ids).toEqual([]);
   });
 });
