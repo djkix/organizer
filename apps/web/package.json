@@ -1,0 +1,24 @@
+{
+  "name": "@organizer/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "prepare": "svelte-kit sync || echo ''",
+    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@organizer/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.70.0",
+    "@sveltejs/vite-plugin-svelte": "^6.2.0",
+    "svelte": "^5.57.0",
+    "svelte-check": "^4.7.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.3.0"
+  }
+}
