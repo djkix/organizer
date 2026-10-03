@@ -7,7 +7,7 @@ import { chargerPrompt } from '@organizer/shared';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { SortieNonConforme } from '../src/classement/provider.js';
 import { CapturePriveeRefusee, traiterCapture, type DepsTraitement } from '../src/classement/traiter.js';
-import { creerCaptureTexte, FauxProvider } from './aides.js';
+import { creerCaptureTexte, FauxProvider, resultatExemple } from './aides.js';
 
 const prisma = creerPrisma();
 const prompt = chargerPrompt(join(import.meta.dirname, '../../../prompts'), 'tri/v1');
@@ -89,6 +89,18 @@ describe('traiterCapture', () => {
     const c = await prisma.capture.findUniqueOrThrow({ where: { id } });
     expect(c.etat).toBe('a_revoir');
     expect(c.erreur).toBe('sortie_non_conforme');
+    expect(await prisma.item.count()).toBe(0);
+  });
+
+  it('passe en a_revoir une capture sans item, en gardant transcription et traçabilité', async () => {
+    const { id } = await creerCaptureTexte(prisma);
+    const vide = { ...resultatExemple(), sortie: { ...resultatExemple().sortie, transcription: 'euh', items: [] } };
+    expect(await traiterCapture(id, deps(new FauxProvider([vide])))).toBe('a_revoir');
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id } });
+    expect(c).toMatchObject({
+      etat: 'a_revoir', erreur: 'aucun_item', texteBrut: 'euh', versionPrompt: 'tri/v1',
+      modele: 'modele-test', tokensEntree: 10, tokensSortie: 5,
+    });
     expect(await prisma.item.count()).toBe(0);
   });
 
