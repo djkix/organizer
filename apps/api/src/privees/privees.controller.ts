@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { SessionGuard, type RequeteAuthentifiee } from '../auth/session.guard.js';
 import { PRIVEES } from '../jetons.js';
 import { CapturePriveeIntrouvable, FormatRefuse, IdentifiantRefuse, MoisInvalide, type CapturesPriveesService } from './privees.service.js';
-import { AudioIllisible } from './reencodeur.js';
+import { AudioIllisible, ServeurOccupe } from './reencodeur.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const schemaEtiquette = z.object({ etiquette: z.string().trim().max(80).nullable() });
@@ -54,6 +54,7 @@ export class PriveesController {
       if (e instanceof FormatRefuse) throw new HttpException({ message: 'Format audio non pris en charge.' }, 415);
       if (e instanceof AudioIllisible) throw new HttpException({ message: 'Enregistrement illisible.' }, 422);
       if (e instanceof IdentifiantRefuse) throw new BadRequestException('Identifiant refusé.');
+      if (e instanceof ServeurOccupe) throw new HttpException({ message: 'Serveur occupé. Réessaie plus tard.' }, 503);
       throw e;
     }
   }

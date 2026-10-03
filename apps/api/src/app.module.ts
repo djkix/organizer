@@ -17,7 +17,7 @@ import { ItemsController } from './items/items.controller.js';
 import { ItemsService } from './items/items.service.js';
 import { PriveesController } from './privees/privees.controller.js';
 import { CapturesPriveesService } from './privees/privees.service.js';
-import { ReencodeurFfmpeg } from './privees/reencodeur.js';
+import { ReencodeurBorne, ReencodeurFfmpeg } from './privees/reencodeur.js';
 import { SanteController } from './sante.controller.js';
 import { creerBot } from './telegram/bot.js';
 import { demarrerTelegram, dormir } from './telegram/demarrage.js';
@@ -28,6 +28,7 @@ import { VuesService } from './vues/vues.service.js';
 
 class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
   private minuterie?: NodeJS.Timeout;
+  private purge?: NodeJS.Timeout;
   private alertes?: Worker;
   private readonly arret = new AbortController();
 
@@ -37,6 +38,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     @Inject(REDIS) private readonly redis: Redis,
     @Inject(BOT) private readonly bot: Bot,
     @Inject(INGESTION) private readonly ingestion: IngestionService,
+    @Inject(AUTH) private readonly auth: AuthService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -54,11 +56,19 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
         console.error(`Reprise des captures en échec (${(err as Error).name})`);
       });
     }, 5 * 60_000);
+    const purger = (): void => {
+      Promise.all([this.auth.purgerExpirees(), new LiaisonService(this.prisma).purgerCodesExpires()]).catch((err: unknown) => {
+        console.error(`Purge des sessions en échec (${(err as Error).name})`);
+      });
+    };
+    purger();
+    this.purge = setInterval(purger, 6 * 3600_000);
   }
 
   async onApplicationShutdown(): Promise<void> {
     this.arret.abort();
     clearInterval(this.minuterie);
+    clearInterval(this.purge);
     if (this.config.telegramMode === 'polling' && this.bot.isRunning()) await this.bot.stop();
     await this.alertes?.close();
     await this.prisma.$disconnect();
@@ -103,7 +113,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
     { provide: VUES, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new VuesService(prisma) },
     { provide: ITEMS, inject: [CONFIG, PRISMA], useFactory: (c: ConfigApi, prisma: PrismaClient) => new ItemsService(prisma, c.typesEcheance) },
-    { provide: PRIVEES, inject: [CONFIG, PRISMA], useFactory: (c: ConfigApi, prisma: PrismaClient) => new CapturesPriveesService(prisma, new StockageAudio(c.audioRacine), new ReencodeurFfmpeg()) },
+    { provide: PRIVEES, inject: [CONFIG, PRISMA], useFactory: (c: ConfigApi, prisma: PrismaClient) => new CapturesPriveesService(prisma, new StockageAudio(c.audioRacine), new ReencodeurBorne(new ReencodeurFfmpeg())) },
     SessionGuard,
     Cycle,
   ],

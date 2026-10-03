@@ -13,7 +13,7 @@ import { StockageAudio } from '../src/ingestion/stockage.js';
 import { AUTH, PRIVEES } from '../src/jetons.js';
 import { PriveesController } from '../src/privees/privees.controller.js';
 import { CapturesPriveesService, FormatRefuse } from '../src/privees/privees.service.js';
-import { AudioIllisible, type Reencodeur } from '../src/privees/reencodeur.js';
+import { AudioIllisible, ServeurOccupe, type Reencodeur } from '../src/privees/reencodeur.js';
 import { demarrerAppTest } from './aides-http.js';
 
 const prisma = creerPrisma();
@@ -231,5 +231,51 @@ describe('/api/captures/privees : erreurs et paramètres', () => {
     app = await demarrerAppTest(M);
     expect((await patch(ID, { etiquette: 'x' })).status).toBe(500);
     expect((await fetch(`${app.url}/api/captures/privees?mois=2026-10`, { headers: { cookie } })).status).toBe(500);
+  });
+});
+
+describe('/api/captures/privees : bornes', () => {
+  it('503 quand ffmpeg est saturé : la PWA garde la capture et réessaiera', async () => {
+    const auth = new AuthService(prisma);
+    await auth.definirMotDePasse('l', 'un mot de passe assez long');
+    const s = await auth.ouvrirSession('l', 'un mot de passe assez long');
+    const occupe = new CapturesPriveesService(prisma, new StockageAudio(racine), {
+      versOpus: async () => { throw new ServeurOccupe('ffmpeg saturé'); },
+    });
+    class M {}
+    Module({ controllers: [PriveesController], providers: [
+      { provide: PRIVEES, useValue: occupe }, { provide: AUTH, useValue: auth }, SessionGuard,
+    ] })(M);
+    const app = await demarrerAppTest(M);
+    try {
+      const r = await fetch(`${app.url}/api/captures/privees`, {
+        method: 'POST',
+        headers: { cookie: `${NOM_COOKIE}=${s!.jeton}`, 'content-type': 'audio/webm', 'x-capture-id': ID },
+        body: Buffer.from('webm'),
+      });
+      expect(r.status).toBe(503);
+      expect((await r.json()).message).toBe('Serveur occupé. Réessaie plus tard.');
+      expect(await prisma.capture.count()).toBe(0);
+    } finally {
+      await app.fermer();
+    }
+  });
+
+  it('sans cookie de session, 401 avant de lire le corps', async () => {
+    class M {}
+    Module({ controllers: [PriveesController], providers: [
+      { provide: PRIVEES, useValue: service }, { provide: AUTH, useValue: new AuthService(prisma) }, SessionGuard,
+    ] })(M);
+    const app = await demarrerAppTest(M);
+    try {
+      const r = await fetch(`${app.url}/api/captures/privees`, {
+        method: 'POST', headers: { 'content-type': 'audio/webm' }, body: Buffer.alloc(1024),
+      });
+      expect(r.status).toBe(401);
+      expect((await r.json()).message).toBe('Connecte-toi pour continuer.');
+      expect(reencodeur.appels).toBe(0);
+    } finally {
+      await app.fermer();
+    }
   });
 });
