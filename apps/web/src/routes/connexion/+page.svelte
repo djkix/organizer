@@ -4,6 +4,7 @@
   import { api, garde } from '$lib/client';
   import { CHEMINS } from '$lib/config';
   import { MESSAGES } from '$lib/messages';
+  import { videur } from '$lib/prive/demarrage';
 
   let nom = $state('');
   let motDePasse = $state('');
@@ -17,6 +18,8 @@
     try {
       await api.connecter({ nom: nom.trim(), motDePasse });
       garde.oublier();
+      // Des enregistrements ont pu attendre la session : ils partent maintenant.
+      void videur.vider().catch(() => undefined);
       await goto(CHEMINS.accueil);
     } catch (err) {
       if (err instanceof ErreurApi && (err.statut === 401 || err.statut === 400 || err.statut === 422)) message = MESSAGES.identifiantsInvalides;
