@@ -1,6 +1,6 @@
 import { Controller, Get, Inject, Post, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { webhookCallback, type Bot } from 'grammy';
+import { BotError, webhookCallback, type Bot } from 'grammy';
 import type { ConfigApi } from '../config.js';
 import { BOT, CONFIG } from '../jetons.js';
 
@@ -26,6 +26,18 @@ export class TelegramController {
       res.status(404).end();
       return;
     }
-    await this.gestionnaire(req, res);
+    try {
+      await this.gestionnaire(req, res);
+    } catch (err) {
+      // Le message d'un BotError recopie l'erreur interne, qui peut contenir le texte de la capture :
+      // identifiant de mise à jour et nom d'erreur seulement. Telegram relivrera, l'ingestion est idempotente.
+      const corps: unknown = req.body;
+      const updateId = typeof corps === 'object' && corps !== null && typeof (corps as { update_id?: unknown }).update_id === 'number'
+        ? (corps as { update_id: number }).update_id
+        : 'illisible';
+      const cause = err instanceof BotError ? err.error : err;
+      console.error(`Webhook, mise à jour ${updateId} : ${(cause as Error).name}`);
+      if (!res.headersSent) res.status(500).end();
+    }
   }
 }
