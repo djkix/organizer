@@ -268,6 +268,7 @@ Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.
 - [Plans de réalisation](docs/superpowers/plans/) : un plan par lot.
 - [Dossier de revue du lot 1-A](docs/revue/2026-10-03-lot1-a.md) : synthèse autonome pour un relecteur externe.
 - [Dossier de revue du lot 1-B1](docs/revue/2026-10-03-lot1-b1.md) : la suite, pour l'API de la PWA et le mode privé.
+- [Dossier de revue du lot 1-B2](docs/revue/2026-10-04-lot1-b2.md) : la PWA, l'enregistreur privé et la file hors ligne.
 
 ## Journal des modifications
 
