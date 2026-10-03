@@ -23,6 +23,8 @@ export interface Cocheur {
   cocher(itemId: string): void;
   /** Décoche le dernier coché, après la réponse de son cochage. */
   annuler(): Promise<void>;
+  /** Ajoute une écriture (une correction) à la même file : elle part après les cochages en cours. */
+  enfiler<T>(travail: () => Promise<T>): Promise<T>;
 }
 
 export function creerCocheur(d: DepsCocheur): Cocheur {
@@ -59,6 +61,7 @@ export function creerCocheur(d: DepsCocheur): Cocheur {
 
   return {
     etat: () => etat,
+    enfiler,
 
     cocher(itemId) {
       if (etat.enCours === itemId || etat.retires.has(itemId)) return;

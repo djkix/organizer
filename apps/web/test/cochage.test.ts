@@ -114,4 +114,17 @@ describe('cochage', () => {
     expect(serveur.has('a')).toBe(true);
     expect(c.etat().enCours).toBe('a');
   });
+
+  it('une écriture ajoutée à la file (correction) passe après un cochage en cours', async () => {
+    const post = differe();
+    const journal: string[] = [];
+    const { c } = monter(async (id) => { await post.p; journal.push(`POST ${id}`); });
+    c.cocher('a');
+    const correction = c.enfiler(async () => { journal.push('PATCH a'); });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(journal).toEqual([]);
+    post.ok();
+    await correction;
+    expect(journal).toEqual(['POST a', 'PATCH a']);
+  });
 });
