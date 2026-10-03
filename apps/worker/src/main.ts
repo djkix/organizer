@@ -1,6 +1,6 @@
 import { creerPrisma } from '@organizer/db';
 import {
-  chargerPrompt, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar,
+  chargerPrompt, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar, OPTIONS_JOB_ALERTE,
   type JobAlerte, type JobClassement,
 } from '@organizer/shared';
 import { Queue } from 'bullmq';
@@ -37,7 +37,7 @@ const worker = demarrerWorker({
   audioRacine: exigerVar('AUDIO_STORAGE_PATH'),
   connexion,
   concurrence: Number(lireVar('WORKER_CONCURRENCY') ?? '2'),
-  alerter: async (message) => { await alertes.add('alerte', { message }); },
+  alerter: async (message) => { await alertes.add('alerte', { message }, OPTIONS_JOB_ALERTE); },
 });
 
 const lancerReprise = (): void => {
