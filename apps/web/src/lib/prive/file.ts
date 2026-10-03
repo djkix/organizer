@@ -4,13 +4,19 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 /** Ce que rend l'enregistreur. emisLe : début de l'enregistrement (CAP-05), ISO 8601. */
 export interface Enregistrement { blob: Blob; mime: string; dureeS: number; emisLe: string }
 /** Capture privée en attente sur le téléphone. L'id est fixé à la mise en file et sert à tous les essais. */
-export interface CapturePrivee extends Enregistrement { id: string }
+export interface CapturePrivee extends Enregistrement {
+  id: string;
+  /** Refus définitif du serveur : la copie reste, mais les vidages automatiques l'ignorent. */
+  refuse?: { statut: number; le: string };
+}
 
 export interface FilePrivee {
   ajouter(c: CapturePrivee): Promise<void>;
   /** Les plus anciennes d'abord. */
   lister(): Promise<CapturePrivee[]>;
   retirer(id: string): Promise<void>;
+  /** Met de côté (refus définitif) ou, avec null, remet en jeu. Ne supprime jamais. */
+  marquerRefusee(id: string, refuse: { statut: number; le: string } | null): Promise<void>;
 }
 
 export class EnregistrementVide extends Error {
@@ -28,6 +34,16 @@ export function ouvrirFilePrivee(nom = 'organizer'): FilePrivee {
       upgrade(d) {
         d.createObjectStore('captures-privees', { keyPath: 'id' });
       },
+      // Le service worker ouvre la même base : ne jamais rester bloqué, ni garder une connexion morte.
+      blocking() {
+        base = null;
+      },
+      terminated() {
+        base = null;
+      },
+    }).catch((e: unknown) => {
+      base = null;
+      throw e;
     }));
   return {
     async ajouter(c) {
@@ -39,76 +55,149 @@ export function ouvrirFilePrivee(nom = 'organizer'): FilePrivee {
     async retirer(id) {
       await (await db()).delete('captures-privees', id);
     },
+    async marquerRefusee(id, refuse) {
+      const d = await db();
+      const tx = d.transaction('captures-privees', 'readwrite');
+      const c = await tx.store.get(id);
+      if (c) {
+        if (refuse) c.refuse = refuse;
+        else delete c.refuse;
+        await tx.store.put(c);
+      }
+      await tx.done;
+    },
   };
 }
 
 export type IssueEnvoi = { issue: 'livre' } | { issue: 'refuse'; statut: number } | { issue: 'reseau' };
 
+/** 60 s de base, puis 20 Ko/s au plancher : un envoi muet ne bloque jamais la file. */
+export const delaiEnvoiMs = (octets: number): number => 60_000 + Math.ceil(octets / 20);
+
 /** 200 (déjà reçue) ou 201 (nouvelle) : livrée. Tout autre statut, ou une coupure : la copie locale reste. */
 export async function envoyerCapture(c: CapturePrivee, f: typeof fetch = (e, i) => fetch(e, i)): Promise<IssueEnvoi> {
+  const arret = new AbortController();
+  let minuteur: ReturnType<typeof setTimeout> | undefined;
+  const delai = new Promise<never>((_, rejeter) => {
+    minuteur = setTimeout(() => {
+      arret.abort();
+      rejeter(new Error('delai'));
+    }, delaiEnvoiMs(c.blob.size));
+  });
   try {
-    const r = await f('/api/captures/privees', {
-      method: 'POST',
-      credentials: 'same-origin',
-      body: c.blob,
-      headers: {
-        'content-type': c.mime,
-        [EN_TETES_CAPTURE_PRIVEE.id]: c.id,
-        [EN_TETES_CAPTURE_PRIVEE.emisLe]: c.emisLe,
-        [EN_TETES_CAPTURE_PRIVEE.dureeS]: String(c.dureeS),
-      },
-    });
+    const r = await Promise.race([
+      f('/api/captures/privees', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: c.blob,
+        signal: arret.signal,
+        headers: {
+          'content-type': c.mime,
+          [EN_TETES_CAPTURE_PRIVEE.id]: c.id,
+          [EN_TETES_CAPTURE_PRIVEE.emisLe]: c.emisLe,
+          [EN_TETES_CAPTURE_PRIVEE.dureeS]: String(Math.round(c.dureeS)),
+        },
+      }),
+      delai,
+    ]);
     return r.status === 200 || r.status === 201 ? { issue: 'livre' } : { issue: 'refuse', statut: r.status };
   } catch {
+    // Coupure, délai dépassé ou AbortError : même sort, la copie reste.
     return { issue: 'reseau' };
+  } finally {
+    clearTimeout(minuteur);
   }
 }
 
-export interface BilanVidage { livrees: number; restantes: number; nonConnecte: boolean; horsLigne: boolean }
+/** restantes : à envoyer encore ; refusees : mises de côté (refus définitif du serveur). */
+export interface BilanVidage { livrees: number; restantes: number; refusees: number; nonConnecte: boolean; horsLigne: boolean }
 
 export interface Videur {
-  /** Un seul vidage à la fois : un appel pendant un vidage reçoit le même résultat. */
+  /** Un seul vidage à la fois : un appel pendant un vidage lui demande un passage de plus. */
   vider(): Promise<BilanVidage>;
+  /** Remet en jeu les captures mises de côté, puis vide. Jamais appelé automatiquement. */
+  reessayerRefusees(): Promise<BilanVidage>;
   ecouter(f: (b: BilanVidage) => void): () => void;
+}
+
+/** Refus propres à ce fichier : il ne partira jamais tel quel. */
+const REFUS_DEFINITIFS = new Set([400, 413, 415, 422]);
+
+async function souslock<T>(fonction: () => Promise<T>): Promise<T> {
+  const locks = (globalThis.navigator as Navigator | undefined)?.locks;
+  return locks ? ((await locks.request('organizer-prive', fonction)) as T) : fonction();
 }
 
 export function creerVideur(file: FilePrivee, f?: typeof fetch): Videur {
   let enCours: Promise<BilanVidage> | null = null;
+  let relancer = false;
   const ecouteurs = new Set<(b: BilanVidage) => void>();
 
-  async function unPassage(): Promise<BilanVidage> {
-    const b: BilanVidage = { livrees: 0, restantes: 0, nonConnecte: false, horsLigne: false };
+  /** arret : coupure, 401, 429, 5xx ou tout autre statut inattendu. */
+  async function unPassage(): Promise<{ b: BilanVidage; arret: boolean }> {
+    const b: BilanVidage = { livrees: 0, restantes: 0, refusees: 0, nonConnecte: false, horsLigne: false };
     const liste = await file.lister();
     for (const [i, c] of liste.entries()) {
+      if (c.refuse) {
+        b.refusees++;
+        continue;
+      }
       const r = await envoyerCapture(c, f);
       if (r.issue === 'livre') {
         await file.retirer(c.id);
         b.livrees++;
         continue;
       }
-      // Coupure ou session absente : inutile d'insister sur les suivantes.
-      if (r.issue === 'reseau' || r.statut === 401) {
-        b.horsLigne = r.issue === 'reseau';
-        b.nonConnecte = r.issue === 'refuse';
-        b.restantes += liste.length - i;
-        break;
+      if (r.issue === 'refuse' && REFUS_DEFINITIFS.has(r.statut)) {
+        await file.marquerRefusee(c.id, { statut: r.statut, le: new Date().toISOString() });
+        b.refusees++;
+        continue;
       }
-      b.restantes++;
+      // Coupure, session absente, 429, 5xx : inutile d'insister sur les suivantes.
+      b.horsLigne = r.issue === 'reseau';
+      b.nonConnecte = r.issue === 'refuse' && r.statut === 401;
+      b.restantes += liste.slice(i).filter((x) => !x.refuse).length;
+      b.refusees += liste.slice(i + 1).filter((x) => x.refuse).length;
+      return { b, arret: true };
     }
-    return b;
+    return { b, arret: false };
+  }
+
+  async function passages(): Promise<BilanVidage> {
+    return souslock(async () => {
+      let total = 0;
+      for (;;) {
+        relancer = false;
+        const { b, arret } = await unPassage();
+        total += b.livrees;
+        // Une capture arrivée pendant le passage : un tour de plus, sans déclencheur externe.
+        if (relancer && !arret) continue;
+        return { ...b, livrees: total };
+      }
+    });
+  }
+
+  function vider(): Promise<BilanVidage> {
+    if (enCours) {
+      relancer = true;
+      return enCours;
+    }
+    enCours = passages()
+      .then((b) => {
+        for (const e of ecouteurs) e(b);
+        return b;
+      })
+      .finally(() => {
+        enCours = null;
+      });
+    return enCours;
   }
 
   return {
-    vider() {
-      enCours ??= unPassage()
-        .then((b) => {
-          for (const e of ecouteurs) e(b);
-          return b;
-        })
-        .finally(() => {
-          enCours = null;
-        });
-      return enCours;
+    vider,
+    async reessayerRefusees() {
+      for (const c of await file.lister()) if (c.refuse) await file.marquerRefusee(c.id, null);
+      return vider();
     },
     ecouter(fonction) {
       ecouteurs.add(fonction);

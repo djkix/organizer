@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   creerVideur, EnregistrementVide, envoyerCapture, garderPuisEnvoyer, ouvrirFilePrivee, type CapturePrivee,
 } from '../src/lib/prive/file.js';
@@ -26,6 +26,8 @@ function serveur(statuts: Array<number | 'coupure'>) {
   }) as typeof fetch;
   return { f, envois };
 }
+
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('file IndexedDB', () => {
   it('garde le blob intact et rend les plus anciennes d\'abord', async () => {
@@ -77,7 +79,7 @@ describe('videur', () => {
     await file.ajouter(capture(1));
     await file.ajouter(capture(2));
     const b = await creerVideur(file, serveur([201, 415]).f).vider();
-    expect(b).toEqual({ livrees: 1, restantes: 1, nonConnecte: false, horsLigne: false });
+    expect(b).toEqual({ livrees: 1, restantes: 0, refusees: 1, nonConnecte: false, horsLigne: false });
     expect((await file.lister()).map((c) => c.id)).toEqual([capture(2).id]);
   });
 
@@ -86,7 +88,7 @@ describe('videur', () => {
     await file.ajouter(capture(1));
     await file.ajouter(capture(2));
     const { f, envois } = serveur(['coupure']);
-    expect(await creerVideur(file, f).vider()).toEqual({ livrees: 0, restantes: 2, nonConnecte: false, horsLigne: true });
+    expect(await creerVideur(file, f).vider()).toEqual({ livrees: 0, restantes: 2, refusees: 0, nonConnecte: false, horsLigne: true });
     expect(envois).toHaveLength(1);
     expect(await file.lister()).toHaveLength(2);
   });
@@ -96,7 +98,7 @@ describe('videur', () => {
     await file.ajouter(capture(1));
     await file.ajouter(capture(2));
     const { f, envois } = serveur([401]);
-    expect(await creerVideur(file, f).vider()).toEqual({ livrees: 0, restantes: 2, nonConnecte: true, horsLigne: false });
+    expect(await creerVideur(file, f).vider()).toEqual({ livrees: 0, restantes: 2, refusees: 0, nonConnecte: true, horsLigne: false });
     expect(envois).toHaveLength(1);
   });
 
@@ -156,5 +158,106 @@ describe('garderPuisEnvoyer', () => {
       .rejects.toBeInstanceOf(EnregistrementVide);
     expect(await file.lister()).toEqual([]);
     expect(envois).toEqual([]);
+  });
+});
+
+describe('fiabilité', () => {
+  it('envoie X-Duree-S arrondi', async () => {
+    const { f, envois } = serveur([201]);
+    await envoyerCapture({ ...capture(1), dureeS: 12.6 }, f);
+    expect(envois[0]!.entetes.get('x-duree-s')).toBe('13');
+  });
+
+  it('un envoi muet est coupé après un délai proportionnel : réseau, la copie reste, le vidage suivant repart', async () => {
+    vi.useFakeTimers();
+    const muet = (() => new Promise<Response>(() => undefined)) as typeof fetch;
+    const p = envoyerCapture(capture(1), muet);
+    await vi.advanceTimersByTimeAsync(59_000);
+    let fini = false;
+    void p.then(() => { fini = true; });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fini).toBe(false);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(await p).toEqual({ issue: 'reseau' });
+  });
+
+  it('un vidage bloqué libère le suivant après le délai', async () => {
+    // fake-indexeddb s'appuie sur setImmediate : seuls les délais sont simulés.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const file = base();
+    await file.ajouter(capture(1));
+    const muet = (() => new Promise<Response>(() => undefined)) as typeof fetch;
+    const b = creerVideur(file, muet).vider();
+    let fini = false;
+    void b.then(() => { fini = true; });
+    await vi.waitFor(async () => { await vi.advanceTimersByTimeAsync(10_000); expect(fini).toBe(true); });
+    expect(await b).toMatchObject({ horsLigne: true, restantes: 1 });
+    expect(await file.lister()).toHaveLength(1);
+  });
+
+  it('une capture mise en file pendant un vidage part dans la même session', async () => {
+    const file = base();
+    await file.ajouter(capture(1));
+    const envois: string[] = [];
+    let lacher!: () => void;
+    const porte = new Promise<void>((r) => { lacher = r; });
+    const f = (async (_u: RequestInfo | URL, init: RequestInit = {}) => {
+      envois.push(new Headers(init.headers).get('x-capture-id')!);
+      if (envois.length === 1) await porte;
+      return new Response(null, { status: 201 });
+    }) as typeof fetch;
+    const v = creerVideur(file, f);
+    const premier = v.vider();
+    await vi.waitFor(() => expect(envois).toHaveLength(1));
+    await garderPuisEnvoyer(file, v, { ...capture(2), blob: new Blob(['b']) }, capture(2).id);
+    lacher();
+    await premier;
+    await vi.waitFor(() => expect(envois).toEqual([capture(1).id, capture(2).id]));
+    expect(await file.lister()).toEqual([]);
+  });
+
+  it.each([429, 500, 503])('%i : le vidage s\'arrête, tout reste en file', async (statut) => {
+    const file = base();
+    await file.ajouter(capture(1));
+    await file.ajouter(capture(2));
+    const { f, envois } = serveur([statut]);
+    const b = await creerVideur(file, f).vider();
+    expect(b).toMatchObject({ livrees: 0, restantes: 2, refusees: 0 });
+    expect(envois).toHaveLength(1);
+    expect(await file.lister()).toHaveLength(2);
+  });
+
+  it.each([400, 413, 415, 422])('%i : mise de côté, jamais supprimée, ignorée aux vidages suivants', async (statut) => {
+    const file = base();
+    await file.ajouter(capture(1));
+    await file.ajouter(capture(2));
+    const { f, envois } = serveur([statut, 201]);
+    const v = creerVideur(file, f);
+    expect(await v.vider()).toEqual({ livrees: 1, restantes: 0, refusees: 1, nonConnecte: false, horsLigne: false });
+    const l = await file.lister();
+    expect(l.map((c) => c.id)).toEqual([capture(1).id]);
+    expect(l[0]!.refuse?.statut).toBe(statut);
+    expect(await v.vider()).toMatchObject({ refusees: 1, livrees: 0 });
+    expect(envois).toHaveLength(2);
+  });
+
+  it('reessayerRefusees renvoie les mises de côté, et une livrée est retirée', async () => {
+    const file = base();
+    await file.ajouter(capture(1));
+    const { f, envois } = serveur([422, 201]);
+    const v = creerVideur(file, f);
+    await v.vider();
+    expect(await v.reessayerRefusees()).toMatchObject({ livrees: 1, refusees: 0 });
+    expect(envois).toHaveLength(2);
+    expect(await file.lister()).toEqual([]);
+  });
+
+  it('utilise navigator.locks quand il existe', async () => {
+    const request = vi.fn(async (_n: string, cb: () => Promise<unknown>) => cb());
+    vi.stubGlobal('navigator', { locks: { request } });
+    const file = base();
+    await file.ajouter(capture(1));
+    await creerVideur(file, serveur([201]).f).vider();
+    expect(request).toHaveBeenCalledWith('organizer-prive', expect.any(Function));
   });
 });
