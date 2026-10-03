@@ -6,10 +6,13 @@ import { BOT, CONFIG } from '../jetons.js';
 
 @Controller()
 export class TelegramController {
-  private readonly gestionnaire: (req: Request, res: Response) => Promise<void>;
+  /** Absent en mode polling : webhookCallback remplacerait bot.start par une fonction qui lève. */
+  private readonly gestionnaire?: (req: Request, res: Response) => Promise<void>;
 
   constructor(@Inject(BOT) bot: Bot, @Inject(CONFIG) config: ConfigApi) {
-    this.gestionnaire = webhookCallback(bot, 'express', { secretToken: config.webhookSecret });
+    if (config.telegramMode === 'webhook') {
+      this.gestionnaire = webhookCallback(bot, 'express', { secretToken: config.webhookSecret });
+    }
   }
 
   @Get('health')
@@ -19,6 +22,10 @@ export class TelegramController {
 
   @Post('telegram/webhook')
   async recevoir(@Req() req: Request, @Res() res: Response): Promise<void> {
+    if (!this.gestionnaire) {
+      res.status(404).end();
+      return;
+    }
     await this.gestionnaire(req, res);
   }
 }

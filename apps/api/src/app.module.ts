@@ -30,7 +30,11 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     await this.bot.init();
     if (this.config.telegramMode === 'polling') {
       await this.bot.api.deleteWebhook({ drop_pending_updates: false });
-      void this.bot.start();
+      // Le polling tourne en tâche de fond : s'il meurt (jeton refusé, conflit), l'API s'arrête, délibérément.
+      this.bot.start().catch((err: unknown) => {
+        console.error(`Bot Telegram arrêté : ${(err as Error).name}`);
+        process.exit(1);
+      });
     }
     this.alertes = demarrerAlertes(this.redis, this.prisma, this.bot);
     this.minuterie = setInterval(() => {
