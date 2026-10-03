@@ -36,14 +36,14 @@ export class VuesService {
   private datees(debut: Date, fin: Date, max: number): Promise<ItemComplet[]> {
     return this.prisma.item.findMany({
       where: { ...ouvertes, action: { is: { faitLe: null, echeanceType: { in: TYPES_DATES }, echeanceDate: { gte: debut, lt: fin } } } },
-      include: inclure, orderBy: { action: { echeanceDate: 'asc' } }, take: max,
+      include: inclure, orderBy: [{ action: { echeanceDate: 'asc' } }, { id: 'asc' }], take: max,
     });
   }
 
   private fenetres(debut: Date, fin: Date | undefined, max: number): Promise<ItemComplet[]> {
     return this.prisma.item.findMany({
       where: { ...ouvertes, action: { is: { faitLe: null, echeanceType: 'fenetre', fenetreFin: { gte: debut, ...(fin ? { lt: fin } : {}) } } } },
-      include: inclure, orderBy: { action: { fenetreFin: 'asc' } }, take: max,
+      include: inclure, orderBy: [{ action: { fenetreFin: 'asc' } }, { id: 'asc' }], take: max,
     });
   }
 
@@ -74,7 +74,8 @@ export class VuesService {
     const bornes = new Map<string, { libelle: string | null; actions: LigneAction[] }>();
     for (const it of items) {
       const fin = it.action!.fenetreFin!.toISOString();
-      const b = bornes.get(fin) ?? { libelle: it.action!.echeanceExpr, actions: [] };
+      const b = bornes.get(fin) ?? { libelle: null, actions: [] };
+      b.libelle ??= it.action!.echeanceExpr;
       b.actions.push(ligne(it));
       bornes.set(fin, b);
     }
@@ -83,12 +84,12 @@ export class VuesService {
 
   async aRevoir(): Promise<VueARevoir> {
     const items = await this.prisma.item.findMany({
-      where: { nature: 'ambigu', archiveLe: null },
+      where: { nature: 'ambigu', archiveLe: null, capture: { prive: false } },
       include: { capture: { select: { emisLe: true, audioPath: true } } },
-      orderBy: { capture: { emisLe: 'desc' } }, take: MAX_LISTE,
+      orderBy: [{ capture: { emisLe: 'desc' } }, { id: 'asc' }], take: MAX_LISTE,
     });
     const captures = await this.prisma.capture.findMany({
-      where: { etat: 'a_revoir', prive: false }, orderBy: { emisLe: 'desc' }, take: MAX_LISTE,
+      where: { etat: 'a_revoir', prive: false }, orderBy: [{ emisLe: 'desc' }, { id: 'asc' }], take: MAX_LISTE,
     });
     return {
       items: items.map((i): ItemARevoir => ({
