@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Canal {
+  telegram
+  pwa
+}
+
+enum EtatCapture {
+  recue
+  en_file
+  a_transcrire
+  classee
+  a_revoir
+  privee
+}
+
+/// Seule énumération métier figée : règle produit n° 1.
+enum Nature {
+  action
+  pensee
+  information
+  ambigu
+}
+
+model Utilisateur {
+  id             String        @id @default(uuid()) @db.Uuid
+  nom            String        @unique
+  telegramChatId BigInt?       @unique @map("telegram_chat_id")
+  fuseau         String        @default("Europe/Paris")
+  admin          Boolean       @default(false)
+  creeLe         DateTime      @default(now()) @map("cree_le")
+  captures       Capture[]
+  codes          CodeLiaison[]
+
+  @@map("utilisateur")
+}
+
+model CodeLiaison {
+  code          String      @id
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  expireLe      DateTime    @map("expire_le")
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@map("code_liaison")
+}
+
+/// Immuable sauf état et résultats de traitement. Conservée à vie.
+model Capture {
+  id            String      @id @default(uuid()) @db.Uuid
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  canal         Canal
+  prive         Boolean
+  sourceRef     String?     @unique @map("source_ref")
+  sourceFichier String?     @map("source_fichier")
+  audioPath     String?     @map("audio_path")
+  audioMime     String?     @map("audio_mime")
+  audioPurgeLe  DateTime?   @map("audio_purge_le")
+  dureeS        Int?        @map("duree_s")
+  texteEcrit    String?     @map("texte_ecrit")
+  texteBrut     String?     @map("texte_brut")
+  emisLe        DateTime    @map("emis_le")
+  recuLe        DateTime    @default(now()) @map("recu_le")
+  etat          EtatCapture
+  erreur        String?
+  versionPrompt String?     @map("version_prompt")
+  modele        String?
+  tokensEntree  Int?        @map("tokens_entree")
+  tokensSortie  Int?        @map("tokens_sortie")
+  classeLe      DateTime?   @map("classe_le")
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  items         Item[]
+
+  @@index([etat])
+  @@map("capture")
+}
+
+/// Donnée, pas code (décision 21) : alimentée par les sorties de tri.
+model Theme {
+  id      String   @id @default(uuid()) @db.Uuid
+  libelle String   @unique
+  creeLe  DateTime @default(now()) @map("cree_le")
+  items   Item[]
+
+  @@map("theme")
+}
+
+model Item {
+  id            String       @id @default(uuid()) @db.Uuid
+  captureId     String       @map("capture_id") @db.Uuid
+  position      Int
+  texte         String
+  nature        Nature
+  confiance     Json
+  themeId       String?      @map("theme_id") @db.Uuid
+  personnes     String[]
+  versionPrompt String       @map("version_prompt")
+  modele        String
+  creeLe        DateTime     @default(now()) @map("cree_le")
+  archiveLe     DateTime?    @map("archive_le")
+  capture       Capture      @relation(fields: [captureId], references: [id])
+  theme         Theme?       @relation(fields: [themeId], references: [id])
+  action        Action?
+  pensee        Pensee?
+  corrections   Correction[]
+
+  @@unique([captureId, position])
+  @@map("item")
+}
+
+/// Types d'échéance, importance, effort, contexte : texte libre validé par le prompt.
+model Action {
+  itemId       String    @id @map("item_id") @db.Uuid
+  echeanceType String?   @map("echeance_type")
+  echeanceExpr String?   @map("echeance_expr")
+  echeanceDate DateTime? @map("echeance_date")
+  fenetreDebut DateTime? @map("fenetre_debut")
+  fenetreFin   DateTime? @map("fenetre_fin")
+  importance   String?
+  effort       String?
+  contexte     String?
+  alarme       Boolean   @default(false)
+  alarmeExpr   String?   @map("alarme_expr")
+  faitLe       DateTime? @map("fait_le")
+  reporteN     Int       @default(0) @map("reporte_n")
+  item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("action")
+}
+
+model Pensee {
+  itemId   String  @id @map("item_id") @db.Uuid
+  tonalite String?
+  item     Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("pensee")
+}
+
+model Correction {
+  id             String   @id @default(uuid()) @db.Uuid
+  itemId         String   @map("item_id") @db.Uuid
+  champ          String
+  ancienneValeur Json?    @map("ancienne_valeur")
+  nouvelleValeur Json?    @map("nouvelle_valeur")
+  corrigeLe      DateTime @default(now()) @map("corrige_le")
+  item           Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("correction")
+}
