@@ -61,6 +61,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 18 | Modèle | `gemini-3.1-flash-lite` par défaut |
 | 19 | Nom | Organizer |
 | 20 | Bot Telegram | `@organizer_lud_bot` |
+| 21 | Lots 0 et 1 | **Menés en parallèle**, décidé par Franck le 3 octobre 2026. Thèmes, types d'échéance et prompt sont des données et de la configuration, branchées en fin de lot 1 |
 
 ## Périmètre fonctionnel
 
@@ -863,7 +864,7 @@ Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo p
 
 ## Trajectoire de livraison
 
-Quatre lots. Le lot 0 ne produit aucun code : il sert à collecter le corpus réel qui déterminera les catégories de tri. Construire avant cette collecte reviendrait à deviner les règles de classement.
+Quatre lots. Le lot 0 collecte le corpus réel qui déterminera les catégories de tri. Le lot 1 démarre en parallèle (décision 21) : ses briques ne dépendent pas du corpus. Ce qui en dépend, la liste des thèmes, les types d'échéance et le prompt, reste en données et en configuration. Rien de tout cela n'est codé en dur ; tout est branché en fin de lot 1, une fois le corpus annoté.
 
 ### Lot 0 — Collecte et validation
 
@@ -883,6 +884,8 @@ Critère de sortie : au moins 60 énoncés réels annotés et une typologie de t
 - PWA en lecture : listes Aujourd'hui, Cette semaine, Horizons, cochage.
 - Correction manuelle d'un classement.
 - Supervision de base.
+
+Mise en service : après la sortie du lot 0, avec la typologie et le prompt validés sur le corpus.
 
 Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses anciennes habitudes.
 
@@ -941,7 +944,7 @@ Le risque principal n'est pas technique : c'est l'abandon après deux semaines s
 | Sans alarme ni relance, le widget suffit-il vraiment à lui rappeler les choses ? | L, à l'usage | Lot 2, c'est le test central du lot |
 | Basculer sur un compte Google dédié si les factures ou les quotas deviennent gênants | Franck | À l'usage |
 
-Tous les autres arbitrages sont fermés. Le cahier des charges est complet pour attaquer le lot 0.
+Tous les autres arbitrages sont fermés. Le cahier des charges est complet pour attaquer les lots 0 et 1.
 
 ### Dépendances externes
 

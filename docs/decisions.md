@@ -22,6 +22,7 @@
 | 18 | Modèle | gemini-3.1-flash-lite par défaut |
 | 19 | Nom | Organizer |
 | 20 | Bot Telegram | @organizer_lud_bot |
+| 21 | Lots 0 et 1 | Menés en parallèle. Thèmes, types d'échéance et prompt sont des données, branchées en fin de lot 1 |
 
 ## Points encore ouverts
 

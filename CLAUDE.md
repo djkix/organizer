@@ -25,7 +25,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 Les fichiers de ce dépôt font foi. Il n'existe aucune version ailleurs qui les
 dépasse : le document de cadrage initial est archivé et n'est plus mis à jour.
 
-- @docs/decisions.md — 20 décisions fermées. Ne pas les rouvrir sans demander.
+- @docs/decisions.md — 21 décisions fermées. Ne pas les rouvrir sans demander.
 - @docs/cahier-des-charges.md — spécification complète.
 
 Quand une décision change : mettre à jour `docs/decisions.md`, répercuter dans
@@ -96,15 +96,17 @@ pnpm prisma migrate dev
 
 ## État du projet
 
-Lot 0 : collecte d'une semaine de captures réelles et annotation. Aucun code applicatif
-avant que le prompt de tri soit validé sur ce corpus.
+Lots 0 et 1 menés en parallèle (décision 21, 3 octobre 2026). Le lot 0 collecte et
+annote une semaine de captures réelles. Le lot 1 construit l'application sans attendre :
+thèmes, types d'échéance et prompt ne sont jamais codés en dur (table ou configuration),
+et sont branchés en fin de lot 1 sur la typologie validée. Pas de mise en service avant
+la sortie du lot 0.
 
 Jalon du lot 0 franchi le 2 octobre 2026 : L confirme le besoin et accepte que ses
 vocaux ordinaires passent par Gemini en palier payé. Le prompt peut donc être testé
 sur le corpus réel une fois l'annotation faite (format : @docs/guide-annotation.md).
 
-Banc d'essai terrain (décidé par Franck le 2 octobre 2026, en dérogation à « aucun code
-avant validation du prompt ») : `infra/terrain/`, un bot Telegram seul qui envoie chaque
+Banc d'essai terrain (décidé par Franck le 2 octobre 2026) : `infra/terrain/`, un bot Telegram seul qui envoie chaque
 vocal à Gemini avec le prompt de tri et garde audio et résultats sur le serveur. Il sert
 à éprouver le prompt en conditions réelles et à constituer le corpus du lot 0. Ce n'est
 pas l'application : il sera retiré quand le lot 1 sera livré. `compose.yaml` est généré
