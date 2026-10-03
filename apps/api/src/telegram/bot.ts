@@ -14,7 +14,8 @@ export function creerBot(token: string, d: DepsBot, options?: BotConfig<Context>
   bot.command('start', async (ctx) => {
     const code = ctx.match.trim();
     if (!code) {
-      await ctx.reply('Envoie /start suivi de ton code.');
+      if (await d.liaison.utilisateurDuChat(ctx.chat.id)) await ctx.reply('Le bouton privé est revenu.', { reply_markup: clavier() });
+      else await ctx.reply('Envoie /start suivi de ton code.');
       return;
     }
     const r = await d.liaison.lier(code, ctx.chat.id);
@@ -43,7 +44,7 @@ export function creerBot(token: string, d: DepsBot, options?: BotConfig<Context>
     }
     const { id, nouvelle, prive } = await d.ingestion.recevoir(u.id, e);
     if (!nouvelle) return;
-    await ctx.reply(prive ? 'Reçu. Elle reste sur le serveur.' : 'Reçu.', { reply_parameters: { message_id: ctx.message.message_id } });
+    await ctx.reply(prive ? 'Reçu. Elle reste sur le serveur.' : 'Reçu.', { reply_parameters: { message_id: ctx.message.message_id }, reply_markup: clavier() });
     // Pas d'attente : l'accusé part avant le téléchargement (CAP-03). La reprise rattrape un échec.
     const suite = prive ? d.ingestion.finaliserPrivee(id) : d.ingestion.finaliser(id);
     void suite.catch((err: unknown) => {

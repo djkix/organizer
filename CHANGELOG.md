@@ -11,6 +11,7 @@ Le projet n'a pas encore de version publiée.
 - La connexion n'accorde plus créance à X-Forwarded-For que du proxy de confiance, un changement de mot de passe révoque les sessions, et la saisie du mot de passe est masquée et confirmée (2026-10-03).
 
 ### Corrigé
+- Le bouton « Prochaine capture privée » revient avec chaque accusé et avec /start pour un chat déjà lié (2026-10-03).
 - L'historique d'une correction d'échéance garde l'expression d'origine du modèle (2026-10-03).
 - À revoir ne dépasse plus vingt lignes en tout, les plus récentes d'abord (2026-10-03).
 - Les erreurs des captures privées sont typées : une panne de base n'est plus prise pour un 404 ou un 400, la durée déclarée est strictement numérique et le mois par défaut suit le fuseau (2026-10-03).
