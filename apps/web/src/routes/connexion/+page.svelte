@@ -1,15 +1,24 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { ErreurApi } from '$lib/api';
   import { api, garde } from '$lib/client';
   import { CHEMINS } from '$lib/config';
   import { MESSAGES } from '$lib/messages';
-  import { videur } from '$lib/prive/demarrage';
+  import { filePrivee, videur } from '$lib/prive/demarrage';
 
   let nom = $state('');
   let motDePasse = $state('');
   let message = $state<string | null>(null);
   let envoi = $state(false);
+  let enAttente = $state(false);
+  onMount(async () => {
+    try {
+      enAttente = (await filePrivee.lister()).length > 0;
+    } catch {
+      enAttente = false;
+    }
+  });
 
   async function connecter(e: SubmitEvent): Promise<void> {
     e.preventDefault();
@@ -38,6 +47,7 @@
     <label>Nom<input bind:value={nom} name="nom" autocomplete="username" autocapitalize="none" required /></label>
     <label>Mot de passe<input bind:value={motDePasse} name="motDePasse" type="password" autocomplete="current-password" required /></label>
     {#if message}<p role="status">{message}</p>{/if}
+    {#if enAttente}<p class="discret">{MESSAGES.partiraApresConnexion}</p>{/if}
     <button class="bouton-principal" type="submit" disabled={envoi}>Me connecter</button>
   </form>
 </main>
