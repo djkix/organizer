@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { Prisma, type PrismaClient } from '@organizer/db';
 import type { Nature } from '@organizer/shared';
 
@@ -68,7 +68,7 @@ export class ItemsService {
         if (!this.typesEcheance.includes(c.echeance.type)) throw new CorrectionInvalide("Type d'échéance inconnu.");
         const nouvelle = colonnes(c.echeance);
         const a = await tx.action.findUnique({ where: { itemId } });
-        await tx.action.upsert({ where: { itemId }, create: { itemId, ...nouvelle }, update: nouvelle });
+        await tx.action.upsert({ where: { itemId }, create: { itemId, ...nouvelle }, update: { ...nouvelle, echeanceExpr: null } });
         await tx.correction.create({
           data: {
             itemId, champ: 'echeance',
@@ -86,9 +86,11 @@ export class ItemsService {
   }
 
   async cheminAudio(captureId: string, racine: string): Promise<{ chemin: string; mime: string } | null> {
+    // `chemin` est relatif à la racine.
     const c = await this.prisma.capture.findUnique({ where: { id: captureId }, select: { audioPath: true, audioMime: true } });
     if (!c?.audioPath) return null;
-    return { chemin: join(racine, c.audioPath), mime: c.audioMime ?? 'application/octet-stream' };
+    if (!resolve(racine, c.audioPath).startsWith(resolve(racine) + sep)) return null;
+    return { chemin: c.audioPath, mime: c.audioMime ?? 'application/octet-stream' };
   }
 
   private async exigerAction(itemId: string): Promise<void> {
