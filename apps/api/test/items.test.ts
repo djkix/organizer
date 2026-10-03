@@ -89,6 +89,14 @@ describe('/api/items', () => {
     expect((await prisma.action.findUniqueOrThrow({ where: { itemId } })).echeanceExpr).toBeNull();
   });
 
+  it('l\'historique d\'une correction d\'échéance garde l\'expression d\'origine', async () => {
+    const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-08T00:00:00+02:00', expr: 'jeudi' });
+    await service.corriger(itemId, { echeance: { type: 'jour', date: '2026-10-09T00:00:00+02:00' } });
+    const c = await prisma.correction.findFirstOrThrow({ where: { itemId, champ: 'echeance' } });
+    expect(c.ancienneValeur).toMatchObject({ type: 'jour', expr: 'jeudi' });
+    expect(c.nouvelleValeur).toMatchObject({ type: 'jour', expr: null });
+  });
+
   it('sert l\'audio sous un dossier caché, 404 si purgé ou hors racine', async () => {
     const racine = join(mkdtempSync(join(tmpdir(), 'audio-')), '.cache', 'audio');
     mkdirSync(join(racine, 'ordinaire'), { recursive: true });
