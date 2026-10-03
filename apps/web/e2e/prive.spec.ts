@@ -187,3 +187,54 @@ test('micro occupé ou absent : un message précis ; double appui : un seul micr
   await bouton.click();
   await expect(page.getByText('Aucun micro trouvé sur ce téléphone.')).toBeVisible();
 });
+
+test('« Réessayer » après un envoi direct raté garde le même identifiant : pas de doublon', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __casse: boolean };
+    w.__casse = true;
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...a: Parameters<IDBObjectStore['put']>) {
+      if (w.__casse) throw new DOMException('indisponible', 'InvalidStateError');
+      return put.apply(this, a);
+    };
+  });
+  const appels = await simuler(page, {
+    ...CONNECTE,
+    'GET /api/captures/privees': json(200, []),
+    [DEPOT]: (r) => r.abort('internetdisconnected'),
+  });
+  await page.goto('/prive/enregistrer');
+  await enregistrer(page);
+  await expect(page.getByText('Pas gardé sur le téléphone. Il reste ici, en mémoire.')).toBeVisible();
+  await page.getByRole('button', { name: 'Envoyer maintenant' }).click();
+  await expect(page.getByText('Pas parti. Il reste ici, réessaie dans un moment.')).toBeVisible();
+  await page.evaluate(() => { (window as unknown as { __casse: boolean }).__casse = false; });
+  const avant = envois(appels).length;
+  await page.getByRole('button', { name: 'Réessayer' }).click();
+  await expect(page).toHaveURL(/\/prive$/);
+  await expect.poll(() => envois(appels).length).toBeGreaterThan(avant);
+  const ids = new Set(envois(appels).map((a) => a.entetes['x-capture-id']));
+  expect(ids.size).toBe(1);
+});
+
+test('écran verrouillé pendant l\'ouverture du micro : on arrête et on range, rien n\'écoute', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __ouvrir: () => void };
+    const reel = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (c) => {
+      await new Promise<void>((ok) => { w.__ouvrir = ok; });
+      return reel(c);
+    };
+  });
+  await simuler(page, { ...CONNECTE, 'GET /api/captures/privees': json(200, []) });
+  await page.goto('/prive/enregistrer');
+  await page.getByRole('button', { name: "Commencer l'enregistrement" }).click();
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    (window as unknown as { __ouvrir: () => void }).__ouvrir();
+  });
+  await expect(page.getByRole('heading', { name: 'Enregistrement privé' })).toBeVisible();
+  await page.waitForTimeout(1_500);
+  await expect(page.getByRole('heading', { name: "J'écoute" })).toHaveCount(0);
+});

@@ -13,7 +13,7 @@
   let secondes = $state(0);
   let message = $state<string | null>(null);
   let aGarder = $state<Enregistrement | null>(null);
-  /** Fixé avec l'audio en mémoire : chaque envoi direct le reprend, le serveur ne voit jamais de doublon. */
+  /** Fixé avec l'enregistrement : la file et l'envoi direct le reprennent, le serveur ne voit jamais de doublon. */
   let idDirect = '';
   let reessai = $state<HTMLButtonElement>();
   let minuterie: ReturnType<typeof setInterval> | undefined;
@@ -50,12 +50,14 @@
     etat = 'ecoute';
     secondes = 0;
     minuterie = setInterval(() => (secondes += 1), 1000);
+    // Écran verrouillé pendant l'ouverture du micro (décision R9) : rien n'enregistre écran éteint.
+    if (document.visibilityState === 'hidden') void arreter(false);
   }
 
   async function garder(e: Enregistrement, allerAuPrive: boolean): Promise<void> {
     etat = 'rangement';
     try {
-      await garderEtEnvoyer(e);
+      await garderEtEnvoyer(e, idDirect);
       aGarder = null;
       etat = 'pret';
       if (allerAuPrive) await goto(CHEMINS.prive);
@@ -65,7 +67,6 @@
         message = MESSAGES.rienEnregistre;
       } else {
         // Échec d'écriture locale : l'audio reste en mémoire, un nouvel essai est proposé.
-        if (aGarder !== e) idDirect = crypto.randomUUID();
         aGarder = e;
         message = MESSAGES.gardeRatee;
       }
@@ -94,6 +95,7 @@
     let e: Enregistrement;
     try {
       e = await enregistreur.arreter();
+      idDirect = crypto.randomUUID();
     } catch {
       etat = 'pret';
       message = MESSAGES.rienEnregistre;

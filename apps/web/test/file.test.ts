@@ -261,3 +261,36 @@ describe('fiabilité', () => {
     expect(request).toHaveBeenCalledWith('organizer-prive', expect.any(Function));
   });
 });
+
+describe('écriture bornée et connexions', () => {
+  it('une base qui ne répond pas : ajouter échoue après 10 s au lieu d\'attendre sans fin', async () => {
+    vi.useFakeTimers();
+    const file = ouvrirFilePrivee('x', { ouvrir: () => new Promise(() => undefined) });
+    let erreur: unknown = null;
+    void file.ajouter(capture(1)).catch((e: unknown) => { erreur = e; });
+    await vi.advanceTimersByTimeAsync(9_900);
+    expect(erreur).toBeNull();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(erreur).toBeInstanceOf(Error);
+  });
+
+  it('une capture déjà écrite peut être réécrite sous le même id sans doublon', async () => {
+    const file = base();
+    await file.ajouter(capture(1));
+    await file.ajouter(capture(1));
+    expect(await file.lister()).toHaveLength(1);
+  });
+
+  it('une nouvelle version de la base n\'est pas bloquée : l\'ancienne connexion se ferme', async () => {
+    const nom = `test-${crypto.randomUUID()}`;
+    const file = ouvrirFilePrivee(nom);
+    await file.ajouter(capture(1));
+    const ouverte = await new Promise<boolean>((fin) => {
+      const demande = indexedDB.open(nom, 2);
+      demande.onsuccess = () => { demande.result.close(); fin(true); };
+      demande.onerror = () => fin(false);
+      setTimeout(() => fin(false), 1_000);
+    });
+    expect(ouverte).toBe(true);
+  });
+});

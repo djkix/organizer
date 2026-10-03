@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { demanderPersistance, demanderSynchro, installerRelances } from '../src/lib/prive/relances.js';
+import { demanderPersistance, demanderSynchro, installerRelances, synchroSiRestantes } from '../src/lib/prive/relances.js';
 
 const visibilite = (v: DocumentVisibilityState): void => {
   Object.defineProperty(document, 'visibilityState', { value: v, configurable: true });
@@ -60,5 +60,21 @@ describe('demanderSynchro', () => {
     expect(await demanderSynchro(undefined)).toBe(false);
     expect(await demanderSynchro({ getRegistration: async () => undefined })).toBe(false);
     expect(await demanderSynchro({ getRegistration: async () => ({}) as ServiceWorkerRegistration })).toBe(false);
+  });
+});
+
+describe('synchroSiRestantes', () => {
+  const bilan = (restantes: number) => ({ livrees: 0, restantes, refusees: 0, nonConnecte: false, horsLigne: restantes > 0 });
+
+  it('demande une synchro d\'arrière-plan dès qu\'un bilan laisse des captures, pas avant', () => {
+    let ecouteur: ((b: ReturnType<typeof bilan>) => void) | null = null;
+    const demander = vi.fn(async () => true);
+    const arreter = synchroSiRestantes((f) => { ecouteur = f; return () => { ecouteur = null; }; }, demander);
+    ecouteur!(bilan(0));
+    expect(demander).not.toHaveBeenCalled();
+    ecouteur!(bilan(2));
+    expect(demander).toHaveBeenCalledTimes(1);
+    arreter();
+    expect(ecouteur).toBeNull();
   });
 });

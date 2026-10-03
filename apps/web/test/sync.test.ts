@@ -30,4 +30,8 @@ describe('surSync', () => {
   it('un échec du vidage lui-même fait réessayer le navigateur', async () => {
     await expect(surSync('organizer-prive', async () => { throw new Error('base'); })).rejects.toThrow();
   });
+
+  it('échoue sur un 429 ou un 5xx : il reste des captures à envoyer, le navigateur réessaiera', async () => {
+    await expect(surSync('organizer-prive', async () => bilan({ restantes: 2 }))).rejects.toThrow();
+  });
 });
