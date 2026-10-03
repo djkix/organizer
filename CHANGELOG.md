@@ -39,6 +39,7 @@ Le projet n'a pas encore de version publiée.
 - Les plafonds Gemini et le traitement du crédit épuisé sont décrits (2026-10-01).
 
 ### Corrigé
+- L'API démarre en mode polling : la route du webhook n'existe qu'en mode webhook, et un polling arrêté termine l'API (2026-10-03).
 - Le worker attend au démarrage si le contrôle du palier échoue, survit à une alerte en panne et ne perd plus de capture à la reprise (2026-10-03).
 - Les erreurs de schéma ne contiennent plus le contenu du modèle (2026-10-03).
 - Les fichiers embarqués du banc d'essai sont lisibles par l'utilisateur du bot (2026-10-02).
