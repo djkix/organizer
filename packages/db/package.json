@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit -p .",
-    "migrate:test": "DATABASE_URL=postgresql://organizer:organizer@127.0.0.1:55432/organizer_test prisma migrate reset --force --skip-generate --skip-seed"
+    "migrate:test": "DATABASE_URL=postgresql://organizer:organizer@127.0.0.1:55432/organizer_test prisma migrate deploy"
   },
   "dependencies": { "@prisma/client": "^6.16.0" },
   "devDependencies": { "prisma": "^6.16.0" }
