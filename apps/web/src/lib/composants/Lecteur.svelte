@@ -9,7 +9,12 @@
 
   function basculer(): void {
     if (!audio) return;
-    if (audio.paused) audio.play().catch(() => { indisponible = true; });
+    if (audio.paused) {
+      // Un pause rapide interrompt play() : ce n'est pas une panne. Une vraie panne passe par onerror.
+      audio.play().catch((e: unknown) => {
+        if (!(e instanceof DOMException && e.name === 'AbortError')) indisponible = true;
+      });
+    }
     else audio.pause();
   }
 </script>

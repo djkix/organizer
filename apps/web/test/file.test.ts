@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  creerVideur, EnregistrementVide, envoyerCapture, garderPuisEnvoyer, ouvrirFilePrivee, type CapturePrivee,
+  creerVideur, EnregistrementVide, envoyerCapture, garderPuisEnvoyer, ouvrirFilePrivee, plusRecentesDAbord, type CapturePrivee,
 } from '../src/lib/prive/file.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -292,5 +292,13 @@ describe('écriture bornée et connexions', () => {
       setTimeout(() => fin(false), 1_000);
     });
     expect(ouverte).toBe(true);
+  });
+});
+
+describe('plusRecentesDAbord', () => {
+  it('« En attente d\'envoi » : la plus récente en haut, sans toucher à l\'ordre du vidage', () => {
+    const l = [capture(1), capture(3), capture(2)];
+    expect(plusRecentesDAbord(l).map((c) => c.id)).toEqual([capture(3).id, capture(2).id, capture(1).id]);
+    expect(l.map((c) => c.id)).toEqual([capture(1).id, capture(3).id, capture(2).id]);
   });
 });

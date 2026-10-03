@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
-import { choixDepuisChamp, corpsEcheance, corpsNature } from '../src/lib/correction.js';
+import { describe, expect, it, vi } from 'vitest';
+import type { CorpsCorrection } from '@organizer/shared/api';
+import { appliquerCorrection, choixDepuisChamp, corpsEcheance, corpsNature } from '../src/lib/correction.js';
 
 const F = 'Europe/Paris';
 
@@ -53,5 +54,21 @@ describe('choixDepuisChamp', () => {
   it('un champ vidé ne corrige rien', () => {
     expect(choixDepuisChamp('jour', '')).toBeNull();
     expect(choixDepuisChamp('datee', '')).toBeNull();
+  });
+});
+
+describe('appliquerCorrection', () => {
+  it('un corps impossible à construire (date illisible) : correction ratée, rien n\'est envoyé', async () => {
+    const envoyer = vi.fn<(c: CorpsCorrection) => Promise<undefined>>(async () => undefined);
+    const r = await appliquerCorrection(() => corpsEcheance({ type: 'datee', jour: '2026-02-31', heure: '10:00' }, F), envoyer);
+    expect(r).toBe('rate');
+    expect(envoyer).not.toHaveBeenCalled();
+  });
+
+  it('un envoi refusé : correction ratée ; un envoi réussi : faite', async () => {
+    expect(await appliquerCorrection(() => corpsNature('pensee'), async () => { throw new Error('x'); })).toBe('rate');
+    const envoyer = vi.fn<(c: CorpsCorrection) => Promise<undefined>>(async () => undefined);
+    expect(await appliquerCorrection(() => corpsNature('pensee'), envoyer)).toBe('faite');
+    expect(envoyer).toHaveBeenCalledWith({ nature: 'pensee' });
   });
 });

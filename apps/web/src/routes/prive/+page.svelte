@@ -11,7 +11,7 @@
   import { duree, heureLocale, libelleJour, libelleMois, moisVoisin } from '$lib/format';
   import { MESSAGES } from '$lib/messages';
   import { filePrivee, videur } from '$lib/prive/demarrage';
-  import type { BilanVidage, CapturePrivee } from '$lib/prive/file';
+  import { plusRecentesDAbord, type BilanVidage, type CapturePrivee } from '$lib/prive/file';
 
   const aujourdhui = jourLocal(new Date(), FUSEAU);
   const moisCourant = aujourdhui.slice(0, 7);
@@ -33,7 +33,7 @@
 
   async function lireAttente(): Promise<void> {
     try {
-      attente = await filePrivee.lister();
+      attente = plusRecentesDAbord(await filePrivee.lister());
     } catch {
       attente = [];
     }
@@ -110,7 +110,7 @@
       <ul class="liste">
         {#each j.captures as c (c.id)}
           <li class="ligne">
-            {#if c.aAudio}<Lecteur src={urlAudio(c.id)} libelle="Écouter" />{/if}
+            {#if c.aAudio}<Lecteur src={urlAudio(c.id)} libelle="Écouter, {c.heure}" />{/if}
             <div class="corps">
               <span>{c.heure}{c.dureeS !== null ? ` · ${duree(c.dureeS)}` : ''}</span>
               {#if !c.aAudio}<span class="discret">{MESSAGES.noteEcrite}</span>{/if}

@@ -88,3 +88,19 @@ test('cibles de 48 px, texte de 17 px, actions principales dans le tiers bas', a
   await page.getByRole('checkbox', { name: 'Cocher : Rappeler le garage' }).click();
   expect((await page.getByRole('button', { name: 'Annuler' }).boundingBox())!.y).toBeGreaterThan((hauteur * 2) / 3);
 });
+
+test('une ligne cochée qui quitte la liste : le focus passe à la suivante, sinon au titre', async ({ page }) => {
+  await simuler(page, { ...table(), [`POST /api/items/${draps.itemId}/fait`]: json(204) });
+  await page.goto('/');
+  const premiere = page.getByRole('checkbox', { name: 'Cocher : Rappeler le garage' });
+  await premiere.click();
+  await expect(premiere).toBeFocused();
+  await page.clock.fastForward(10_000);
+  await expect(page.getByText('Rappeler le garage')).toHaveCount(0);
+  await expect(page.getByRole('checkbox', { name: 'Cocher : Changer les draps' })).toBeFocused();
+
+  await page.getByRole('checkbox', { name: 'Cocher : Changer les draps' }).click();
+  await page.clock.fastForward(10_000);
+  await expect(page.getByText('Changer les draps')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe('H1');
+});

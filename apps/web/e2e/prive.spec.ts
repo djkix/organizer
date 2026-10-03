@@ -92,7 +92,7 @@ test('la vue Privé : par jour, lecteur ou note écrite, étiquette facultative'
   await page.goto('/prive');
   await expect(page.getByRole('heading', { name: 'Hier' })).toBeVisible();
   await expect(page.getByText('23:41 · 1 min 04')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Écouter' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Écouter, 23:41' })).toBeVisible();
   await expect(page.getByText('Note écrite, gardée sur le serveur.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mois suivant' })).toBeDisabled();
 
@@ -237,4 +237,21 @@ test('écran verrouillé pendant l\'ouverture du micro : on arrête et on range,
   await expect(page.getByRole('heading', { name: 'Enregistrement privé' })).toBeVisible();
   await page.waitForTimeout(1_500);
   await expect(page.getByRole('heading', { name: "J'écoute" })).toHaveCount(0);
+});
+
+test('un play interrompu par un pause rapide n\'annonce pas « audio indisponible »', async ({ page }) => {
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('interrompu', 'AbortError'));
+  });
+  await simuler(page, {
+    ...CONNECTE,
+    'GET /api/captures/privees': json(200, [
+      { jour: '2026-10-05', captures: [{ id: '00000000-0000-4000-8000-0000000000aa', heure: '23:41', dureeS: 64, etiquette: null, aAudio: true }] },
+    ]),
+  });
+  await page.goto('/prive');
+  await page.getByRole('button', { name: 'Écouter, 23:41' }).click();
+  await page.waitForTimeout(300);
+  await expect(page.getByText('Audio indisponible.')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Écouter, 23:41' })).toBeVisible();
 });

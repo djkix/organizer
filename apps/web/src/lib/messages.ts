@@ -20,6 +20,7 @@ export const MESSAGES = {
   pasUneAction: "Ce n'est pas une chose à faire",
   correctionRatee: 'Pas pu corriger. Réessaie dans un moment.',
   rangeEnPensee: 'Rangé dans les pensées.',
+  cestNote: "C'est noté.",
   audioIndisponible: 'Audio indisponible.',
   aRevoirSous: 'Quand tu veux, rien ne presse',
   videARevoir: 'Rien à revoir.',

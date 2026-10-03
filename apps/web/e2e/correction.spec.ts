@@ -131,3 +131,16 @@ test.describe('focus et retour du détail', () => {
     expect(appels.length).toBeGreaterThan(0);
   });
 });
+
+test('une date corrigée est annoncée d\'une phrase courte', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
+  await simuler(page, {
+    ...CONNECTE,
+    'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [draps], suggestions: [] }),
+    [`PATCH /api/items/${draps.itemId}`]: json(204),
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Changer les draps/ }).click();
+  await page.getByLabel('Un jour').fill('2026-10-08');
+  await expect(page.getByRole('status').filter({ hasText: "C'est noté." })).toBeVisible();
+});
