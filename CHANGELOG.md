@@ -25,6 +25,9 @@ Le projet n'a pas encore de version publiée.
 - Les maquettes, avec des prénoms fictifs (2026-10-01).
 - Le cadrage initial : décisions, cahier des charges et règles du projet (2026-10-01).
 
+### Sécurité
+- La liaison d'un compte Telegram est limitée à dix échecs par dix minutes, ne remplace jamais un lien existant (commande « délier » pour l'admin) (2026-10-03).
+
 ### Modifié
 - Une légende de message est gardée comme texte, et le bot répond aux formats qu'il ne prend pas en charge (2026-10-03).
 - Les lots 0 et 1 sont menés en parallèle (décision 21) (2026-10-03).

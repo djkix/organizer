@@ -2,6 +2,8 @@ import { randomInt } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@organizer/db';
 
 const VALIDITE_MS = 10 * 60_000;
+const FENETRE_MS = 10 * 60_000;
+const MAX_ECHECS = 10;
 
 export class LiaisonService {
   constructor(private readonly prisma: PrismaClient, private readonly maintenant: () => Date = () => new Date()) {}
@@ -15,19 +17,45 @@ export class LiaisonService {
     return code;
   }
 
+  /** Échecs récents, tous chats confondus : borne la force brute sur un code à six chiffres. */
+  private echecs: number[] = [];
+
+  private bloque(): boolean {
+    const limite = this.maintenant().getTime() - FENETRE_MS;
+    this.echecs = this.echecs.filter((t) => t > limite);
+    return this.echecs.length >= MAX_ECHECS;
+  }
+
+  private echec(): 'invalide' {
+    this.echecs.push(this.maintenant().getTime());
+    return 'invalide';
+  }
+
   async lier(code: string, chatId: number): Promise<'lie' | 'invalide'> {
+    if (this.bloque()) return 'invalide';
     const c = await this.prisma.codeLiaison.findUnique({ where: { code } });
-    if (!c || c.expireLe <= this.maintenant()) return 'invalide';
+    if (!c || c.expireLe <= this.maintenant()) return this.echec();
+    const chat = BigInt(chatId);
     try {
-      await this.prisma.$transaction([
-        this.prisma.utilisateur.update({ where: { id: c.utilisateurId }, data: { telegramChatId: BigInt(chatId) } }),
-        this.prisma.codeLiaison.delete({ where: { code } }),
-      ]);
-      return 'lie';
+      const ok = await this.prisma.$transaction(async (tx) => {
+        const u = await tx.utilisateur.findUniqueOrThrow({ where: { id: c.utilisateurId } });
+        // Jamais d'écrasement : un compte déjà lié à un autre chat se délie par la CLI.
+        if (u.telegramChatId !== null && u.telegramChatId !== chat) return false;
+        // Le perdant d'une course sur le même code ne supprime rien et reçoit « invalide ».
+        const { count } = await tx.codeLiaison.deleteMany({ where: { code } });
+        if (count === 0) return false;
+        await tx.utilisateur.update({ where: { id: u.id }, data: { telegramChatId: chat } });
+        return true;
+      });
+      return ok ? 'lie' : this.echec();
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return 'invalide';
+      if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === 'P2002' || e.code === 'P2025')) return this.echec();
       throw e;
     }
+  }
+
+  async delier(nom: string): Promise<void> {
+    await this.prisma.utilisateur.update({ where: { nom }, data: { telegramChatId: null } });
   }
 
   utilisateurDuChat(chatId: number): Promise<{ id: string } | null> {
