@@ -28,6 +28,14 @@ export interface Cocheur {
 export function creerCocheur(d: DepsCocheur): Cocheur {
   let etat: EtatCochage = { retires: new Set(), enCours: null, message: null };
   let envoi: Promise<boolean> = Promise.resolve(false);
+  // Toutes les écritures (cochages et décochages, tous items) passent par cette file :
+  // elles atteignent le serveur dans l'ordre des gestes, jamais en parallèle.
+  let file: Promise<unknown> = Promise.resolve();
+  const enfiler = <T>(travail: () => Promise<T>): Promise<T> => {
+    const resultat = file.then(travail);
+    file = resultat.then(() => undefined, () => undefined);
+    return resultat;
+  };
   let minuterie: ReturnType<typeof setTimeout> | undefined;
   let minuterieMessage: ReturnType<typeof setTimeout> | undefined;
 
@@ -57,7 +65,7 @@ export function creerCocheur(d: DepsCocheur): Cocheur {
       clore();
       publier({ enCours: itemId });
       minuterie = setTimeout(clore, DELAI_ANNULATION_MS);
-      envoi = d.cocher(itemId).then(
+      envoi = enfiler(() => d.cocher(itemId)).then(
         () => true,
         () => {
           // Refusé ou coupé : la ligne revient telle quelle.
@@ -79,10 +87,12 @@ export function creerCocheur(d: DepsCocheur): Cocheur {
       const cochage = envoi;
       clearTimeout(minuterie);
       publier({ enCours: null });
-      // Sans cette attente, un DELETE parti avant le POST serait écrasé par lui.
-      if (!(await cochage)) return;
       try {
-        await d.decocher(itemId);
+        // Mis en file tout de suite : un nouveau cochage de la même ligne passera après lui.
+        await enfiler(async () => {
+          if (!(await cochage)) return;
+          await d.decocher(itemId);
+        });
       } catch {
         publier({ retires: avec(etat.retires, itemId) });
         signaler(MESSAGES.annulationRatee);

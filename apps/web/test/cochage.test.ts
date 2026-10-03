@@ -92,4 +92,26 @@ describe('cochage', () => {
     expect(c.etat().retires.has('a')).toBe(true);
     expect(c.etat().message).toBe(MESSAGES.annulationRatee);
   });
+
+  it('cocher, annuler, recocher pendant le premier envoi : les écritures partent dans l\'ordre des gestes', async () => {
+    const journal: string[] = [];
+    const serveur = new Set<string>();
+    const post1 = differe();
+    let n = 0;
+    const { c } = monter(
+      async (id) => { journal.push(`POST ${id}`); if (++n === 1) await post1.p; serveur.add(id); },
+      async (id) => { journal.push(`DELETE ${id}`); serveur.delete(id); },
+    );
+    c.cocher('a');
+    const annulation = c.annuler();
+    c.cocher('a');
+    await Promise.resolve();
+    expect(journal).toEqual(['POST a']);
+    post1.ok();
+    await annulation;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(journal).toEqual(['POST a', 'DELETE a', 'POST a']);
+    expect(serveur.has('a')).toBe(true);
+    expect(c.etat().enCours).toBe('a');
+  });
 });

@@ -11,7 +11,7 @@
   import { MESSAGES } from '$lib/messages';
   import { groupes, NOMS_VUES, nomVue, TITRES, VIDES, type DonneesVue, type NomVue } from '$lib/vues';
 
-  const aujourdhui = jourLocal(new Date(), FUSEAU);
+  let aujourdhui = $state(jourLocal(new Date(), FUSEAU));
   const vue: NomVue = $derived(nomVue(page.url.searchParams.get('vue')));
   let donnees = $state<DonneesVue | null>(null);
   let erreur = $state(false);
@@ -40,6 +40,17 @@
 
   $effect(() => { void charger(vue); });
 
+  // Une PWA laissée ouverte une nuit : au retour, le bon jour et la liste à jour.
+  $effect(() => {
+    const retour = (): void => {
+      if (document.visibilityState !== 'visible') return;
+      aujourdhui = jourLocal(new Date(), FUSEAU);
+      void charger(vue);
+    };
+    document.addEventListener('visibilitychange', retour);
+    return () => document.removeEventListener('visibilitychange', retour);
+  });
+
   const liste = $derived(donnees && donnees.nom === vue ? groupes(donnees, aujourdhui, FUSEAU, cochage.retires) : []);
 </script>
 
@@ -61,7 +72,7 @@
   {:else if donnees && donnees.nom === vue && liste.length === 0}
     <p class="vide">{VIDES[vue]}</p>
   {:else}
-    {#each liste as g, i (g.titre ?? i)}
+    {#each liste as g, i (i)}
       {#if g.titre}<h2 class="groupe">{g.titre}</h2>{/if}
       <ul class="liste">
         {#each g.lignes as l (l.itemId)}
