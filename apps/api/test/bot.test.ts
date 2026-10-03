@@ -15,20 +15,26 @@ function monter(lie: boolean) {
     utilisateurDuChat: async () => (lie ? { id: 'u1' } : null),
     lier: async (code: string) => (code === '123456' ? 'lie' : 'invalide'),
   } as unknown as LiaisonService;
+  let arme = false;
+  const privees: string[] = [];
   const ingestion = {
     recevoir: async (_u: string, e: CaptureEntrante) => {
       const nouvelle = !recues.includes(e.sourceRef);
       recues.push(e.sourceRef);
-      return { id: 'c1', nouvelle };
+      const prive = nouvelle && arme;
+      if (prive) arme = false;
+      return { id: 'c1', nouvelle, prive };
     },
     finaliser: async (id: string) => { finalisees.push(id); },
+    finaliserPrivee: async (id: string) => { privees.push(id); },
+    armerPrivee: async () => { arme = true; },
   } as unknown as IngestionService;
   const bot = creerBot('0:test', { liaison, ingestion }, { botInfo });
   bot.api.config.use(async (_prev, method, payload) => {
     envois.push({ method, payload: payload as Record<string, unknown> });
     return { ok: true, result: true } as never;
   });
-  return { bot, envois, recues, finalisees };
+  return { bot, envois, recues, finalisees, privees };
 }
 
 const maj = (id: number, message: Record<string, unknown>) => ({
@@ -65,6 +71,23 @@ describe('creerBot', () => {
     const { bot, envois } = monter(false);
     await bot.handleUpdate(maj(1, { text: '/start 123456', entities: [{ type: 'bot_command', offset: 0, length: 6 }] }));
     expect(envois[0]!.payload.text).toBe("C'est lié. Envoie un vocal quand tu veux.");
+  });
+
+  it('le bouton arme la capture privée ; la suivante est accusée comme privée, jamais finalisée en ordinaire', async () => {
+    const { bot, envois, finalisees, privees } = monter(true);
+    await bot.handleUpdate(maj(1, { text: 'Prochaine capture privée' }));
+    expect(envois[0]!.payload.text).toBe('La prochaine capture reste sur le serveur.');
+    await bot.handleUpdate(maj(2, { voice: { file_id: 'F', file_unique_id: 'U', duration: 3 } }));
+    expect(envois[1]!.payload.text).toBe('Reçu. Elle reste sur le serveur.');
+    await new Promise((r) => setImmediate(r));
+    expect(privees).toEqual(['c1']);
+    expect(finalisees).toEqual([]);
+  });
+
+  it('la liaison réussie envoie le clavier avec le bouton privé', async () => {
+    const { bot, envois } = monter(false);
+    await bot.handleUpdate(maj(1, { text: '/start 123456', entities: [{ type: 'bot_command', offset: 0, length: 6 }] }));
+    expect(JSON.stringify(envois[0]!.payload.reply_markup)).toContain('Prochaine capture privée');
   });
 
   it('un format non pris en charge reçoit une réponse sans capture', async () => {
