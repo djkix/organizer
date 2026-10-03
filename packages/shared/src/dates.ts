@@ -13,3 +13,20 @@ export function isoLocal(date: Date, fuseau: string): string {
 export function jourSemaine(date: Date, fuseau: string): string {
   return new Intl.DateTimeFormat('fr-FR', { timeZone: fuseau, weekday: 'long' }).format(date);
 }
+
+/** Jour civil (AAAA-MM-JJ) d'un instant, dans le fuseau. */
+export function jourLocal(date: Date, fuseau: string): string {
+  return isoLocal(date, fuseau).slice(0, 10);
+}
+
+export function ajouterJours(jour: string, n: number): string {
+  const [a, m, j] = jour.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(a, m - 1, j + n)).toISOString().slice(0, 10);
+}
+
+/** Instant de 00:00 locale du jour civil. */
+export function debutJour(jour: string, fuseau: string): Date {
+  // Le décalage lu à 00:00 UTC est celui de minuit local : les changements d'heure ont lieu plus tard dans la nuit.
+  const decalage = isoLocal(new Date(`${jour}T00:00:00Z`), fuseau).slice(19);
+  return new Date(`${jour}T00:00:00${decalage}`);
+}

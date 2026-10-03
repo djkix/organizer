@@ -2,7 +2,7 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { chargerPrompt, normaliser, normaliserTheme, rendrePrompt } from '../src/tri.js';
+import { chargerPrompt, normaliser, normaliserTheme, rendrePrompt, valeursAdmises } from '../src/tri.js';
 import { sortieExemple } from './sortie-exemple.js';
 
 const PROMPTS = join(import.meta.dirname, '../../../prompts');
@@ -105,5 +105,12 @@ describe('rendrePrompt', () => {
       emis_le: '', jour_semaine: '', fuseau: '', themes_connus: ['$&'], prenoms_connus: [], exemples: '',
     });
     expect(r).toBe('$&');
+  });
+});
+
+describe('valeursAdmises', () => {
+  it('lit les valeurs d\'un champ dans le schéma de la version', () => {
+    expect(valeursAdmises(v1(), 'echeance_type')).toEqual(['datee', 'jour', 'fenetre', 'relative', 'aucune']);
+    expect(valeursAdmises(v1(), 'texte')).toEqual([]);
   });
 });

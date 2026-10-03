@@ -149,3 +149,9 @@ export function normaliser(s: TriSortie): TriSortie {
     }),
   };
 }
+
+/** Valeurs admises d'un champ d'item, lues dans le schéma de la version (décision 21). */
+export function valeursAdmises(prompt: Prompt, champ: keyof ItemTri): string[] {
+  const schema = prompt.responseSchema as Noeud;
+  return schema.properties?.items?.items?.properties?.[champ]?.enum ?? [];
+}
