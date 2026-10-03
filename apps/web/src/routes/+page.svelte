@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { pushState } from '$app/navigation';
   import { page } from '$app/state';
+  import { tick } from 'svelte';
   import { jourLocal } from '@organizer/shared/dates';
   import type { LigneAction } from '@organizer/shared/api';
   import { api } from '$lib/client';
@@ -18,6 +20,7 @@
   let erreur = $state(false);
   let selection = $state<LigneAction | null>(null);
   let annonce = $state<string | null>(null);
+  let declencheur: HTMLElement | null = null;
   let cochage = $state<EtatCochage>({ retires: new Set(), enCours: null, message: null });
   let numero = 0;
 
@@ -53,8 +56,42 @@
     return () => document.removeEventListener('visibilitychange', retour);
   });
 
-  function corrige(message: string | null): void {
+  function ouvrir(l: LigneAction): void {
+    declencheur = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    pushState('', { detail: l.itemId });
+    selection = l;
+  }
+
+  /** Ferme le détail et rend le focus à la ligne ; l'entrée d'historique du détail est retirée. */
+  function fermer(): void {
+    if (!selection) return;
     selection = null;
+    if (page.state.detail) history.back();
+    const cible = declencheur?.isConnected ? declencheur : document.querySelector<HTMLElement>('main h1');
+    declencheur = null;
+    void tick().then(() => cible?.focus());
+  }
+
+  // Le geste retour d'Android retire l'entrée du détail : le détail se ferme.
+  $effect(() => {
+    if (selection && !page.state.detail) {
+      selection = null;
+      const cible = declencheur?.isConnected ? declencheur : document.querySelector<HTMLElement>('main h1');
+      declencheur = null;
+      void tick().then(() => cible?.focus());
+    }
+  });
+
+  // Le fond (liste et navigation du layout) est inerte tant que le détail est ouvert ; le bandeau d'annulation reste actif.
+  $effect(() => {
+    const ouvert = selection !== null;
+    const fond = document.querySelectorAll('nav[aria-label="Navigation"], .fab');
+    fond.forEach((e) => e.toggleAttribute('inert', ouvert));
+    return () => fond.forEach((e) => e.removeAttribute('inert'));
+  });
+
+  function corrige(message: string | null): void {
+    fermer();
     annonce = message;
     if (message) setTimeout(() => { if (annonce === message) annonce = null; }, 10_000);
     void charger(vue);
@@ -63,7 +100,7 @@
   const liste = $derived(donnees && donnees.nom === vue ? groupes(donnees, aujourdhui, FUSEAU, cochage.retires) : []);
 </script>
 
-<main class="ecran">
+<main class="ecran" inert={selection !== null}>
   <header class="entete">
     <h1>{TITRES[vue].titre}</h1>
     <p class="sous">{TITRES[vue].sous ?? titreDuJour(aujourdhui)}</p>
@@ -90,7 +127,7 @@
             coche={cochage.enCours === l.itemId}
             surCocher={() => cocheur.cocher(l.itemId)}
             surDecocher={() => void cocheur.annuler()}
-            surOuvrir={() => (selection = l.source)}
+            surOuvrir={() => ouvrir(l.source)}
           />
         {/each}
       </ul>
@@ -100,7 +137,7 @@
 
 <Bandeau enCours={cochage.enCours !== null} message={cochage.message ?? annonce} surAnnuler={() => void cocheur.annuler()} />
 {#if selection}
-  <DetailItem ligne={selection} surFermer={() => (selection = null)} surCorrige={corrige} enfiler={cocheur.enfiler} />
+  <DetailItem ligne={selection} surFermer={fermer} surCorrige={corrige} enfiler={cocheur.enfiler} />
 {/if}
 
 <style>

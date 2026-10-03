@@ -43,3 +43,76 @@ test('À revoir : trancher un item ambigu ; une capture seule reste en lecture',
   await expect(page.getByText('« vendredi ou samedi »')).toHaveCount(0);
   await expect(page.getByRole('button', { name: "C'est à faire" })).toHaveCount(0);
 });
+
+test.describe('focus et retour du détail', () => {
+  const montage = async (page: import('@playwright/test').Page) => {
+    await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
+    const appels = await simuler(page, {
+      ...CONNECTE,
+      'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [garage, draps], suggestions: [] }),
+      [`PATCH /api/items/${draps.itemId}`]: async (route) => { await new Promise((r) => setTimeout(r, 700)); await route.fulfill({ status: 204 }); },
+      [`POST /api/items/${garage.itemId}/fait`]: json(204),
+      [`DELETE /api/items/${garage.itemId}/fait`]: json(204),
+    });
+    await page.goto('/');
+    return appels;
+  };
+  const ligneDraps = (page: import('@playwright/test').Page) => page.getByRole('button', { name: /Changer les draps/ });
+  const detail = (page: import('@playwright/test').Page) => page.getByRole('dialog');
+
+  test('le focus entre dans le détail, le fond est inerte, Échap ferme et rend le focus à la ligne', async ({ page }) => {
+    await montage(page);
+    await ligneDraps(page).click();
+    await expect(detail(page)).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null)).toBe(true);
+    await expect(page.locator('main')).toHaveJSProperty('inert', true);
+    await expect(page.getByRole('navigation', { name: 'Navigation' })).toHaveJSProperty('inert', true);
+
+    await page.keyboard.press('Escape');
+    await expect(detail(page)).toHaveCount(0);
+    await expect(page.locator('main')).toHaveJSProperty('inert', false);
+    await expect(ligneDraps(page)).toBeFocused();
+  });
+
+  test('le geste retour d\'Android ferme le détail et reste sur À faire', async ({ page }) => {
+    await montage(page);
+    await ligneDraps(page).click();
+    await expect(detail(page)).toBeVisible();
+    await page.goBack();
+    await expect(detail(page)).toHaveCount(0);
+    await expect(page).toHaveURL(/127\.0\.0\.1:4173\/?(\?.*)?$/);
+    await expect(page.getByRole('heading', { name: 'Aujourd\'hui' })).toBeVisible();
+    await expect(ligneDraps(page)).toBeFocused();
+  });
+
+  test('Retour et fermeture ne laissent pas d\'entrée d\'historique en trop', async ({ page }) => {
+    await montage(page);
+    const avant = await page.evaluate(() => history.length);
+    await ligneDraps(page).click();
+    await page.getByRole('button', { name: 'Retour' }).click();
+    await expect(detail(page)).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => history.state?.['sveltekit:states']?.detail ?? null)).toBeNull();
+    expect(await page.evaluate(() => history.length)).toBeLessThanOrEqual(avant + 1);
+  });
+
+  test('le bandeau d\'annulation reste au-dessus du détail', async ({ page }) => {
+    await montage(page);
+    await page.getByRole('checkbox', { name: 'Cocher : Rappeler le garage' }).click();
+    await ligneDraps(page).click();
+    await expect(detail(page)).toBeVisible();
+    const annuler = page.getByRole('button', { name: 'Annuler' });
+    await expect(annuler).toBeVisible();
+    await annuler.click({ trial: true });
+  });
+
+  test('un champ date garde son focus pendant l\'envoi', async ({ page }) => {
+    await montage(page);
+    await ligneDraps(page).click();
+    const champ = page.getByLabel('Un jour');
+    await champ.focus();
+    await champ.fill('2026-10-08');
+    await expect(champ).toHaveAttribute('aria-disabled', 'true');
+    await expect(champ).toBeFocused();
+    await expect(champ).not.toHaveAttribute('disabled', '');
+  });
+});

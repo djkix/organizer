@@ -12,7 +12,7 @@
 
 <style>
   .bandeau {
-    position: fixed; left: 16px; right: 96px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 6;
+    position: fixed; left: 16px; right: 96px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 11;
     min-height: 56px; display: flex; align-items: center; justify-content: space-between;
     padding-left: 16px; border-radius: 14px; background: var(--text); color: var(--bg);
   }
