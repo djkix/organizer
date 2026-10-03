@@ -73,10 +73,10 @@ export class ItemsService {
           data: {
             itemId, champ: 'echeance',
             ancienneValeur: a
-              ? { type: a.echeanceType, date: iso(a.echeanceDate), debut: iso(a.fenetreDebut), fin: iso(a.fenetreFin) }
+              ? { type: a.echeanceType, expr: a.echeanceExpr, date: iso(a.echeanceDate), debut: iso(a.fenetreDebut), fin: iso(a.fenetreFin) }
               : Prisma.JsonNull,
             nouvelleValeur: {
-              type: nouvelle.echeanceType, date: iso(nouvelle.echeanceDate),
+              type: nouvelle.echeanceType, expr: null, date: iso(nouvelle.echeanceDate),
               debut: iso(nouvelle.fenetreDebut), fin: iso(nouvelle.fenetreFin),
             },
           },
