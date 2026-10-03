@@ -72,6 +72,17 @@ describe('demarrerWorker', () => {
     expect(await prisma.capture.count({ where: { etat: 'a_revoir' } })).toBe(0);
   });
 
+  it('crédit épuisé : une alerte en échec ne bloque ni la pause ni la reprise', async () => {
+    const a = await creerCaptureTexte(prisma, 'un');
+    const p = new FauxProvider([new CreditEpuise('402'), resultatExemple()]);
+    worker = demarrerWorker({
+      prisma, provider: p, prompt, audioRacine: tmpdir(), connexion, concurrence: 1, nomFile, pauseCreditMs: 300,
+      alerter: async () => { throw new Error('telegram hors service'); },
+    });
+    await file.add('classer', { captureId: a.id }, { ...OPTIONS_JOB_CLASSEMENT, jobId: a.id });
+    await attendre(async () => (await etat(a.id)) === 'classee');
+  });
+
   it('passe en a_transcrire quand les essais sont épuisés', async () => {
     const { id } = await creerCaptureTexte(prisma);
     lancer(new FauxProvider([new Error('HTTP 503')]));
@@ -98,5 +109,13 @@ describe('reprendre', () => {
     expect(await reprendre(prisma, file)).toBe(1);
     expect(await etat(id)).toBe('en_file');
     expect(await file.count()).toBe(1);
+  });
+
+  it('laisse la capture en a_transcrire si l\'enfilage échoue', async () => {
+    const { id } = await creerCaptureTexte(prisma);
+    await prisma.capture.update({ where: { id }, data: { etat: 'a_transcrire' } });
+    const cassee = { add: async () => { throw new Error('redis indisponible'); } } as unknown as Queue<JobClassement>;
+    await expect(reprendre(prisma, cassee)).rejects.toThrow();
+    expect(await etat(id)).toBe('a_transcrire');
   });
 });
