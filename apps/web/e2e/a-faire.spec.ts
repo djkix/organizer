@@ -4,6 +4,9 @@ import { CONNECTE, json, ligne, simuler, type Table } from './simul';
 const garage = ligne(1, 'Rappeler le garage', { echeanceType: 'datee', echeanceDate: '2026-10-06T08:00:00.000Z' });
 const draps = ligne(2, 'Changer les draps', { echeanceType: 'jour', echeanceDate: '2026-10-05T22:00:00.000Z' });
 
+const POST = `POST /api/items/${garage.itemId}/fait`;
+const DELETE = `DELETE /api/items/${garage.itemId}/fait`;
+
 const table = (): Table => ({
   ...CONNECTE,
   'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [garage, draps], suggestions: [] }),
@@ -36,6 +39,28 @@ test('cocher d\'un geste, annuler, puis laisser passer les 10 s', async ({ page 
   await expect(page.getByText('Rappeler le garage')).toHaveCount(0);
   await expect(page.getByText('Fait.')).toHaveCount(0);
   expect(compte(`DELETE /api/items/${garage.itemId}/fait`)).toBe(1);
+  await expect.poll(() => compte(`POST /api/items/${garage.itemId}/fait`)).toBe(2);
+  const ecritures = appels.map((a) => a.cle).filter((c) => c.includes('/fait'));
+  expect(ecritures).toEqual([POST, DELETE, POST]);
+});
+
+test('Annuler avant la réponse du cochage : le DELETE part après le POST', async ({ page }) => {
+  let liberer!: () => void;
+  const attente = new Promise<void>((ok) => { liberer = ok; });
+  const appels = await simuler(page, {
+    ...table(),
+    [POST]: async (route) => { await attente; await route.fulfill({ status: 204 }); },
+  });
+  await page.goto('/');
+  const caseGarage = page.getByRole('checkbox', { name: 'Cocher : Rappeler le garage' });
+  await caseGarage.click();
+  await expect.poll(() => appels.some((a) => a.cle === POST)).toBe(true);
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await expect(caseGarage).toHaveAttribute('aria-checked', 'false');
+  await page.waitForTimeout(100);
+  expect(appels.map((a) => a.cle).filter((c) => c.includes('/fait'))).toEqual([POST]);
+  liberer();
+  await expect.poll(() => appels.map((a) => a.cle).filter((c) => c.includes('/fait'))).toEqual([POST, DELETE]);
 });
 
 test('les onglets Semaine et Horizons, et un état vide neutre', async ({ page }) => {

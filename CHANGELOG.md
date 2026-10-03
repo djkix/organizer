@@ -11,6 +11,7 @@ Le projet n'a pas encore de version publiée.
 - La connexion n'accorde plus créance à X-Forwarded-For que du proxy de confiance, un changement de mot de passe révoque les sessions, et la saisie du mot de passe est masquée et confirmée (2026-10-03).
 
 ### Corrigé
+- Les cochages et décochages de la PWA partent dans l'ordre des gestes, le bandeau « Fait. » est annoncé par TalkBack et l'écran À faire change de jour au retour de l'application (2026-10-04).
 - La PWA n'affiche plus jamais un message brut du serveur, et chaque appel est borné à 15 secondes : un réseau muet donne « hors ligne », jamais « déconnecté » (2026-10-04).
 - Le README demande ffmpeg avec libopus et précise que l'API lit `prompts/` au démarrage (2026-10-03).
 - Le bouton « Prochaine capture privée » revient avec chaque accusé et avec /start pour un chat déjà lié (2026-10-03).
