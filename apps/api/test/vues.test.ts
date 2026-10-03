@@ -103,6 +103,25 @@ describe('a revoir', () => {
   });
 });
 
+describe('a revoir : budget commun', () => {
+  it('ne dépasse pas 20 lignes en tout, les plus récentes d\'abord', async () => {
+    const u = await prisma.utilisateur.upsert({ where: { nom: 'test' }, create: { nom: 'test' }, update: {} });
+    // Items aux minutes paires, captures aux minutes impaires : 30 lignes, 20 retenues.
+    for (let i = 0; i < 15; i++) {
+      await creerAction(prisma, { texte: `i${i}`, type: null, nature: 'ambigu', emisLe: `2026-10-02T08:${String(2 * i).padStart(2, '0')}:00Z` });
+      await prisma.capture.create({
+        data: { utilisateurId: u.id, canal: 'telegram', prive: false, etat: 'a_revoir', emisLe: new Date(`2026-10-02T08:${String(2 * i + 1).padStart(2, '0')}:00Z`), texteBrut: `c${i}` },
+      });
+    }
+    const v = await vues.aRevoir();
+    expect(v.items.length + v.captures.length).toBe(20);
+    const dates = [...v.items, ...v.captures].map((l) => l.emisLe).sort().reverse();
+    expect(dates[0]).toBe('2026-10-02T08:29:00.000Z');
+    expect(dates[19]).toBe('2026-10-02T08:10:00.000Z');
+    expect(v.items.map((i) => i.texte)).toEqual(['i14', 'i13', 'i12', 'i11', 'i10', 'i9', 'i8', 'i7', 'i6', 'i5']);
+  });
+});
+
 describe('/api/vues', () => {
   it('exige une session', async () => {
     class M {}
