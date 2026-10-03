@@ -5,6 +5,7 @@
   import { api } from '$lib/client';
   import { creerCocheur, type EtatCochage } from '$lib/cochage';
   import Bandeau from '$lib/composants/Bandeau.svelte';
+  import DetailItem from '$lib/composants/DetailItem.svelte';
   import LigneActionVue from '$lib/composants/LigneAction.svelte';
   import { FUSEAU } from '$lib/config';
   import { titreDuJour } from '$lib/format';
@@ -16,6 +17,7 @@
   let donnees = $state<DonneesVue | null>(null);
   let erreur = $state(false);
   let selection = $state<LigneAction | null>(null);
+  let annonce = $state<string | null>(null);
   let cochage = $state<EtatCochage>({ retires: new Set(), enCours: null, message: null });
   let numero = 0;
 
@@ -50,6 +52,13 @@
     document.addEventListener('visibilitychange', retour);
     return () => document.removeEventListener('visibilitychange', retour);
   });
+
+  function corrige(message: string | null): void {
+    selection = null;
+    annonce = message;
+    if (message) setTimeout(() => { if (annonce === message) annonce = null; }, 10_000);
+    void charger(vue);
+  }
 
   const liste = $derived(donnees && donnees.nom === vue ? groupes(donnees, aujourdhui, FUSEAU, cochage.retires) : []);
 </script>
@@ -89,7 +98,10 @@
   {/if}
 </main>
 
-<Bandeau enCours={cochage.enCours !== null} message={cochage.message} surAnnuler={() => void cocheur.annuler()} />
+<Bandeau enCours={cochage.enCours !== null} message={cochage.message ?? annonce} surAnnuler={() => void cocheur.annuler()} />
+{#if selection}
+  <DetailItem ligne={selection} surFermer={() => (selection = null)} surCorrige={corrige} enfiler={cocheur.enfiler} />
+{/if}
 
 <style>
   .onglets { display: flex; gap: 8px; padding: 4px 20px 12px; overflow-x: auto; scrollbar-width: none; }
