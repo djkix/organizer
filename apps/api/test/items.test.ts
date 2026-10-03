@@ -78,11 +78,50 @@ describe('cheminAudio', () => {
     mkdirSync(join(racine, 'ordinaire'), { recursive: true });
     writeFileSync(join(racine, 'ordinaire', 'a.oga'), 'OggS');
     await prisma.capture.update({ where: { id: captureId }, data: { audioPath: 'ordinaire/a.oga', audioMime: 'audio/ogg' } });
-    expect(await service.cheminAudio(captureId, racine)).toEqual({ chemin: join(racine, 'ordinaire', 'a.oga'), mime: 'audio/ogg' });
+    expect(await service.cheminAudio(captureId, racine)).toEqual({ chemin: 'ordinaire/a.oga', mime: 'audio/ogg' });
   });
 });
 
 describe('/api/items', () => {
+  it('echeanceExpr est effacée par une correction d\'échéance', async () => {
+    const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-08T00:00:00+02:00', expr: 'jeudi' });
+    await service.corriger(itemId, { echeance: { type: 'jour', date: '2026-10-09T00:00:00+02:00' } });
+    expect((await prisma.action.findUniqueOrThrow({ where: { itemId } })).echeanceExpr).toBeNull();
+  });
+
+  it('sert l\'audio sous un dossier caché, 404 si purgé ou hors racine', async () => {
+    const racine = join(mkdtempSync(join(tmpdir(), 'audio-')), '.cache', 'audio');
+    mkdirSync(join(racine, 'ordinaire'), { recursive: true });
+    writeFileSync(join(racine, 'ordinaire', 'a.oga'), 'OggS');
+    const auth = new AuthService(prisma);
+    await prisma.utilisateur.create({ data: { nom: 'l' } });
+    await auth.definirMotDePasse('l', 'un mot de passe assez long');
+    const s = await auth.ouvrirSession('l', 'un mot de passe assez long');
+    const { captureId } = await creerAction(prisma, { type: null, nature: 'pensee' });
+    class M {}
+    Module({ controllers: [ItemsController], providers: [
+      { provide: ITEMS, useValue: service }, { provide: CONFIG, useValue: { audioRacine: racine } },
+      { provide: AUTH, useValue: auth }, SessionGuard,
+    ] })(M);
+    const app = await demarrerAppTest(M);
+    const get = () => fetch(`${app.url}/api/captures/${captureId}/audio`, { headers: { cookie: `${NOM_COOKIE}=${s!.jeton}` } });
+    try {
+      await prisma.capture.update({ where: { id: captureId }, data: { audioPath: 'ordinaire/a.oga', audioMime: 'audio/ogg' } });
+      const ok = await get();
+      expect(ok.status).toBe(200);
+      expect(ok.headers.get('content-type')).toContain('audio/ogg');
+      expect(await ok.text()).toBe('OggS');
+      await prisma.capture.update({ where: { id: captureId }, data: { audioPath: null } });
+      const purge = await get();
+      expect(purge.status).toBe(404);
+      expect((await purge.json()).message).toBe('Audio indisponible.');
+      await prisma.capture.update({ where: { id: captureId }, data: { audioPath: '../x', audioMime: 'audio/ogg' } });
+      expect((await get()).status).toBe(404);
+    } finally {
+      await app.fermer();
+    }
+  });
+
   it('cocher exige une session et traduit un item inconnu en 404', async () => {
     const auth = new AuthService(prisma);
     await prisma.utilisateur.create({ data: { nom: 'l' } });

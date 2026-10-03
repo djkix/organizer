@@ -55,7 +55,7 @@ export class ItemsController {
   async audio(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
     const a = await this.items.cheminAudio(id, this.config.audioRacine);
     if (!a) throw new NotFoundException('Audio indisponible.');
-    res.type(a.mime).sendFile(a.chemin, (err) => {
+    res.type(a.mime).sendFile(a.chemin, { root: this.config.audioRacine, dotfiles: 'allow' }, (err) => {
       if (err && !res.headersSent) res.status(404).json({ message: 'Audio indisponible.' });
     });
   }
