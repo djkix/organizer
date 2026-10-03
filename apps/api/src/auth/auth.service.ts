@@ -1,0 +1,42 @@
+import { createHash, randomBytes } from 'node:crypto';
+import { hash, verify } from '@node-rs/argon2';
+import type { PrismaClient } from '@organizer/db';
+
+const DUREE_SESSION_MS = 90 * 24 * 3600_000;
+
+export interface UtilisateurSession { id: string; nom: string; fuseau: string }
+
+const empreinte = (jeton: string): string => createHash('sha256').update(jeton).digest('hex');
+
+// Haché factice : un compte inconnu coûte le même temps qu'un mauvais mot de passe.
+let hacheFactice: Promise<string> | undefined;
+const factice = (): Promise<string> => (hacheFactice ??= hash('organizer-compte-inexistant'));
+
+export class AuthService {
+  constructor(private readonly prisma: PrismaClient, readonly maintenant: () => Date = () => new Date()) {}
+
+  async definirMotDePasse(nom: string, motDePasse: string): Promise<void> {
+    if (motDePasse.length < 12) throw new Error('Mot de passe trop court : 12 caractères minimum.');
+    await this.prisma.utilisateur.update({ where: { nom }, data: { motDePasseHash: await hash(motDePasse) } });
+  }
+
+  async ouvrirSession(nom: string, motDePasse: string): Promise<{ jeton: string; expireLe: Date } | null> {
+    const u = await this.prisma.utilisateur.findUnique({ where: { nom } });
+    const ok = await verify(u?.motDePasseHash ?? (await factice()), motDePasse);
+    if (!u?.motDePasseHash || !ok) return null;
+    const jeton = randomBytes(32).toString('base64url');
+    const expireLe = new Date(this.maintenant().getTime() + DUREE_SESSION_MS);
+    await this.prisma.session.create({ data: { jetonHash: empreinte(jeton), utilisateurId: u.id, expireLe } });
+    return { jeton, expireLe };
+  }
+
+  async utilisateurDeSession(jeton: string): Promise<UtilisateurSession | null> {
+    const s = await this.prisma.session.findUnique({ where: { jetonHash: empreinte(jeton) }, include: { utilisateur: true } });
+    if (!s || s.expireLe <= this.maintenant()) return null;
+    return { id: s.utilisateur.id, nom: s.utilisateur.nom, fuseau: s.utilisateur.fuseau };
+  }
+
+  async fermerSession(jeton: string): Promise<void> {
+    await this.prisma.session.deleteMany({ where: { jetonHash: empreinte(jeton) } });
+  }
+}

@@ -5,11 +5,14 @@ import { Queue, type Worker } from 'bullmq';
 import type { Bot } from 'grammy';
 import { Redis } from 'ioredis';
 import { demarrerAlertes } from './alertes.js';
+import { AuthController } from './auth/auth.controller.js';
+import { AuthService } from './auth/auth.service.js';
+import { SessionGuard } from './auth/session.guard.js';
 import { lireConfigApi, type ConfigApi } from './config.js';
 import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
-import { BOT, CONFIG, INGESTION, PRISMA, REDIS } from './jetons.js';
+import { AUTH, BOT, CONFIG, INGESTION, PRISMA, REDIS } from './jetons.js';
 import { creerBot } from './telegram/bot.js';
 import { LiaisonService } from './telegram/liaison.service.js';
 import { TelegramController } from './telegram/telegram.controller.js';
@@ -54,7 +57,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
 }
 
 @Module({
-  controllers: [TelegramController],
+  controllers: [TelegramController, AuthController],
   providers: [
     { provide: CONFIG, useFactory: lireConfigApi },
     { provide: PRISMA, useFactory: () => creerPrisma() },
@@ -86,6 +89,8 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
       useFactory: (c: ConfigApi, prisma: PrismaClient, ingestion: IngestionService) =>
         creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion }),
     },
+    { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
+    SessionGuard,
     Cycle,
   ],
 })
