@@ -153,7 +153,7 @@ L'API expose :
 - `POST /telegram/webhook` : le webhook Telegram, en mode `webhook` seulement (404 en mode `polling`).
   Une erreur de traitement répond 500 : Telegram relivre, et l'ingestion est idempotente.
 
-Routes de la PWA, sous `/api`, toutes protégées par la session sauf sa création :
+Routes de la PWA, sous `/api`, toutes protégées par la session, sauf la connexion et la déconnexion :
 
 - `POST /api/session` : connexion (mot de passe), cookie de 90 jours ; `DELETE /api/session` : déconnexion ;
   `GET /api/session/moi` : le compte connecté ;
@@ -161,7 +161,7 @@ Routes de la PWA, sous `/api`, toutes protégées par la session sauf sa créati
 - `POST /api/items/:id/fait` : cocher ; `DELETE /api/items/:id/fait` : décocher ;
   `PATCH /api/items/:id` : corriger la nature ou l'échéance ;
 - `GET /api/captures/:id/audio` : réécouter l'audio d'origine ;
-- `POST /api/captures/privees` : déposer une capture privée ; `GET /api/captures/privees` : les lister par jour ;
+- `POST /api/captures/privees` : déposer une capture privée ; `GET /api/captures/privees?mois=AAAA-MM` : les lister par jour (mois courant par défaut) ;
   `PATCH /api/captures/privees/:id` : poser ou retirer l'étiquette.
 
 En mode `polling`, si le polling s'arrête sur une erreur (jeton refusé, autre processus sur le
