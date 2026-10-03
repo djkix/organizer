@@ -7,6 +7,7 @@ Le projet n'a pas encore de version publiée.
 ## [Non publié]
 
 ### Ajouté
+- Le worker BullMQ : crédit épuisé mis en pause avec une seule alerte, reprise des captures à transcrire, refus de démarrer hors palier payé (2026-10-03).
 - Le classement d'une capture en items, rejouable sans doublon, qui refuse toute capture privée (2026-10-03).
 - Le README décrit le projet, son état et le démarrage en développement, et ce journal est tenu à jour à chaque commit (2026-10-03).
 - Le monorepo pnpm et la base de dev (Postgres et Valkey) sur la VM Docker, jointe par un tunnel SSH (2026-10-03).
