@@ -1,0 +1,16 @@
+{
+  "name": "@organizer/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/main.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@organizer/db": "workspace:*",
+    "@organizer/shared": "workspace:*",
+    "bullmq": "^5.58.0",
+    "ioredis": "^5.7.0"
+  },
+  "devDependencies": { "tsx": "^4.20.0" }
+}

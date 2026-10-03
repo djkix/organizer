@@ -1,0 +1,100 @@
+import { join } from 'node:path';
+import { chargerPrompt } from '@organizer/shared';
+import { describe, expect, it } from 'vitest';
+import { sortieExemple } from '../../../packages/shared/test/sortie-exemple.js';
+import { GeminiProvider } from '../src/classement/gemini.js';
+import { CreditEpuise, PalierNonPaye, SortieNonConforme } from '../src/classement/provider.js';
+
+const prompt = chargerPrompt(join(import.meta.dirname, '../../../prompts'), 'tri/v1');
+
+interface Appel { url: string; corps: Record<string, unknown>; entetes: Record<string, string> }
+
+function faux(reponses: Array<{ status: number; texte?: string; tier?: string }>) {
+  const appels: Appel[] = [];
+  const f = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    appels.push({ url: String(url), corps: JSON.parse(String(init?.body)), entetes: init?.headers as Record<string, string> });
+    const r = reponses.shift();
+    if (!r) throw new Error('appel inattendu');
+    const corps = r.status === 200
+      ? { candidates: [{ content: { parts: [{ text: r.texte ?? '' }] } }], usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 20, serviceTier: r.tier ?? 'standard' } }
+      : { error: { message: 'contenu de la requête qui ne doit pas fuiter', status: 'ERREUR' } };
+    return new Response(JSON.stringify(corps), { status: r.status });
+  };
+  return { appels, fetch: f as typeof fetch };
+}
+
+const provider = (f: typeof fetch) =>
+  new GeminiProvider({ cle: 'cle-test', modele: 'principal', repli: 'repli', prompt, tiersPayes: ['standard'], fetch: f });
+
+const audio = { mime: 'audio/ogg', donnees: Buffer.from('OggS-faux') };
+
+describe('GeminiProvider.classer', () => {
+  it('renvoie la sortie validée, le modèle et les jetons', async () => {
+    const { fetch } = faux([{ status: 200, texte: JSON.stringify(sortieExemple()) }]);
+    const r = await provider(fetch).classer({ systeme: 'S', audio });
+    expect(r.modele).toBe('principal');
+    expect(r.sortie.items[0]!.theme).toBe('voiture');
+    expect([r.tokensEntree, r.tokensSortie]).toEqual([100, 20]);
+  });
+
+  it('envoie l\'audio en ligne, le schéma, la température 0,2 et la clé en en-tête', async () => {
+    const { fetch, appels } = faux([{ status: 200, texte: JSON.stringify(sortieExemple()) }]);
+    await provider(fetch).classer({ systeme: 'S', audio });
+    const a = appels[0]!;
+    expect(a.url).toContain('/models/principal:generateContent');
+    expect(a.url).not.toContain('cle-test');
+    expect(a.entetes['x-goog-api-key']).toBe('cle-test');
+    const gen = a.corps.generationConfig as Record<string, unknown>;
+    expect(gen.temperature).toBe(0.2);
+    expect(gen.responseMimeType).toBe('application/json');
+    expect(gen.responseSchema).toEqual(prompt.responseSchema);
+    expect(JSON.stringify(a.corps.contents)).toContain(audio.donnees.toString('base64'));
+  });
+
+  it('passe au modèle de repli sur une sortie hors schéma', async () => {
+    const { fetch, appels } = faux([
+      { status: 200, texte: '{"transcription": 3}' },
+      { status: 200, texte: JSON.stringify(sortieExemple()) },
+    ]);
+    const r = await provider(fetch).classer({ systeme: 'S', texte: 'bonjour' });
+    expect(r.modele).toBe('repli');
+    expect(appels[1]!.url).toContain('/models/repli:');
+  });
+
+  it('lève SortieNonConforme si le repli échoue aussi', async () => {
+    const { fetch } = faux([{ status: 200, texte: 'pas du json' }, { status: 200, texte: '{}' }]);
+    await expect(provider(fetch).classer({ systeme: 'S', texte: 'x' })).rejects.toBeInstanceOf(SortieNonConforme);
+  });
+
+  it('traite un texte vide (réponse bloquée) comme une sortie non conforme', async () => {
+    const { fetch } = faux([{ status: 200, texte: '' }, { status: 200, texte: '' }]);
+    await expect(provider(fetch).classer({ systeme: 'S', texte: 'x' })).rejects.toBeInstanceOf(SortieNonConforme);
+  });
+
+  it('lève CreditEpuise sur HTTP 402, sans tenter le repli', async () => {
+    const { fetch, appels } = faux([{ status: 402 }]);
+    await expect(provider(fetch).classer({ systeme: 'S', texte: 'x' })).rejects.toBeInstanceOf(CreditEpuise);
+    expect(appels).toHaveLength(1);
+  });
+
+  it('laisse remonter une panne serveur comme erreur passagère, sans contenu', async () => {
+    const { fetch, appels } = faux([{ status: 503 }]);
+    const err = await provider(fetch).classer({ systeme: 'S', texte: 'secret de L' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(SortieNonConforme);
+    expect(String((err as Error).message)).not.toMatch(/secret de L|fuiter/);
+    expect(appels).toHaveLength(1);
+  });
+});
+
+describe('GeminiProvider.verifierPalierPaye', () => {
+  it('accepte un palier déclaré payé', async () => {
+    const { fetch } = faux([{ status: 200, texte: '{}', tier: 'standard' }]);
+    await expect(provider(fetch).verifierPalierPaye()).resolves.toBeUndefined();
+  });
+
+  it('refuse un palier inconnu ou absent', async () => {
+    const { fetch } = faux([{ status: 200, texte: '{}', tier: 'free' }]);
+    await expect(provider(fetch).verifierPalierPaye()).rejects.toBeInstanceOf(PalierNonPaye);
+  });
+});
