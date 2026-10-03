@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AuthService } from '../src/auth/auth.service.js';
 import { NOM_COOKIE } from '../src/auth/cookies.js';
 import { SessionGuard } from '../src/auth/session.guard.js';
@@ -13,7 +13,7 @@ import { StockageAudio } from '../src/ingestion/stockage.js';
 import { AUTH, PRIVEES } from '../src/jetons.js';
 import { PriveesController } from '../src/privees/privees.controller.js';
 import { CapturesPriveesService, FormatRefuse } from '../src/privees/privees.service.js';
-import type { Reencodeur } from '../src/privees/reencodeur.js';
+import { AudioIllisible, type Reencodeur } from '../src/privees/reencodeur.js';
 import { demarrerAppTest } from './aides-http.js';
 
 const prisma = creerPrisma();
@@ -108,5 +108,103 @@ describe('/api/captures/privees', () => {
     } finally {
       await app.fermer();
     }
+  });
+});
+
+describe('/api/captures/privees : erreurs et paramètres', () => {
+  let app: Awaited<ReturnType<typeof demarrerAppTest>>;
+  let cookie: string;
+
+  beforeEach(async () => {
+    const auth = new AuthService(prisma);
+    await auth.definirMotDePasse('l', 'un mot de passe assez long');
+    const s = await auth.ouvrirSession('l', 'un mot de passe assez long');
+    cookie = `${NOM_COOKIE}=${s!.jeton}`;
+    class M {}
+    Module({ controllers: [PriveesController], providers: [
+      { provide: PRIVEES, useValue: service }, { provide: AUTH, useValue: auth }, SessionGuard,
+    ] })(M);
+    app = await demarrerAppTest(M);
+  });
+  afterEach(async () => {
+    await app.fermer();
+  });
+
+  const post = (en: Record<string, string> = {}, corps: Buffer = Buffer.from('webm')) => fetch(`${app.url}/api/captures/privees`, {
+    method: 'POST', headers: { cookie, 'content-type': 'audio/webm', 'x-capture-id': ID, ...en }, body: new Uint8Array(corps),
+  });
+  const patch = (id: string, corps: unknown) => fetch(`${app.url}/api/captures/privees/${id}`, {
+    method: 'PATCH', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(corps),
+  });
+
+  it('422 si l\'audio est illisible', async () => {
+    service = new CapturesPriveesService(prisma, new StockageAudio(racine), {
+      async versOpus(): Promise<Buffer> { throw new AudioIllisible('x'); },
+    });
+    await app.fermer();
+    const auth = new AuthService(prisma);
+    class M {}
+    Module({ controllers: [PriveesController], providers: [
+      { provide: PRIVEES, useValue: service }, { provide: AUTH, useValue: auth }, SessionGuard,
+    ] })(M);
+    app = await demarrerAppTest(M);
+    const r = await post();
+    expect(r.status).toBe(422);
+    expect((await r.json()).message).toBe('Enregistrement illisible.');
+  });
+
+  it('400 si le corps est vide', async () => {
+    const r = await post({}, Buffer.alloc(0));
+    expect(r.status).toBe(400);
+    expect((await r.json()).message).toBe('Enregistrement vide.');
+  });
+
+  it('400 si l\'identifiant désigne une capture ordinaire', async () => {
+    await prisma.capture.create({ data: { id: ID, utilisateurId, canal: 'telegram', prive: false, etat: 'recue', emisLe: new Date() } });
+    const r = await post();
+    expect(r.status).toBe(400);
+    expect((await r.json()).message).toBe('Identifiant refusé.');
+  });
+
+  it('PATCH : 204, étiquette vide devient nulle, 404, plus de 80 caractères refusés', async () => {
+    await post();
+    expect((await patch(ID, { etiquette: 'garage' })).status).toBe(204);
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id: ID } })).etiquette).toBe('garage');
+    expect((await patch(ID, { etiquette: '' })).status).toBe(204);
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id: ID } })).etiquette).toBeNull();
+    expect((await patch('4a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d', { etiquette: 'x' })).status).toBe(404);
+    expect((await patch(ID, { etiquette: 'x'.repeat(81) })).status).toBe(400);
+  });
+
+  it('GET : 400 sur un mois invalide', async () => {
+    const r = await fetch(`${app.url}/api/captures/privees?mois=2026-13`, { headers: { cookie } });
+    expect(r.status).toBe(400);
+    expect((await r.json()).message).toBe('Mois attendu au format AAAA-MM.');
+  });
+
+  it('un X-Emis-Le futur devient l\'heure de réception', async () => {
+    const avant = Date.now();
+    await post({ 'x-emis-le': new Date(Date.now() + 3_600_000).toISOString() });
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id: ID } });
+    expect(Math.abs(c.emisLe.getTime() - avant)).toBeLessThan(10_000);
+  });
+
+  it.each(['3601', '-1', '', '1e3', '0x10', 'abc'])('un X-Duree-S « %s » devient nul', async (v) => {
+    await post({ 'x-duree-s': v });
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id: ID } })).dureeS).toBeNull();
+  });
+
+  it('une panne inattendue reste une erreur 500, pas un 404 ni un 400', async () => {
+    const casse = new Proxy(service, { get: (c, n) => (n === 'etiqueter' || n === 'lister'
+      ? async () => { throw new Error('base injoignable'); } : Reflect.get(c, n)) });
+    await app.fermer();
+    const auth = new AuthService(prisma);
+    class M {}
+    Module({ controllers: [PriveesController], providers: [
+      { provide: PRIVEES, useValue: casse }, { provide: AUTH, useValue: auth }, SessionGuard,
+    ] })(M);
+    app = await demarrerAppTest(M);
+    expect((await patch(ID, { etiquette: 'x' })).status).toBe(500);
+    expect((await fetch(`${app.url}/api/captures/privees?mois=2026-10`, { headers: { cookie } })).status).toBe(500);
   });
 });

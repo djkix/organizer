@@ -3,12 +3,12 @@ import {
   BadRequestException, Body, Controller, Get, HttpCode, HttpException, Inject, NotFoundException,
   Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
-import type { JourPrive } from '@organizer/shared';
+import { jourLocal, type JourPrive } from '@organizer/shared';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { SessionGuard, type RequeteAuthentifiee } from '../auth/session.guard.js';
 import { PRIVEES } from '../jetons.js';
-import { FormatRefuse, type CapturesPriveesService } from './privees.service.js';
+import { CapturePriveeIntrouvable, FormatRefuse, IdentifiantRefuse, MoisInvalide, type CapturesPriveesService } from './privees.service.js';
 import { AudioIllisible } from './reencodeur.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -25,8 +25,9 @@ function emisLe(valeur: string | undefined, maintenant: Date): Date {
 }
 
 function duree(valeur: string | undefined): number | null {
+  if (valeur === undefined || !/^\d{1,4}$/.test(valeur)) return null;
   const n = Number(valeur);
-  return valeur !== undefined && Number.isInteger(n) && n >= 0 && n <= 3600 ? n : null;
+  return n <= 3600 ? n : null;
 }
 
 @Controller('api/captures/privees')
@@ -50,7 +51,7 @@ export class PriveesController {
     } catch (e) {
       if (e instanceof FormatRefuse) throw new HttpException({ message: 'Format audio non pris en charge.' }, 415);
       if (e instanceof AudioIllisible) throw new HttpException({ message: 'Enregistrement illisible.' }, 422);
-      if (e instanceof Error && e.message.includes('ordinaire')) throw new BadRequestException('Identifiant refusé.');
+      if (e instanceof IdentifiantRefuse) throw new BadRequestException('Identifiant refusé.');
       throw e;
     }
   }
@@ -62,7 +63,8 @@ export class PriveesController {
     if (!p.success) throw new BadRequestException('Étiquette de 80 caractères au plus.');
     try {
       await this.privees.etiqueter(id, p.data.etiquette || null);
-    } catch {
+    } catch (e) {
+      if (!(e instanceof CapturePriveeIntrouvable)) throw e;
       throw new NotFoundException('Élément introuvable.');
     }
   }
@@ -70,8 +72,9 @@ export class PriveesController {
   @Get()
   async lister(@Req() req: RequeteAuthentifiee, @Query('mois') mois: string | undefined): Promise<JourPrive[]> {
     try {
-      return await this.privees.lister(mois ?? new Date().toISOString().slice(0, 7), req.utilisateur.fuseau);
-    } catch {
+      return await this.privees.lister(mois ?? jourLocal(new Date(), req.utilisateur.fuseau).slice(0, 7), req.utilisateur.fuseau);
+    } catch (e) {
+      if (!(e instanceof MoisInvalide)) throw e;
       throw new BadRequestException('Mois attendu au format AAAA-MM.');
     }
   }

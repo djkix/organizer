@@ -9,6 +9,18 @@ export class FormatRefuse extends Error {
   override name = 'FormatRefuse';
 }
 
+export class IdentifiantRefuse extends Error {
+  override name = 'IdentifiantRefuse';
+}
+
+export class CapturePriveeIntrouvable extends Error {
+  override name = 'CapturePriveeIntrouvable';
+}
+
+export class MoisInvalide extends Error {
+  override name = 'MoisInvalide';
+}
+
 export interface DepotPrive { id: string; donnees: Buffer; mime: string; emisLe: Date; dureeS: number | null }
 
 export class CapturesPriveesService {
@@ -22,7 +34,7 @@ export class CapturesPriveesService {
     if (!FORMATS_ACCEPTES.includes(d.mime)) throw new FormatRefuse(d.mime);
     const existante = await this.prisma.capture.findUnique({ where: { id: d.id }, select: { prive: true } });
     if (existante) {
-      if (!existante.prive) throw new Error(`Capture ${d.id} ordinaire : identifiant refusé`);
+      if (!existante.prive) throw new IdentifiantRefuse(d.id);
       return { id: d.id, nouvelle: false };
     }
     const opus = await this.reencodeur.versOpus(d.donnees);
@@ -44,11 +56,11 @@ export class CapturesPriveesService {
 
   async etiqueter(id: string, etiquette: string | null): Promise<void> {
     const r = await this.prisma.capture.updateMany({ where: { id, prive: true }, data: { etiquette } });
-    if (r.count === 0) throw new Error(`Capture privée ${id} introuvable`);
+    if (r.count === 0) throw new CapturePriveeIntrouvable(id);
   }
 
   async lister(mois: string, fuseau: string): Promise<JourPrive[]> {
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mois)) throw new Error('Mois attendu au format AAAA-MM');
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mois)) throw new MoisInvalide(mois);
     const premier = `${mois}-01`;
     const suivant = ajouterJours(`${mois}-28`, 4).slice(0, 7) + '-01';
     const captures = await this.prisma.capture.findMany({
