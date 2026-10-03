@@ -11,6 +11,7 @@ Le projet n'a pas encore de version publiée.
 - La connexion n'accorde plus créance à X-Forwarded-For que du proxy de confiance, un changement de mot de passe révoque les sessions, et la saisie du mot de passe est masquée et confirmée (2026-10-03).
 
 ### Corrigé
+- Sur un réseau faible, la PWA affiche l'écran après 2,5 s au lieu de 15 s, retient l'état « hors ligne » le temps de la page et renvoie à la connexion si la session est partie ; l'écran de connexion garde le bouton violet vers l'enregistreur privé (2026-10-04).
 - L'enregistreur privé s'arrête et garde à une heure, n'ouvre qu'un micro malgré un double appui, ne quitte pas l'écran tant que l'audio n'est gardé qu'en mémoire, nomme la panne du micro et garde ce qui est reçu si le navigateur ne dit pas « stop » (2026-10-04).
 - Après une correction, le focus de la PWA revient à la ligne ou, si elle a quitté la liste, au titre de la page (2026-10-04).
 - La file hors ligne des captures privées borne chaque envoi, relance un passage pour une capture arrivée pendant un vidage, s'arrête sur 429 et 5xx, met de côté sans jamais la supprimer une capture refusée définitivement, et ne double pas l'envoi entre page et service worker (2026-10-04).

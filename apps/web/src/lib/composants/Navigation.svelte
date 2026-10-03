@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { CHEMINS } from '$lib/config';
+  import BoutonPrive from './BoutonPrive.svelte';
   import Icone from './Icone.svelte';
 
   const ONGLETS = [
@@ -13,7 +14,7 @@
     href === CHEMINS.accueil ? page.url.pathname === href : page.url.pathname.startsWith(href);
 </script>
 
-<a class="fab" href={CHEMINS.enregistreur} aria-label="Enregistrement privé"><Icone nom="cadenas" taille={26} /></a>
+<BoutonPrive />
 <nav aria-label="Navigation">
   {#each ONGLETS as o (o.href)}
     <a href={o.href} aria-current={actif(o.href) ? 'page' : undefined}><Icone nom={o.icone} />{o.libelle}</a>
@@ -30,9 +31,4 @@
     gap: 2px; color: var(--muted); text-decoration: none; font-size: var(--font-meta);
   }
   nav a[aria-current='page'] { color: var(--accent); font-weight: 600; }
-  .fab {
-    position: fixed; right: 18px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 5;
-    width: 64px; height: 64px; border-radius: var(--radius-pill);
-    background: var(--private); color: var(--bg); display: grid; place-items: center;
-  }
 </style>
