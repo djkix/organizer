@@ -34,7 +34,9 @@ export const MESSAGES = {
   finirEnregistrement: 'Appuie sur le carré quand tu as fini.',
   rienEnregistre: "Rien n'a été enregistré.",
   microRefuse: 'Le micro est bloqué. Autorise-le dans Chrome.',
-  gardeRatee: 'Pas pu le garder sur le téléphone. Réessaie.',
+  gardeRatee: 'Pas gardé sur le téléphone. Il reste ici, en mémoire.',
+  envoyerMaintenant: 'Envoyer maintenant',
+  envoiRate: "Pas parti. Il reste ici, réessaie dans un moment.",
   reessayer: 'Réessayer',
   // Vue Privé
   priveSous: 'Par date et par heure',
@@ -42,6 +44,7 @@ export const MESSAGES = {
   enAttente: "En attente d'envoi",
   partiraAuRetour: 'Il partira au retour du réseau.',
   partiraApresConnexion: 'Il partira après ta connexion.',
+  enregistrementRefuse: "Un enregistrement n'a pas pu partir.",
   noteEcrite: 'Note écrite, gardée sur le serveur.',
   ajouterUnMot: 'ajouter un mot',
   motRate: 'Pas pu garder le mot. Réessaie.',
