@@ -3,11 +3,11 @@ import type { PrismaClient } from '@organizer/db';
 /** Crée une capture ordinaire classée et un item, sans passer par Gemini. Données fabriquées. */
 export async function creerAction(
   prisma: PrismaClient,
-  o: { texte?: string; type: string | null; date?: string; fin?: string; faitLe?: string; expr?: string; nature?: 'action' | 'pensee' | 'ambigu' },
+  o: { texte?: string; type: string | null; date?: string; fin?: string; faitLe?: string; expr?: string; nature?: 'action' | 'pensee' | 'ambigu'; emisLe?: string },
 ): Promise<{ itemId: string; captureId: string }> {
   const u = await prisma.utilisateur.upsert({ where: { nom: 'test' }, create: { nom: 'test' }, update: {} });
   const c = await prisma.capture.create({
-    data: { utilisateurId: u.id, canal: 'telegram', prive: false, etat: 'classee', emisLe: new Date('2026-10-01T08:00:00Z'), texteEcrit: 'x' },
+    data: { utilisateurId: u.id, canal: 'telegram', prive: false, etat: 'classee', emisLe: new Date(o.emisLe ?? '2026-10-01T08:00:00Z'), texteEcrit: 'x' },
   });
   const nature = o.nature ?? 'action';
   const item = await prisma.item.create({
