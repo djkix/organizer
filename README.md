@@ -21,7 +21,11 @@ Livré sur la branche `lot1-a-socle-pipeline` :
 - l'ingestion Telegram : bot grammY, liaison des comptes par code, accusé de réception, audio rangé, job enfilé ;
 - l'API NestJS (webhook ou polling, `GET /health`) et sa ligne de commande d'administration.
 
-Pas encore livré : la PWA, le mode privé côté PWA (plan 1-B) et le déploiement (plan 1-C). L'application n'est pas en service.
+Livré sur la branche `lot1-b2-pwa` :
+
+- la PWA (`apps/web`) : connexion, À faire, cochage avec annulation, correction, À revoir, enregistreur et vue Privé, file hors ligne, installation Android avec raccourcis.
+
+Pas encore livré : le déploiement (plan 1-C). L'application n'est pas en service.
 
 ## Principes
 
@@ -44,7 +48,7 @@ flowchart LR
     Q --> W[Worker]
     W --> G[API Gemini]
     W --> P
-    PWA[PWA, à venir] -.-> A
+    PWA[PWA] --> A
 ```
 
 | Brique | Choix |
@@ -64,7 +68,8 @@ flowchart LR
 
 ```
 apps/api          NestJS : bot Telegram, ingestion, alertes admin, CLI d'administration
-apps/worker       traitement asynchrone : classement Gemini, reprise (scheduler et web : à venir)
+apps/worker       traitement asynchrone : classement Gemini, reprise (scheduler : à venir)
+apps/web          PWA SvelteKit (SPA statique, service worker Workbox)
 packages/shared   types, schémas Zod et configuration partagés
 packages/db       schéma Prisma, migrations, garde-fous SQL du mode privé
 prompts/          prompts Gemini versionnés et responseSchema
@@ -191,6 +196,27 @@ On la retrouve par date et heure, avec une étiquette facultative.
 Dans Telegram, le bouton arme la capture suivante, vocal ou texte, une seule fois.
 Le bot répond « Reçu. Elle reste sur le serveur. »
 
+## PWA
+
+L'application web est dans `apps/web`. Elle n'a pas besoin de ffmpeg : seuls l'API et les tests le demandent.
+
+- `pnpm dev` lance aussi la PWA sur `http://localhost:5173`. Vite renvoie `/api` vers l'API sur le port 3000. Ouvrir `localhost` : Chrome y accepte le cookie `Secure`.
+- `pnpm --filter @organizer/web build` produit `apps/web/build` : la SPA, son repli `index.html`, `sw.js` et `manifest.webmanifest`.
+- `pnpm --filter @organizer/web budget` construit puis vérifie le budget de 150 Ko compressés pour le JS et le CSS.
+- `pnpm --filter @organizer/web icones` régénère les PNG depuis les SVG de `apps/web/static/`.
+- `pnpm --filter @organizer/web e2e` lance les tests Playwright. Une fois avant : `pnpm --filter @organizer/web exec playwright install chromium`. L'API y est simulée : ni tunnel, ni base.
+
+Installation sur Android : ouvrir l'adresse dans Chrome, puis « Installer l'application » dans le menu.
+Un appui long sur l'icône propose deux raccourcis : « Enregistrement privé » et « Aujourd'hui ».
+L'enregistreur privé s'ouvre même sans réseau.
+
+Hors ligne, une capture privée reste sur le téléphone (IndexedDB), jamais perdue.
+Elle part dès que le réseau revient, ou après la connexion si la session manquait.
+Un envoi qui échoue laisse la copie en place. Une capture refusée pour de bon est mise de côté : elle ne part plus toute seule et n'est jamais supprimée.
+
+Le service worker ne garde que la coquille de l'application. Aucune réponse de l'API n'est mise en cache.
+Une mise à jour s'applique à la prochaine ouverture, jamais en plein enregistrement.
+
 ## Administration
 
 Aucune inscription libre : les comptes se créent en ligne de commande. La CLI lit le `.env` racine.
@@ -211,7 +237,8 @@ Aucune inscription libre : les comptes se créent en ligne de commande. La CLI l
 | `pnpm typecheck` | vérification TypeScript de chaque paquet |
 | `pnpm db …` | CLI Prisma du paquet `@organizer/db`, avec le `.env` racine chargé (`migrate dev`, `migrate status`, `studio`…) |
 | `pnpm prisma …` | CLI Prisma sans charger le `.env` : exporter `DATABASE_URL` avant |
-| `pnpm dev` | lance en parallèle les applications de `apps/` |
+| `pnpm dev` | lance en parallèle les applications de `apps/`, PWA comprise |
+| `pnpm --filter @organizer/web e2e` | tests de bout en bout de la PWA (Playwright, API simulée) |
 | `python3 tools/relecture/relecture.py` | relecture des captures du banc d'essai (voir [`tools/relecture/README.md`](tools/relecture/README.md)) |
 
 ## Tests

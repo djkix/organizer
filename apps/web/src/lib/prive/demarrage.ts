@@ -1,3 +1,4 @@
+import { registerSW } from 'virtual:pwa-register';
 import { creerVideur, garderPuisEnvoyer, ouvrirFilePrivee, type Enregistrement } from './file.js';
 import { demanderPersistance, demanderSynchro, installerRelances } from './relances.js';
 
@@ -6,6 +7,7 @@ export const filePrivee = ouvrirFilePrivee();
 export const videur = creerVideur(filePrivee);
 
 export function demarrerPrive(): () => void {
+  registerSW({ immediate: true });
   return installerRelances(() => videur.vider(), window, document);
 }
 

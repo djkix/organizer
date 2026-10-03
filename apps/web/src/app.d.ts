@@ -1,4 +1,5 @@
-// Types propres à l'application. Ceux du service worker arrivent avec la tâche 8.
+/// <reference types="vite-plugin-pwa/client" />
+// Types propres à l'application.
 declare global {
   namespace App {
     /** État d'historique du détail ouvert (navigation superficielle). */
