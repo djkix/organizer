@@ -62,23 +62,27 @@
     selection = l;
   }
 
-  /** Ferme le détail et rend le focus à la ligne ; l'entrée d'historique du détail est retirée. */
+  /** Le focus revient à la ligne d'origine si elle existe encore, sinon au titre de la page. */
+  async function rendreFocus(): Promise<void> {
+    const cible = declencheur;
+    declencheur = null;
+    await tick();
+    (cible?.isConnected ? cible : document.querySelector<HTMLElement>('main h1'))?.focus();
+  }
+
+  /** Ferme le détail ; l'entrée d'historique du détail est retirée. */
   function fermer(): void {
     if (!selection) return;
     selection = null;
     if (page.state.detail) history.back();
-    const cible = declencheur?.isConnected ? declencheur : document.querySelector<HTMLElement>('main h1');
-    declencheur = null;
-    void tick().then(() => cible?.focus());
+    void rendreFocus();
   }
 
   // Le geste retour d'Android retire l'entrée du détail : le détail se ferme.
   $effect(() => {
     if (selection && !page.state.detail) {
       selection = null;
-      const cible = declencheur?.isConnected ? declencheur : document.querySelector<HTMLElement>('main h1');
-      declencheur = null;
-      void tick().then(() => cible?.focus());
+      void rendreFocus();
     }
   });
 
@@ -90,11 +94,14 @@
     return () => fond.forEach((e) => e.removeAttribute('inert'));
   });
 
-  function corrige(message: string | null): void {
-    fermer();
+  async function corrige(message: string | null): Promise<void> {
+    selection = null;
+    if (page.state.detail) history.back();
     annonce = message;
     if (message) setTimeout(() => { if (annonce === message) annonce = null; }, 10_000);
-    void charger(vue);
+    // Focus après le rechargement : la ligne corrigée a pu quitter la liste.
+    await charger(vue);
+    await rendreFocus();
   }
 
   const liste = $derived(donnees && donnees.nom === vue ? groupes(donnees, aujourdhui, FUSEAU, cochage.retires) : []);
@@ -102,7 +109,7 @@
 
 <main class="ecran" inert={selection !== null}>
   <header class="entete">
-    <h1>{TITRES[vue].titre}</h1>
+    <h1 tabindex="-1">{TITRES[vue].titre}</h1>
     <p class="sous">{TITRES[vue].sous ?? titreDuJour(aujourdhui)}</p>
   </header>
   <nav class="onglets" aria-label="Listes">
@@ -137,10 +144,11 @@
 
 <Bandeau enCours={cochage.enCours !== null} message={cochage.message ?? annonce} surAnnuler={() => void cocheur.annuler()} />
 {#if selection}
-  <DetailItem ligne={selection} surFermer={fermer} surCorrige={corrige} enfiler={cocheur.enfiler} />
+  <DetailItem ligne={selection} surFermer={fermer} surCorrige={(m) => void corrige(m)} enfiler={cocheur.enfiler} />
 {/if}
 
 <style>
+  h1:focus { outline: none; }
   .onglets { display: flex; gap: 8px; padding: 4px 20px 12px; overflow-x: auto; scrollbar-width: none; }
   .puce {
     min-height: var(--touch-min); display: inline-flex; align-items: center; padding: 0 16px; white-space: nowrap;

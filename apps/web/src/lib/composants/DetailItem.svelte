@@ -47,7 +47,7 @@
 
 <svelte:window onkeydown={(e) => { if (e.key === 'Escape') surFermer(); }} />
 
-<div class="panneau" role="dialog" aria-modal="true" aria-labelledby="titre-detail">
+<div class="panneau" role="dialog" aria-labelledby="titre-detail">
   <header><button class="bouton-icone" onclick={surFermer} aria-label="Retour"><Icone nom="retour" /></button></header>
   <h2 id="titre-detail" class="titre" tabindex="-1" bind:this={titre}>{ligne.texte}</h2>
 
