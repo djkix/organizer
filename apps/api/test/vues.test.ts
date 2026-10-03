@@ -75,6 +75,13 @@ describe('semaine et horizons', () => {
     ]);
   });
 
+  it('le libellé d\'une borne est la première expression non nulle du groupe', async () => {
+    await creerAction(prisma, { texte: 'a', type: 'fenetre', fin: '2026-12-24T23:59:00+01:00' });
+    await creerAction(prisma, { texte: 'b', type: 'fenetre', fin: '2026-12-24T23:59:00+01:00', expr: 'avant Noël' });
+    const v = await vues.horizons(MAINTENANT, PARIS);
+    expect(v.bornes.map((b) => b.libelle)).toEqual(['avant Noël']);
+  });
+
   it('une vue ne dépasse jamais 20 lignes', async () => {
     for (let i = 0; i < 25; i++) await creerAction(prisma, { type: 'fenetre', fin: '2026-11-01T00:00:00+01:00' });
     const v = await vues.horizons(MAINTENANT, PARIS);
@@ -88,6 +95,8 @@ describe('a revoir', () => {
     const u = await prisma.utilisateur.findUniqueOrThrow({ where: { nom: 'test' } });
     await prisma.capture.create({ data: { utilisateurId: u.id, canal: 'telegram', prive: false, etat: 'a_revoir', emisLe: new Date(), texteBrut: 'inaudible' } });
     await prisma.capture.create({ data: { utilisateurId: u.id, canal: 'pwa', prive: true, etat: 'privee', emisLe: new Date() } });
+    const priv = await creerAction(prisma, { texte: 'ambigu privé', type: null, nature: 'ambigu' });
+    await prisma.capture.update({ where: { id: priv.captureId }, data: { prive: true, etat: 'privee' } });
     const v = await vues.aRevoir();
     expect(v.items.map((i) => i.texte)).toEqual(['vendredi ou samedi']);
     expect(v.captures.map((c) => c.texte)).toEqual(['inaudible']);
