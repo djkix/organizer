@@ -17,7 +17,17 @@ export class AuthService {
 
   async definirMotDePasse(nom: string, motDePasse: string): Promise<void> {
     if (motDePasse.length < 12) throw new Error('Mot de passe trop court : 12 caractères minimum.');
-    await this.prisma.utilisateur.update({ where: { nom }, data: { motDePasseHash: await hash(motDePasse) } });
+    const motDePasseHash = await hash(motDePasse);
+    try {
+      // Changer le mot de passe révoque toutes les sessions du compte.
+      await this.prisma.$transaction([
+        this.prisma.utilisateur.update({ where: { nom }, data: { motDePasseHash } }),
+        this.prisma.session.deleteMany({ where: { utilisateur: { nom } } }),
+      ]);
+    } catch (err) {
+      if ((err as { code?: string }).code === 'P2025') throw new Error('Compte introuvable.');
+      throw err;
+    }
   }
 
   async ouvrirSession(nom: string, motDePasse: string): Promise<{ jeton: string; expireLe: Date } | null> {
