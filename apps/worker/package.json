@@ -10,7 +10,8 @@
     "@organizer/db": "workspace:*",
     "@organizer/shared": "workspace:*",
     "bullmq": "^5.58.0",
-    "ioredis": "^5.7.0"
+    "ioredis": "^5.7.0",
+    "zod": "^4.1.0"
   },
   "devDependencies": { "tsx": "^4.20.0" }
 }

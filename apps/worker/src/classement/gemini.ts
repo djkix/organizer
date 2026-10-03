@@ -1,4 +1,5 @@
 import type { Prompt } from '@organizer/shared';
+import { z } from 'zod';
 import {
   CreditEpuise, PalierNonPaye, SortieNonConforme,
   type ClassificationProvider, type EntreeClassement, type ResultatClassement,
@@ -29,17 +30,28 @@ export class GeminiProvider implements ClassificationProvider {
   constructor(private readonly o: OptionsGemini) {}
 
   async classer(e: EntreeClassement): Promise<ResultatClassement> {
-    let derniere: unknown;
+    let derniereRaison = '';
     for (const modele of [this.o.modele, this.o.repli]) {
       const brut = await this.appeler(modele, e);
       try {
         const sortie = this.o.prompt.valider(JSON.parse(brut.texte));
         return { sortie, modele, tokensEntree: brut.entree, tokensSortie: brut.sortie };
       } catch (err) {
-        derniere = err;
+        derniereRaison = this.sanitizeErrorReason(err);
       }
     }
-    throw new SortieNonConforme(`Sortie hors schéma sur ${this.o.modele} puis ${this.o.repli}`, { cause: derniere });
+    throw new SortieNonConforme(`Sortie hors schéma sur ${this.o.modele} puis ${this.o.repli} : ${derniereRaison}`);
+  }
+
+  private sanitizeErrorReason(err: unknown): string {
+    if (err instanceof z.ZodError) {
+      // Extract issue paths and codes only, no values
+      return err.issues.map((issue) => `${issue.path.join('.')}:${issue.code}`).join('; ');
+    }
+    if (err instanceof Error) {
+      return err.name;
+    }
+    return 'erreur inconnue';
   }
 
   async verifierPalierPaye(): Promise<void> {
