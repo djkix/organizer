@@ -9,5 +9,7 @@ export default {
     adapter: adapter({ fallback: 'index.html', strict: true }),
     // Le service worker est enregistré par vite-plugin-pwa (tâche 8), pas par SvelteKit.
     serviceWorker: { register: false },
+    // Chemins absolus : la même coquille sert « / » et « /prive/enregistrer » depuis le cache du service worker.
+    paths: { relative: false },
   },
 };
