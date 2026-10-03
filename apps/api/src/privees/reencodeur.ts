@@ -38,3 +38,35 @@ export class ReencodeurFfmpeg implements Reencodeur {
     });
   }
 }
+
+export class ServeurOccupe extends Error {
+  override name = 'ServeurOccupe';
+}
+
+/**
+ * Plafond de ffmpeg simultanés : au plus `max` en cours, `attenteMax` en attente, dans l'ordre d'arrivée.
+ * Au-delà, refus immédiat (503) : la PWA garde la capture et réessaie, rien ne se perd.
+ */
+export class ReencodeurBorne implements Reencodeur {
+  private enCours = 0;
+  private readonly attente: Array<() => void> = [];
+
+  constructor(private readonly interne: Reencodeur, private readonly max = 2, private readonly attenteMax = 4) {}
+
+  async versOpus(donnees: Buffer): Promise<Buffer> {
+    if (this.enCours < this.max) {
+      this.enCours++;
+    } else {
+      if (this.attente.length >= this.attenteMax) throw new ServeurOccupe('ffmpeg saturé');
+      // La place est transmise par celui qui sort : enCours ne bouge pas.
+      await new Promise<void>((tour) => this.attente.push(tour));
+    }
+    try {
+      return await this.interne.versOpus(donnees);
+    } finally {
+      const suivant = this.attente.shift();
+      if (suivant) suivant();
+      else this.enCours--;
+    }
+  }
+}

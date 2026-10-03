@@ -30,6 +30,12 @@ export class AuthService {
     }
   }
 
+  /** Sessions expirées : jamais gardées. Renvoie le nombre supprimé. */
+  async purgerExpirees(): Promise<number> {
+    const { count } = await this.prisma.session.deleteMany({ where: { expireLe: { lte: this.maintenant() } } });
+    return count;
+  }
+
   async ouvrirSession(nom: string, motDePasse: string): Promise<{ jeton: string; expireLe: Date } | null> {
     const u = await this.prisma.utilisateur.findUnique({ where: { nom } });
     const ok = await verify(u?.motDePasseHash ?? (await factice()), motDePasse);

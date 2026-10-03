@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DELAI_ENVOI_PRIVE_MAX_MS, lireVar, TAILLE_MAX_CAPTURE_PRIVEE } from '@organizer/shared';
 import { json, raw, type NextFunction, type Request, type Response } from 'express';
+import { lireCookie, NOM_COOKIE } from './auth/cookies.js';
 import { LimiteurDebit } from './auth/limiteur.js';
 import { erreurDeCorps, FiltreSansContenu } from './erreurs.js';
 
@@ -45,8 +46,15 @@ export function configurerApp(app: NestExpressApplication): void {
     res.status(429).json({ message: 'Trop de requêtes. Réessaie dans une minute.' });
   });
   const audio = raw({ type: () => true, limit: TAILLE_MAX_AUDIO });
-  app.use('/api/captures/privees', (req: Request, res: Response, suite: NextFunction) =>
-    req.method === 'POST' && req.path === '/' ? audio(req, res, suite) : suite());
+  app.use('/api/captures/privees', (req: Request, res: Response, suite: NextFunction) => {
+    if (req.method !== 'POST' || req.path !== '/') return suite();
+    // Sans cookie de session, inutile de lire jusqu'à 30 Mio : refus avant le corps.
+    if (!lireCookie(req.headers.cookie, NOM_COOKIE)) {
+      res.status(401).json({ message: 'Connecte-toi pour continuer.' });
+      return;
+    }
+    audio(req, res, suite);
+  });
   app.use(json({ limit: '1mb' }));
   app.use(erreurDeCorps);
   app.useGlobalFilters(new FiltreSansContenu(app.getHttpAdapter()));

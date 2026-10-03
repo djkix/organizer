@@ -129,3 +129,15 @@ describe('/api/session', () => {
     }
   });
 });
+
+describe('purge des sessions', () => {
+  it('supprime les sessions expirées, garde les autres', async () => {
+    const u = await prisma.utilisateur.create({ data: { nom: 'p' } });
+    await prisma.session.createMany({ data: [
+      { jetonHash: 'a'.repeat(64), utilisateurId: u.id, expireLe: new Date('2026-10-01T00:00:00Z') },
+      { jetonHash: 'b'.repeat(64), utilisateurId: u.id, expireLe: new Date('2027-01-01T00:00:00Z') },
+    ] });
+    expect(await auth.purgerExpirees()).toBe(1);
+    expect((await prisma.session.findMany()).map((s) => s.jetonHash)).toEqual(['b'.repeat(64)]);
+  });
+});

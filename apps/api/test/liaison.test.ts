@@ -102,3 +102,14 @@ describe('lierDirectement (CLI, avant la bascule)', () => {
     await expect(service().lierDirectement('inconnu', 9n)).rejects.toThrow('Compte introuvable.');
   });
 });
+
+describe('purge des codes', () => {
+  it('supprime les codes expirés, garde les valides', async () => {
+    horloge = new Date('2026-10-06T08:00:00Z');
+    await service().creerCode('a');
+    horloge = new Date('2026-10-06T08:20:00Z');
+    const valide = await service().creerCode('b');
+    expect(await service().purgerCodesExpires()).toBe(1);
+    expect((await prisma.codeLiaison.findMany()).map((c) => c.code)).toEqual([valide]);
+  });
+});

@@ -8,6 +8,11 @@ const MAX_ECHECS = 10;
 export class LiaisonService {
   constructor(private readonly prisma: PrismaClient, private readonly maintenant: () => Date = () => new Date()) {}
 
+  async purgerCodesExpires(): Promise<number> {
+    const { count } = await this.prisma.codeLiaison.deleteMany({ where: { expireLe: { lte: this.maintenant() } } });
+    return count;
+  }
+
   async creerCode(nom: string): Promise<string> {
     const u = await this.prisma.utilisateur.findUniqueOrThrow({ where: { nom } });
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
