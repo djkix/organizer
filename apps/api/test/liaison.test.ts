@@ -80,3 +80,25 @@ describe('LiaisonService', () => {
     expect([...r].sort()).toEqual(['invalide', 'lie']);
   });
 });
+
+describe('lierDirectement (CLI, avant la bascule)', () => {
+  it('lier-chat lie un compte sans code, et le rejouer ne change rien', async () => {
+    await service().lierDirectement('a', 7n);
+    await service().lierDirectement('a', 7n);
+    expect((await service().utilisateurDuChat(7))?.id).toBe((await prisma.utilisateur.findUniqueOrThrow({ where: { nom: 'a' } })).id);
+  });
+
+  it('refuse un chat déjà lié à un autre compte', async () => {
+    await service().lierDirectement('a', 7n);
+    await expect(service().lierDirectement('b', 7n)).rejects.toThrow('Ce chat est déjà lié à un autre compte.');
+  });
+
+  it('refuse d\'écraser le lien d\'un compte : delier d\'abord', async () => {
+    await service().lierDirectement('a', 7n);
+    await expect(service().lierDirectement('a', 8n)).rejects.toThrow('delier');
+  });
+
+  it('refuse un compte inconnu', async () => {
+    await expect(service().lierDirectement('inconnu', 9n)).rejects.toThrow('Compte introuvable.');
+  });
+});

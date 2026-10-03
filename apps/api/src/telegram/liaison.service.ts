@@ -54,6 +54,18 @@ export class LiaisonService {
     }
   }
 
+  /** Liaison par l'administrateur, sans code : avant la bascule, aucun vocal ne peut tomber sur un chat non lié. */
+  async lierDirectement(nom: string, chat: bigint): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const u = await tx.utilisateur.findUnique({ where: { nom } });
+      if (!u) throw new Error('Compte introuvable.');
+      if (u.telegramChatId === chat) return;
+      if (u.telegramChatId !== null) throw new Error('Ce compte est déjà lié à un autre chat : delier d\'abord.');
+      if (await tx.utilisateur.findUnique({ where: { telegramChatId: chat } })) throw new Error('Ce chat est déjà lié à un autre compte.');
+      await tx.utilisateur.update({ where: { id: u.id }, data: { telegramChatId: chat } });
+    });
+  }
+
   async delier(nom: string): Promise<void> {
     await this.prisma.utilisateur.update({ where: { nom }, data: { telegramChatId: null } });
   }

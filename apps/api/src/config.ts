@@ -8,6 +8,10 @@ export interface ConfigApi {
   webhookSecret: string | undefined;
   audioRacine: string;
   typesEcheance: string[];
+  /** Racine de l'API Bot (tests, serveur Bot API local). Défaut : https://api.telegram.org */
+  telegramApiRoot?: string;
+  /** Adresse publique du webhook, pour la CLI telegram-webhook. */
+  webhookUrl?: string;
 }
 
 export function lireConfigApi(): ConfigApi {
@@ -21,6 +25,8 @@ export function lireConfigApi(): ConfigApi {
     telegramToken: exigerVar('TELEGRAM_BOT_TOKEN'),
     telegramMode: mode,
     webhookSecret,
+    telegramApiRoot: lireVar('TELEGRAM_API_ROOT'),
+    webhookUrl: lireVar('TELEGRAM_WEBHOOK_URL'),
     audioRacine: cheminConfigure('AUDIO_STORAGE_PATH', exigerVar('AUDIO_STORAGE_PATH')),
     typesEcheance: valeursAdmises(
       chargerPrompt(cheminConfigure('PROMPTS_DIR', lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v1'),
