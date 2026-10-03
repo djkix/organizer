@@ -6,6 +6,9 @@ Le projet n'a pas encore de version publiée.
 
 ## [Non publié]
 
+### Ajouté
+- L'API démarre et sert la PWA même si Telegram est injoignable ; la CLI pose, retire et décrit le webhook (une connexion, secret, messages en attente gardés) et lie un compte à un chat sans code (2026-10-04).
+
 ### Modifié
 - Les images Docker seront publiées sur GHCR en public, et non en privé (2026-10-04).
 
