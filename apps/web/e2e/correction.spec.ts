@@ -115,4 +115,19 @@ test.describe('focus et retour du détail', () => {
     await expect(champ).toBeFocused();
     await expect(champ).not.toHaveAttribute('disabled', '');
   });
+
+  test('après une correction qui retire la ligne, le focus va au titre de la page', async ({ page }) => {
+    const appels = await montage(page);
+    let corrige = false;
+    await page.route('**/api/vues/aujourdhui', (route) => route.fulfill({
+      json: { jour: '2026-10-06', actions: corrige ? [garage] : [garage, draps], suggestions: [] },
+    }));
+    await page.route(`**/api/items/${draps.itemId}`, async (route) => { corrige = true; await route.fulfill({ status: 204 }); });
+    await ligneDraps(page).click();
+    await page.getByRole('button', { name: "Ce n'est pas une chose à faire" }).click();
+    await expect(detail(page)).toHaveCount(0);
+    await expect(ligneDraps(page)).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe('H1');
+    expect(appels.length).toBeGreaterThan(0);
+  });
 });
