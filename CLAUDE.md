@@ -93,7 +93,7 @@ pnpm install
 pnpm dev                 # api + worker + web en parallèle
 pnpm test                # tests unitaires
 pnpm lint && pnpm typecheck
-pnpm prisma migrate dev
+pnpm db migrate dev      # CLI Prisma avec le .env racine chargé
 ```
 
 ## État du projet

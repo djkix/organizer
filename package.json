@@ -9,7 +9,8 @@
     "test": "pnpm --filter @organizer/db migrate:test && vitest run --no-file-parallelism",
     "lint": "eslint .",
     "typecheck": "pnpm -r typecheck",
-    "prisma": "pnpm --filter @organizer/db exec prisma"
+    "prisma": "pnpm --filter @organizer/db exec prisma",
+    "db": "pnpm --filter @organizer/db db"
   },
   "devDependencies": {
     "@types/node": "^22.18.0",

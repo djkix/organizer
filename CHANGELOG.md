@@ -30,6 +30,7 @@ Le projet n'a pas encore de version publiée.
 - La liaison d'un compte Telegram est limitée à dix échecs par dix minutes, ne remplace jamais un lien existant (commande « délier » pour l'admin) (2026-10-03).
 
 ### Modifié
+- Le README et `.env.example` décrivent l'état réel du lot 1-A, le bot unique @organizer_lud_bot, la configuration, l'administration, et `pnpm db` charge le `.env` pour Prisma (2026-10-03).
 - Une légende de message est gardée comme texte, et le bot répond aux formats qu'il ne prend pas en charge (2026-10-03).
 - Les lots 0 et 1 sont menés en parallèle (décision 21) (2026-10-03).
 - Les tests appliquent les migrations sans réinitialiser la base (2026-10-03).

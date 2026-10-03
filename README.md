@@ -16,9 +16,12 @@ Livré sur la branche `lot1-a-socle-pipeline` :
 - le monorepo pnpm et la base de dev (Postgres et Valkey sur la VM Docker, par tunnel SSH) ;
 - les prompts versionnés et la validation Zod de la sortie de tri ;
 - le schéma Prisma, avec le verrouillage du mode privé en SQL ;
-- l'interface `ClassificationProvider` et le fournisseur Gemini, avec repli de modèle.
+- l'interface `ClassificationProvider` et le fournisseur Gemini, avec repli de modèle ;
+- le worker BullMQ : classement des captures, pause sur crédit épuisé avec alerte à l'admin, reprise des captures perdues en route, contrôle du palier payé au démarrage ;
+- l'ingestion Telegram : bot grammY, liaison des comptes par code, accusé de réception, audio rangé, job enfilé ;
+- l'API NestJS (webhook ou polling, `GET /health`) et sa ligne de commande d'administration.
 
-Pas encore livré : le traitement par le worker, l'ingestion Telegram, l'API NestJS, la PWA et le déploiement. L'application n'est pas en service.
+Pas encore livré : la PWA, le mode privé côté PWA (plan 1-B) et le déploiement (plan 1-C). L'application n'est pas en service.
 
 ## Principes
 
@@ -60,7 +63,8 @@ flowchart LR
 ## Arborescence
 
 ```
-apps/worker       traitement asynchrone : fournisseur Gemini (apps/api, scheduler et web : à venir)
+apps/api          NestJS : bot Telegram, ingestion, alertes admin, CLI d'administration
+apps/worker       traitement asynchrone : classement Gemini, reprise (scheduler et web : à venir)
 packages/shared   types, schémas Zod et configuration partagés
 packages/db       schéma Prisma, migrations, garde-fous SQL du mode privé
 prompts/          prompts Gemini versionnés et responseSchema
@@ -78,8 +82,13 @@ docs/             cahier des charges, décisions, guide d'annotation, plans
 - Node 22 LTS minimum.
 - pnpm, installé par Homebrew.
 - Accès SSH à l'hôte Docker du homelab, pour la base de dev.
-- Un bot Telegram de dev, distinct de celui de production.
+- Le jeton du bot `@organizer_lud_bot` (décision R10 : pas de bot de dev distinct).
 - Une clé d'API Gemini sur un projet Google Cloud avec facturation activée.
+
+> **Attention.** Ne jamais lancer l'API en mode polling avec le jeton de `@organizer_lud_bot`
+> tant que le banc d'essai (`infra/terrain/`) tourne : les deux processus se disputeraient
+> les messages de L, et des captures du corpus du lot 0 seraient perdues pour le banc.
+> L'essai de bout en bout se fera au déploiement (plan 1-C), en remplaçant le banc d'essai.
 
 ## Démarrage en développement
 
@@ -95,30 +104,77 @@ docs/             cahier des charges, décisions, guide d'annotation, plans
    pnpm install
    ```
 
-3. Copier `.env.example` en `.env`, puis le remplir (le `.env` reste hors dépôt) :
+3. Copier `.env.example` en `.env`, puis le remplir (le `.env` reste hors dépôt). `DATABASE_URL`
+   et `REDIS_URL` pointent sur le tunnel (`127.0.0.1:55432` et `127.0.0.1:56379`). Les chemins
+   relatifs (`AUDIO_STORAGE_PATH`, `PROMPTS_DIR`) se lisent depuis la racine du dépôt.
 
    ```bash
    cp .env.example .env
    ```
 
-4. Appliquer les migrations :
+4. Appliquer les migrations. `pnpm db` lance la CLI Prisma en chargeant le `.env` racine
+   (une variable déjà exportée dans le shell l'emporte sur le fichier) :
 
    ```bash
-   pnpm prisma migrate dev
+   pnpm db migrate dev
+   pnpm db migrate status   # vérifier sans rien modifier
    ```
 
-5. Créer un compte et un code de liaison. Ces commandes seront disponibles à la fin du lot 1-A :
+5. Créer un compte et un code de liaison (voir « Administration » plus bas) :
 
    ```bash
    pnpm --filter @organizer/api cli creer-utilisateur <nom> --admin
    pnpm --filter @organizer/api cli code-liaison <nom>
    ```
 
-6. Lancer l'application :
+6. Lancer l'application (lire d'abord l'avertissement sur le polling ci-dessus) :
 
    ```bash
    pnpm dev
    ```
+
+## Configuration de l'API et du worker
+
+| Variable | Rôle |
+| --- | --- |
+| `TELEGRAM_MODE` | `webhook` (défaut, production) ou `polling` (l'API interroge Telegram elle-même) |
+| `TELEGRAM_WEBHOOK_SECRET` | obligatoire en mode `webhook` : jeton vérifié dans l'en-tête de chaque appel de Telegram |
+| `TELEGRAM_BOT_TOKEN` | jeton de `@organizer_lud_bot` |
+| `AUDIO_STORAGE_PATH` | dossier de l'audio, commun à l'API et au worker |
+| `PROMPTS_DIR`, `PROMPT_VERSION` | dossier des prompts (défaut `prompts`) et version (défaut `tri/v1`) |
+| `GEMINI_TIERS_PAYES` | valeurs de `serviceTier` acceptées comme palier payé |
+
+Chaque variable peut aussi être lue depuis un fichier, par `<NOM>_FILE` (secrets Docker).
+
+L'API expose :
+
+- `GET /health` : répond `{ "ok": true }`, pour la sonde de santé ;
+- `POST /telegram/webhook` : le webhook Telegram, en mode `webhook` seulement (404 en mode `polling`).
+  Une erreur de traitement répond 500 : Telegram relivre, et l'ingestion est idempotente.
+
+En mode `polling`, si le polling s'arrête sur une erreur (jeton refusé, autre processus sur le
+même bot), l'API s'arrête volontairement.
+
+### Contrôle du palier payé au démarrage du worker
+
+Règle n° 8 : avant de traiter quoi que ce soit, le worker vérifie que le projet Gemini est au
+palier payé.
+
+- Palier non payé : le worker refuse de démarrer et s'arrête.
+- Contrôle impossible (crédit épuisé, HTTP 402, réseau, erreur serveur) : il attend et réessaie,
+  de 30 s jusqu'à 15 min entre deux essais, sans jamais démarrer sans contrôle.
+
+Au démarrage puis chaque heure, le worker remet en file les captures perdues en route.
+
+## Administration
+
+Aucune inscription libre : les comptes se créent en ligne de commande. La CLI lit le `.env` racine.
+
+| Commande | Rôle |
+| --- | --- |
+| `pnpm --filter @organizer/api cli creer-utilisateur <nom> [--admin]` | crée un compte ; `--admin` reçoit les alertes techniques |
+| `pnpm --filter @organizer/api cli code-liaison <nom>` | affiche un code à usage unique, valable 10 minutes, à envoyer au bot par `/start <code>` |
+| `pnpm --filter @organizer/api cli delier <nom>` | retire le lien entre un compte et son chat Telegram (une liaison ne remplace jamais un lien existant) |
 
 ## Commandes
 
@@ -127,7 +183,8 @@ docs/             cahier des charges, décisions, guide d'annotation, plans
 | `pnpm test` | applique les migrations de test, puis lance les tests Vitest |
 | `pnpm lint` | ESLint sur tout le dépôt |
 | `pnpm typecheck` | vérification TypeScript de chaque paquet |
-| `pnpm prisma …` | CLI Prisma du paquet `@organizer/db` (`migrate dev`, `migrate deploy`, `studio`…) |
+| `pnpm db …` | CLI Prisma du paquet `@organizer/db`, avec le `.env` racine chargé (`migrate dev`, `migrate status`, `studio`…) |
+| `pnpm prisma …` | CLI Prisma sans charger le `.env` : exporter `DATABASE_URL` avant |
 | `pnpm dev` | lance en parallèle les applications de `apps/` |
 | `python3 tools/relecture/relecture.py` | relecture des captures du banc d'essai (voir [`tools/relecture/README.md`](tools/relecture/README.md)) |
 
