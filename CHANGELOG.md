@@ -40,6 +40,7 @@ Le projet n'a pas encore de version publiée.
 - Les plafonds Gemini et le traitement du crédit épuisé sont décrits (2026-10-01).
 
 ### Corrigé
+- Le worker remet en file, au démarrage puis chaque heure, les captures restées en file plus d'une heure sans traitement en cours (2026-10-03).
 - Une capture dont le classement ne produit aucun item passe en « à revoir » au lieu de disparaître (2026-10-03).
 - L'API démarre en mode polling : la route du webhook n'existe qu'en mode webhook, et un polling arrêté termine l'API (2026-10-03).
 - Le worker attend au démarrage si le contrôle du palier échoue, survit à une alerte en panne et ne perd plus de capture à la reprise (2026-10-03).
