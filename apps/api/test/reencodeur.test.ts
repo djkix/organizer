@@ -21,4 +21,19 @@ describe('ReencodeurFfmpeg', () => {
   it('signale un binaire absent', async () => {
     await expect(new ReencodeurFfmpeg('ffmpeg-inexistant').versOpus(webm())).rejects.toThrow();
   });
+
+  it('ne suit pas un fichier de concaténation ni une référence locale', async () => {
+    const piege = Buffer.from('ffconcat version 1.0\nfile x.wav\n');
+    await expect(new ReencodeurFfmpeg().versOpus(piege)).rejects.toBeInstanceOf(AudioIllisible);
+  });
+
+  it('retire les métadonnées de la source', async () => {
+    const avec = execFileSync('ffmpeg', [
+      '-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1',
+      '-metadata', 'title=SECRET-TITRE', '-metadata', 'location=48.85+2.35/', '-c:a', 'libopus', '-f', 'webm', 'pipe:1',
+    ]);
+    expect(avec.includes('SECRET-TITRE')).toBe(true);
+    const sortie = await new ReencodeurFfmpeg().versOpus(avec);
+    expect(sortie.includes('SECRET-TITRE')).toBe(false);
+  });
 });

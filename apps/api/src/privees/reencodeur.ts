@@ -15,7 +15,10 @@ export class ReencodeurFfmpeg implements Reencodeur {
   versOpus(donnees: Buffer): Promise<Buffer> {
     return new Promise((resoudre, rejeter) => {
       const p = spawn(this.binaire, [
-        '-hide_banner', '-loglevel', 'error', '-i', 'pipe:0', '-vn', '-c:a', 'libopus', '-b:a', '32k', '-f', 'ogg', 'pipe:1',
+        '-hide_banner', '-loglevel', 'error',
+        // Octets non fiables : aucun protocole hors du tube, seuls les conteneurs attendus, pas de métadonnées.
+        '-protocol_whitelist', 'pipe', '-format_whitelist', 'matroska,webm,ogg,mov,mp4,m4a,mp3,wav',
+        '-i', 'pipe:0', '-vn', '-map_metadata', '-1', '-t', '3600', '-c:a', 'libopus', '-b:a', '32k', '-f', 'ogg', 'pipe:1',
       ], { stdio: ['pipe', 'pipe', 'ignore'] });
       const morceaux: Buffer[] = [];
       const minuterie = setTimeout(() => p.kill('SIGKILL'), this.delaiMs);
