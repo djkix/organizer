@@ -40,9 +40,12 @@ const worker = demarrerWorker({
   alerter: async (message) => { await alertes.add('alerte', { message }); },
 });
 
-const minuterie = setInterval(() => {
+const lancerReprise = (): void => {
   reprendre(prisma, file).catch((e: unknown) => console.error(`Reprise impossible : ${(e as Error).name}`));
-}, 60 * 60_000);
+};
+// Une fois au démarrage (captures orphelines d'un arrêt ou d'une perte de Valkey), puis toutes les heures.
+lancerReprise();
+const minuterie = setInterval(lancerReprise, 60 * 60_000);
 
 console.log(`Worker démarré. Prompt ${prompt.version}, concurrence ${worker.opts.concurrency}.`);
 

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
 import { chargerPrompt, OPTIONS_JOB_CLASSEMENT, type JobClassement } from '@organizer/shared';
-import { Queue, type Worker } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CreditEpuise } from '../src/classement/provider.js';
@@ -114,8 +114,64 @@ describe('reprendre', () => {
   it('laisse la capture en a_transcrire si l\'enfilage échoue', async () => {
     const { id } = await creerCaptureTexte(prisma);
     await prisma.capture.update({ where: { id }, data: { etat: 'a_transcrire' } });
-    const cassee = { add: async () => { throw new Error('redis indisponible'); } } as unknown as Queue<JobClassement>;
+    const cassee = {
+      getJob: async () => undefined,
+      remove: async () => 0,
+      add: async () => { throw new Error('redis indisponible'); },
+    } as unknown as Queue<JobClassement>;
     await expect(reprendre(prisma, cassee)).rejects.toThrow();
     expect(await etat(id)).toBe('a_transcrire');
+  });
+
+  const ilYa = (ms: number) => new Date(Date.now() - ms);
+  const enFileDepuis = async (ms: number) => {
+    const { id } = await creerCaptureTexte(prisma);
+    await prisma.capture.update({ where: { id }, data: { etat: 'en_file', recuLe: ilYa(ms) } });
+    return id;
+  };
+
+  it('réenfile une capture en_file ancienne dont aucun job n\'existe', async () => {
+    const id = await enFileDepuis(2 * 3_600_000);
+    expect(await reprendre(prisma, file)).toBe(1);
+    expect(await etat(id)).toBe('en_file');
+    expect(await (await file.getJob(id))?.getState()).toBe('waiting');
+  });
+
+  it('réenfile une capture en_file ancienne dont le job a échoué ou s\'est terminé', async () => {
+    const id = await enFileDepuis(2 * 3_600_000);
+    const job = await file.add('classer', { captureId: id }, { jobId: id, attempts: 1 });
+    // Un job mort côté BullMQ alors que la capture est restée en_file (handler failed perdu).
+    const casse = new Worker<JobClassement>(nomFile, async () => { throw new Error('bloqué'); }, { connection: connexion });
+    await attendre(async () => (await job.getState()) === 'failed');
+    await casse.close();
+    expect(await job.getState()).toBe('failed');
+    expect(await reprendre(prisma, file)).toBe(1);
+    expect(await (await file.getJob(id))?.getState()).toBe('waiting');
+  });
+
+  it('ne touche ni une capture en_file récente ni une capture dont le job attend', async () => {
+    const recente = await enFileDepuis(10 * 60_000);
+    const attendue = await enFileDepuis(2 * 3_600_000);
+    await file.add('classer', { captureId: attendue }, { jobId: attendue });
+    expect(await reprendre(prisma, file)).toBe(0);
+    expect(await file.getJob(recente)).toBeUndefined();
+    expect(await file.count()).toBe(1);
+  });
+
+  it('ne réenfile jamais une capture privée', async () => {
+    const u = await prisma.utilisateur.create({ data: { nom: 'prive' } });
+    await prisma.capture.create({
+      data: { utilisateurId: u.id, canal: 'pwa', prive: true, etat: 'privee', emisLe: new Date(), recuLe: ilYa(5 * 3_600_000) },
+    });
+    expect(await reprendre(prisma, file)).toBe(0);
+    expect(await file.count()).toBe(0);
+  });
+
+  it('une capture reprise depuis a_transcrire reste détectée comme vivante au balayage suivant', async () => {
+    const { id } = await creerCaptureTexte(prisma);
+    await prisma.capture.update({ where: { id }, data: { etat: 'a_transcrire', recuLe: ilYa(2 * 3_600_000) } });
+    expect(await reprendre(prisma, file)).toBe(1);
+    expect(await reprendre(prisma, file)).toBe(0);
+    expect(await file.count()).toBe(1);
   });
 });
