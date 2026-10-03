@@ -22,6 +22,7 @@ Le projet n'a pas encore de version publiée.
 - L'ordre des vues est stable à égalité, le libellé d'un horizon vient de la première expression connue, et À revoir exclut les items privés (2026-10-03).
 
 ### Ajouté
+- La file hors ligne des captures privées de la PWA : copie locale d'abord, envoi idempotent par X-Capture-Id, relance au retour du réseau (2026-10-04).
 - Le détail d'un item dans la PWA : réécoute, correction de la nature ou de l'échéance en deux gestes, et l'écran À revoir (2026-10-04).
 - L'écran À faire de la PWA : Aujourd'hui, Semaine et Horizons, cochage d'un geste avec annulation pendant 10 s, sans compteur ni mention de retard (2026-10-04).
 - La connexion à la PWA, la garde de session qui ne bloque jamais l'enregistreur privé, la navigation et la déconnexion dans Réglages (2026-10-04).
