@@ -1,4 +1,4 @@
-import { exigerVar, lireVar } from '@organizer/shared';
+import { cheminDepuisRacine, exigerVar, lireVar } from '@organizer/shared';
 
 export interface ConfigApi {
   port: number;
@@ -20,6 +20,6 @@ export function lireConfigApi(): ConfigApi {
     telegramToken: exigerVar('TELEGRAM_BOT_TOKEN'),
     telegramMode: mode,
     webhookSecret,
-    audioRacine: exigerVar('AUDIO_STORAGE_PATH'),
+    audioRacine: cheminDepuisRacine(exigerVar('AUDIO_STORAGE_PATH')),
   };
 }
