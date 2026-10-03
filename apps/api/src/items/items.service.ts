@@ -1,11 +1,8 @@
 import { resolve, sep } from 'node:path';
 import { Prisma, type PrismaClient } from '@organizer/db';
-import type { Nature } from '@organizer/shared';
+import type { CorpsCorrection } from '@organizer/shared';
 
-export interface CorrectionItem {
-  nature?: Nature;
-  echeance?: { type: string; date?: string | null; debut?: string | null; fin?: string | null };
-}
+export type CorrectionItem = CorpsCorrection;
 
 export class ItemIntrouvable extends Error {
   override name = 'ItemIntrouvable';

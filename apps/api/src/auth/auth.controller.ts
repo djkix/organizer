@@ -7,7 +7,7 @@ import { cookieEfface, cookieSession, lireCookie, NOM_COOKIE } from './cookies.j
 import { LimiteurDebit } from './limiteur.js';
 import { SessionGuard, type RequeteAuthentifiee } from './session.guard.js';
 
-const schemaConnexion = z.object({ nom: z.string().min(1).max(100), motDePasse: z.string().min(1).max(500) });
+export const schemaConnexion = z.object({ nom: z.string().min(1).max(100), motDePasse: z.string().min(1).max(500) });
 
 @Controller('api/session')
 export class AuthController {

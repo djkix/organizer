@@ -11,7 +11,7 @@ import { CONFIG, ITEMS } from '../jetons.js';
 import { CorrectionInvalide, ItemIntrouvable, type ItemsService } from './items.service.js';
 
 const dateOuNul = z.string().max(40).nullable().optional();
-const schemaCorrection = z.object({
+export const schemaCorrection = z.object({
   nature: z.enum(NATURES).optional(),
   echeance: z.object({ type: z.string().max(40), date: dateOuNul, debut: dateOuNul, fin: dateOuNul }).optional(),
 }).refine((c) => c.nature !== undefined || c.echeance !== undefined);

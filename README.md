@@ -166,6 +166,7 @@ Routes de la PWA, sous `/api`, toutes protégées par la session, sauf la connex
 - `GET /api/captures/:id/audio` : réécouter l'audio d'origine ;
 - `POST /api/captures/privees` : déposer une capture privée ; `GET /api/captures/privees?mois=AAAA-MM` : les lister par jour (mois courant par défaut) ;
   `PATCH /api/captures/privees/:id` : poser ou retirer l'étiquette.
+  Le dépôt envoie l'audio brut ; sans `X-Capture-Id`, un rejeu crée un doublon.
 
 En mode `polling`, si le polling s'arrête sur une erreur (jeton refusé, autre processus sur le
 même bot), l'API s'arrête volontairement.
