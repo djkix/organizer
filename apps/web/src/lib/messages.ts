@@ -5,6 +5,7 @@ export const MESSAGES = {
   tropDeRequetes: 'Trop de demandes. Réessaie dans une minute.',
   horsLigne: 'Pas de réseau pour le moment.',
   serveurIndisponible: 'Le serveur ne répond pas.',
+  enregistrementTropLong: 'Enregistrement trop long.',
   listeIndisponible: 'Pas de réseau. La liste reviendra.',
   // À faire
   videAujourdhui: "Rien pour aujourd'hui.",

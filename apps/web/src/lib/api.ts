@@ -41,14 +41,22 @@ export interface OptionsClient {
 
 export const urlAudio = (captureId: string): string => `/api/captures/${encodeURIComponent(captureId)}/audio`;
 
+/** Durée maximale d'un appel : une panne réseau muette ne bloque jamais l'écran. */
+export const DELAI_APPEL_MS = 15_000;
+
+/** Seuls 401 et 429 portent un message français connu de l'API ; le reste ne montre jamais le texte du serveur. */
 async function messageDe(r: Response): Promise<string> {
-  try {
-    const corps = (await r.json()) as Partial<ReponseErreur>;
-    if (typeof corps.message === 'string' && corps.message.length > 0) return corps.message;
-  } catch {
-    // Corps absent ou illisible : message par défaut.
+  if (r.status === 413) return MESSAGES.enregistrementTropLong;
+  if (r.status === 401 || r.status === 429) {
+    try {
+      const corps = (await r.json()) as Partial<ReponseErreur>;
+      if (typeof corps.message === 'string' && corps.message.length > 0) return corps.message;
+    } catch {
+      // Corps absent ou illisible : message par défaut.
+    }
+    return r.status === 429 ? MESSAGES.tropDeRequetes : MESSAGES.identifiantsInvalides;
   }
-  return r.status === 429 ? MESSAGES.tropDeRequetes : MESSAGES.serveurIndisponible;
+  return MESSAGES.serveurIndisponible;
 }
 
 export function creerClientApi(o: OptionsClient = {}): ClientApi {
@@ -56,15 +64,21 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
 
   async function appeler(methode: string, chemin: string, corps?: unknown, signaler = true): Promise<Response> {
     let r: Response;
+    const arret = new AbortController();
+    const minuteur = setTimeout(() => arret.abort(), DELAI_APPEL_MS);
     try {
       r = await f(chemin, {
+        signal: arret.signal,
         method: methode,
         credentials: 'same-origin',
         headers: corps === undefined ? { accept: 'application/json' } : { accept: 'application/json', 'content-type': 'application/json' },
         body: corps === undefined ? undefined : JSON.stringify(corps),
       });
     } catch {
+      // Coupure ou délai dépassé : hors ligne, jamais déconnecté.
       throw new HorsLigne();
+    } finally {
+      clearTimeout(minuteur);
     }
     if (r.ok) return r;
     if (r.status === 401 && signaler) o.surNonConnecte?.();

@@ -19,7 +19,7 @@
       garde.oublier();
       await goto(CHEMINS.accueil);
     } catch (err) {
-      if (err instanceof ErreurApi && err.statut === 401) message = MESSAGES.identifiantsInvalides;
+      if (err instanceof ErreurApi && (err.statut === 401 || err.statut === 400 || err.statut === 422)) message = MESSAGES.identifiantsInvalides;
       else if (err instanceof ErreurApi && err.statut === 429) message = MESSAGES.tropDeRequetes;
       else if (err instanceof ErreurApi) message = MESSAGES.serveurIndisponible;
       else message = MESSAGES.horsLigne;
