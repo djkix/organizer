@@ -49,6 +49,11 @@
     }
   }
 
+  function changerMois(delta: number): void {
+    jours = null;
+    mois = moisVoisin(mois, delta);
+  }
+
   $effect(() => { void charger(mois); });
 
   onMount(() => {
@@ -88,9 +93,9 @@
   {/if}
 
   <nav class="mois" aria-label="Mois">
-    <button class="bouton-icone" onclick={() => (mois = moisVoisin(mois, -1))} aria-label="Mois précédent"><Icone nom="retour" /></button>
+    <button class="bouton-icone" onclick={() => changerMois(-1)} aria-label="Mois précédent"><Icone nom="retour" /></button>
     <span>{libelleMois(mois)}</span>
-    <button class="bouton-icone" onclick={() => (mois = moisVoisin(mois, 1))} disabled={mois >= moisCourant} aria-label="Mois suivant">
+    <button class="bouton-icone" onclick={() => changerMois(1)} disabled={mois >= moisCourant} aria-label="Mois suivant">
       <Icone nom="suivant" />
     </button>
   </nav>

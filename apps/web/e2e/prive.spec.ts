@@ -135,3 +135,55 @@ test('si le téléphone ne peut pas garder, l\'audio reste en mémoire et part e
   await expect(page).toHaveURL(/\/prive$/);
   expect(envois(appels).at(-1)!.taille).toBeGreaterThan(0);
 });
+
+test('audio seulement en mémoire : le retour d\'Android ne quitte pas l\'écran, et l\'identifiant d\'envoi reste le même', async ({ page }) => {
+  await page.addInitScript(() => {
+    indexedDB.open = () => { throw new DOMException('indisponible', 'InvalidStateError'); };
+  });
+  let reseau = false;
+  const appels = await simuler(page, {
+    ...CONNECTE,
+    'GET /api/captures/privees': json(200, []),
+    [DEPOT]: (r) => (reseau ? r.fulfill({ status: 201, json: { id: 'x' } }) : r.abort('internetdisconnected')),
+  });
+  await page.goto('/prive');
+  await page.getByRole('link', { name: 'Enregistrement privé' }).click();
+  await expect(page).toHaveURL(/\/prive\/enregistrer$/);
+  await enregistrer(page);
+  await expect(page.getByText('Pas gardé sur le téléphone. Il reste ici, en mémoire.')).toBeVisible();
+
+  await page.goBack();
+  await page.waitForTimeout(300);
+  await expect(page).toHaveURL(/\/prive\/enregistrer$/);
+  await expect(page.getByRole('button', { name: 'Envoyer maintenant' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Envoyer maintenant' }).click();
+  await expect(page.getByText('Pas parti. Il reste ici, réessaie dans un moment.')).toBeVisible();
+  reseau = true;
+  await page.getByRole('button', { name: 'Envoyer maintenant' }).click();
+  await expect(page).toHaveURL(/\/prive$/);
+  const ids = new Set(envois(appels).map((a) => a.entetes['x-capture-id']));
+  expect(ids.size).toBe(1);
+});
+
+test('micro occupé ou absent : un message précis ; double appui : un seul micro', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __ouvertures: number; __erreur: string };
+    w.__ouvertures = 0;
+    w.__erreur = 'NotReadableError';
+    navigator.mediaDevices.getUserMedia = async () => {
+      w.__ouvertures += 1;
+      await new Promise((ok) => setTimeout(ok, 300));
+      throw new DOMException('x', w.__erreur);
+    };
+  });
+  await simuler(page, { ...CONNECTE });
+  await page.goto('/prive/enregistrer');
+  const bouton = page.getByRole('button', { name: "Commencer l'enregistrement" });
+  await bouton.dblclick();
+  await expect(page.getByText('Le micro est pris, par un appel peut-être.')).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __ouvertures: number }).__ouvertures)).toBe(1);
+  await page.evaluate(() => { (window as unknown as { __erreur: string }).__erreur = 'NotFoundError'; });
+  await bouton.click();
+  await expect(page.getByText('Aucun micro trouvé sur ce téléphone.')).toBeVisible();
+});

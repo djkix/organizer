@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { beforeNavigate, goto } from '$app/navigation';
   import Icone from '$lib/composants/Icone.svelte';
   import { CHEMINS } from '$lib/config';
   import { chrono } from '$lib/format';
@@ -9,19 +9,42 @@
   import { creerEnregistreur } from '$lib/prive/enregistreur';
   import { envoyerCapture, EnregistrementVide, type Enregistrement } from '$lib/prive/file';
 
-  let etat = $state<'pret' | 'ecoute' | 'rangement'>('pret');
+  let etat = $state<'pret' | 'demarrage' | 'ecoute' | 'rangement'>('pret');
   let secondes = $state(0);
   let message = $state<string | null>(null);
   let aGarder = $state<Enregistrement | null>(null);
+  /** Fixé avec l'audio en mémoire : chaque envoi direct le reprend, le serveur ne voit jamais de doublon. */
+  let idDirect = '';
+  let reessai = $state<HTMLButtonElement>();
   let minuterie: ReturnType<typeof setInterval> | undefined;
-  const enregistreur = creerEnregistreur({ surInterruption: () => void arreter() });
+  let detruit = false;
+  const enregistreur = creerEnregistreur({
+    surInterruption: () => void arreter(),
+    surLimite: () => void arreter(false, MESSAGES.heureAtteinte),
+  });
+  const statut = $derived(etat === 'ecoute' ? MESSAGES.ecoute : '');
+
+  function messageMicro(err: unknown): string {
+    const nom = err instanceof DOMException ? err.name : '';
+    if (nom === 'NotReadableError' || nom === 'AbortError') return MESSAGES.microOccupe;
+    if (nom === 'NotFoundError' || nom === 'OverconstrainedError') return MESSAGES.microAbsent;
+    return MESSAGES.microRefuse;
+  }
 
   async function commencer(): Promise<void> {
+    if (etat !== 'pret' || aGarder) return;
     message = null;
+    etat = 'demarrage';
     try {
       await enregistreur.demarrer();
-    } catch {
-      message = MESSAGES.microRefuse;
+    } catch (err) {
+      etat = 'pret';
+      message = messageMicro(err);
+      return;
+    }
+    if (detruit) {
+      // L'écran a été quitté pendant l'autorisation : le micro est rendu aussitôt.
+      enregistreur.liberer();
       return;
     }
     etat = 'ecoute';
@@ -34,14 +57,15 @@
     try {
       await garderEtEnvoyer(e);
       aGarder = null;
+      etat = 'pret';
       if (allerAuPrive) await goto(CHEMINS.prive);
-      else etat = 'pret';
     } catch (err) {
       etat = 'pret';
       if (err instanceof EnregistrementVide) {
         message = MESSAGES.rienEnregistre;
       } else {
         // Échec d'écriture locale : l'audio reste en mémoire, un nouvel essai est proposé.
+        if (aGarder !== e) idDirect = crypto.randomUUID();
         aGarder = e;
         message = MESSAGES.gardeRatee;
       }
@@ -52,9 +76,10 @@
   async function envoyerDirect(e: Enregistrement): Promise<void> {
     etat = 'rangement';
     message = null;
-    const r = await envoyerCapture({ id: crypto.randomUUID(), ...e });
+    const r = await envoyerCapture({ id: idDirect, ...e });
     if (r.issue === 'livre') {
       aGarder = null;
+      etat = 'pret';
       await goto(CHEMINS.prive);
       return;
     }
@@ -62,7 +87,7 @@
     message = MESSAGES.envoiRate;
   }
 
-  async function arreter(allerAuPrive = true): Promise<void> {
+  async function arreter(allerAuPrive = true, avis: string | null = null): Promise<void> {
     if (etat !== 'ecoute') return;
     etat = 'rangement';
     clearInterval(minuterie);
@@ -75,6 +100,7 @@
       return;
     }
     await garder(e, allerAuPrive);
+    if (!aGarder && !message) message = avis ?? (allerAuPrive ? null : MESSAGES.garde);
   }
 
   // Fermer pendant l'enregistrement garde ce qui a été dit : rien ne se perd.
@@ -83,6 +109,22 @@
     if (etat === 'ecoute') void arreter();
     else void goto(CHEMINS.accueil);
   }
+
+  // L'audio en mémoire n'a pas d'autre copie : ni retour, ni lien, ni fermeture ne le jettent.
+  beforeNavigate(({ cancel }) => {
+    if (aGarder || etat === 'rangement') cancel();
+  });
+
+  $effect(() => {
+    if (!aGarder) return;
+    const garde = (e: BeforeUnloadEvent): void => e.preventDefault();
+    window.addEventListener('beforeunload', garde);
+    return () => window.removeEventListener('beforeunload', garde);
+  });
+
+  $effect(() => {
+    if (aGarder) reessai?.focus();
+  });
 
   onMount(() => {
     // Écran quitté (appel, verrouillage) : on range plutôt que de risquer la perte.
@@ -94,6 +136,7 @@
   });
 
   onDestroy(() => {
+    detruit = true;
     clearInterval(minuterie);
     if (etat === 'ecoute') void arreter(false);
     else enregistreur.liberer();
@@ -106,18 +149,25 @@
   <h1>{etat === 'ecoute' ? MESSAGES.ecoute : MESSAGES.enregistrementPrive}</h1>
   <p class="maison">{MESSAGES.resteALaMaison}</p>
   <p class="consigne">{etat === 'ecoute' ? MESSAGES.finirEnregistrement : MESSAGES.rienNestTrie}</p>
-  {#if message}<p class="consigne" role="status">{message}</p>{/if}
+  <div role="status" aria-live="polite">
+    <span class="sr">{statut}</span>
+    {#if message}<p class="consigne">{message}</p>{/if}
+  </div>
 
   <div class="commandes">
     <p class="minuteur">{etat === 'ecoute' ? chrono(secondes) : ''}</p>
     {#if aGarder}
-      <button class="bouton reessayer" onclick={() => aGarder && garder(aGarder, true)} disabled={etat === 'rangement'}>{MESSAGES.reessayer}</button>
+      <button class="bouton reessayer" bind:this={reessai} onclick={() => aGarder && garder(aGarder, true)} disabled={etat === 'rangement'}>{MESSAGES.reessayer}</button>
       <button class="bouton reessayer" onclick={() => aGarder && envoyerDirect(aGarder)} disabled={etat === 'rangement'}>{MESSAGES.envoyerMaintenant}</button>
-    {:else if etat === 'ecoute'}
-      <button class="enreg" onclick={() => arreter()} aria-label="Arrêter et garder"><span class="carre"></span></button>
     {:else}
-      <button class="enreg" onclick={commencer} disabled={etat === 'rangement'} aria-label="Commencer l'enregistrement">
-        <span class="rond"></span>
+      <!-- Un seul bouton, jamais recréé : le focus reste en place quand son rôle change. -->
+      <button
+        class="enreg"
+        onclick={() => (etat === 'ecoute' ? arreter() : commencer())}
+        aria-disabled={etat === 'demarrage' || etat === 'rangement'}
+        aria-label={etat === 'ecoute' ? 'Arrêter et garder' : "Commencer l'enregistrement"}
+      >
+        <span class={etat === 'ecoute' ? 'carre' : 'rond'}></span>
       </button>
     {/if}
   </div>
@@ -138,5 +188,6 @@
   .enreg { width: 108px; height: 108px; display: grid; place-items: center; border: none; border-radius: var(--radius-pill); background: var(--bg); }
   .rond { width: 40px; height: 40px; border-radius: var(--radius-pill); background: var(--private); }
   .carre { width: 34px; height: 34px; border-radius: 6px; background: var(--private); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .reessayer { border-color: var(--bg); color: var(--bg); }
 </style>
