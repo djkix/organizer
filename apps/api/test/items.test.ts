@@ -118,6 +118,8 @@ describe('/api/items', () => {
       const ok = await get();
       expect(ok.status).toBe(200);
       expect(ok.headers.get('content-type')).toContain('audio/ogg');
+      // L'audio, privé compris, ne doit jamais finir dans le cache HTTP du téléphone.
+      expect(ok.headers.get('cache-control')).toBe('no-store');
       expect(await ok.text()).toBe('OggS');
       await prisma.capture.update({ where: { id: captureId }, data: { audioPath: null } });
       const purge = await get();

@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DELAI_ENVOI_PRIVE_MAX_MS, lireVar, TAILLE_MAX_CAPTURE_PRIVEE } from '@organizer/shared';
 import { json, raw, type NextFunction, type Request, type Response } from 'express';
 import { LimiteurDebit } from './auth/limiteur.js';
+import { erreurDeCorps, FiltreSansContenu } from './erreurs.js';
 
 export const TAILLE_MAX_AUDIO = TAILLE_MAX_CAPTURE_PRIVEE;
 
@@ -33,6 +34,11 @@ export function configurerServeur(serveur: Server): void {
 export function configurerApp(app: NestExpressApplication): void {
   // X-Forwarded-For n'est cru que des adresses de TRUSTED_PROXY, sinon n'importe qui le falsifierait.
   app.set('trust proxy', lireConfianceProxy());
+  // Aucune réponse de l'API (listes, audio privé compris) ne doit rester dans un cache HTTP.
+  app.use('/api', (_req: Request, res: Response, suite: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store');
+    suite();
+  });
   const limiteur = new LimiteurDebit(60, 60_000);
   app.use('/api', (req: Request, res: Response, suite: NextFunction) => {
     if (limiteur.autoriser(req.ip ?? 'inconnue')) return suite();
@@ -42,4 +48,6 @@ export function configurerApp(app: NestExpressApplication): void {
   app.use('/api/captures/privees', (req: Request, res: Response, suite: NextFunction) =>
     req.method === 'POST' && req.path === '/' ? audio(req, res, suite) : suite());
   app.use(json({ limit: '1mb' }));
+  app.use(erreurDeCorps);
+  app.useGlobalFilters(new FiltreSansContenu(app.getHttpAdapter()));
 }

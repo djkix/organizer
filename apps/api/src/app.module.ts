@@ -18,6 +18,7 @@ import { ItemsService } from './items/items.service.js';
 import { PriveesController } from './privees/privees.controller.js';
 import { CapturesPriveesService } from './privees/privees.service.js';
 import { ReencodeurFfmpeg } from './privees/reencodeur.js';
+import { SanteController } from './sante.controller.js';
 import { creerBot } from './telegram/bot.js';
 import { LiaisonService } from './telegram/liaison.service.js';
 import { TelegramController } from './telegram/telegram.controller.js';
@@ -64,7 +65,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
 }
 
 @Module({
-  controllers: [TelegramController, AuthController, VuesController, ItemsController, PriveesController],
+  controllers: [TelegramController, AuthController, VuesController, ItemsController, PriveesController, SanteController],
   providers: [
     { provide: CONFIG, useFactory: lireConfigApi },
     { provide: PRISMA, useFactory: () => creerPrisma() },
