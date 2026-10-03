@@ -73,6 +73,7 @@ docs/             cahier des charges, décisions
 - Chaque item stocke la version de prompt et le nom du modèle qui l'a classé.
 - Les messages visibles par l'utilisatrice sont en français, tutoiement, phrases de moins de 12 mots.
 - Les tâches de traitement sont idempotentes et rejouables sans doublon.
+- Chaque commit met à jour `CHANGELOG.md` (rubrique sous « Non publié »), dans le même commit. Toute la documentation est en français.
 
 ## Dépôt public — ce qui n'y entre jamais
 
