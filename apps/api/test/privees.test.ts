@@ -78,7 +78,17 @@ describe('CapturesPriveesService', () => {
     await service.etiqueter(ID, 'garage');
     const mois = await service.lister('2026-10', 'Europe/Paris');
     expect(mois.map((j) => j.jour)).toEqual(['2026-10-07', '2026-10-06']);
-    expect(mois[1]!.captures).toEqual([{ id: ID, heure: '08:12', dureeS: 14, etiquette: 'garage' }]);
+    expect(mois[1]!.captures).toEqual([{ id: ID, heure: '08:12', dureeS: 14, etiquette: 'garage', aAudio: true }]);
+  });
+});
+
+describe('lister : indicateur d\'audio', () => {
+  it('une capture privée sans fichier audio a aAudio faux', async () => {
+    await prisma.capture.create({
+      data: { utilisateurId, canal: 'telegram', prive: true, etat: 'privee', emisLe: new Date('2026-10-06T07:00:00Z'), texteEcrit: 'x' },
+    });
+    const mois = await service.lister('2026-10', 'Europe/Paris');
+    expect(mois[0]!.captures[0]).toMatchObject({ aAudio: false });
   });
 });
 
@@ -151,6 +161,21 @@ describe('/api/captures/privees : erreurs et paramètres', () => {
     const r = await post();
     expect(r.status).toBe(422);
     expect((await r.json()).message).toBe('Enregistrement illisible.');
+  });
+
+  it('400 si l\'identifiant fourni n\'est pas un UUID, sans rien créer', async () => {
+    const r = await post({ 'x-capture-id': 'pas-un-uuid' });
+    expect(r.status).toBe(400);
+    expect((await r.json()).message).toBe('Identifiant refusé.');
+    expect(await prisma.capture.count()).toBe(0);
+  });
+
+  it('sans identifiant, la capture reçoit un identifiant aléatoire', async () => {
+    const r = await fetch(`${app.url}/api/captures/privees`, {
+      method: 'POST', headers: { cookie, 'content-type': 'audio/webm' }, body: new Uint8Array(Buffer.from('webm')),
+    });
+    expect(r.status).toBe(201);
+    expect(await prisma.capture.count()).toBe(1);
   });
 
   it('400 si le corps est vide', async () => {

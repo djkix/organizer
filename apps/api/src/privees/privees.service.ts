@@ -66,13 +66,13 @@ export class CapturesPriveesService {
     const captures = await this.prisma.capture.findMany({
       where: { prive: true, emisLe: { gte: debutJour(premier, fuseau), lt: debutJour(suivant, fuseau) } },
       orderBy: { emisLe: 'desc' },
-      select: { id: true, emisLe: true, dureeS: true, etiquette: true },
+      select: { id: true, emisLe: true, dureeS: true, etiquette: true, audioPath: true },
     });
     const jours = new Map<string, JourPrive['captures']>();
     for (const c of captures) {
       const jour = jourLocal(c.emisLe, fuseau);
       jours.set(jour, [...(jours.get(jour) ?? []), {
-        id: c.id, heure: isoLocal(c.emisLe, fuseau).slice(11, 16), dureeS: c.dureeS, etiquette: c.etiquette,
+        id: c.id, heure: isoLocal(c.emisLe, fuseau).slice(11, 16), dureeS: c.dureeS, etiquette: c.etiquette, aAudio: c.audioPath !== null,
       }]);
     }
     return [...jours].map(([jour, liste]) => ({ jour, captures: liste }));

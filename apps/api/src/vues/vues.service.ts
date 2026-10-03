@@ -93,15 +93,15 @@ export class VuesService {
     });
     // Budget commun : les plus récents d'abord, toutes sortes confondues, puis séparés.
     const retenus = [
-      ...items.map((i) => ({ emisLe: i.capture.emisLe, id: i.id, item: i })),
-      ...captures.map((c) => ({ emisLe: c.emisLe, id: c.id, capture: c })),
+      ...items.map((i) => ({ sorte: 'item' as const, emisLe: i.capture.emisLe, id: i.id, ligne: i })),
+      ...captures.map((c) => ({ sorte: 'capture' as const, emisLe: c.emisLe, id: c.id, ligne: c })),
     ].sort((a, b) => b.emisLe.getTime() - a.emisLe.getTime() || (a.id < b.id ? -1 : 1)).slice(0, MAX_LISTE);
     return {
-      items: retenus.flatMap((r) => (r.item ? [r.item] : [])).map((i): ItemARevoir => ({
+      items: retenus.flatMap((r) => (r.sorte === 'item' ? [r.ligne] : [])).map((i): ItemARevoir => ({
         itemId: i.id, captureId: i.captureId, texte: i.texte,
         emisLe: i.capture.emisLe.toISOString(), aAudio: i.capture.audioPath !== null,
       })),
-      captures: retenus.flatMap((r) => (r.capture ? [r.capture] : [])).map((c): CaptureARevoir => ({
+      captures: retenus.flatMap((r) => (r.sorte === 'capture' ? [r.ligne] : [])).map((c): CaptureARevoir => ({
         captureId: c.id, texte: c.texteBrut ?? c.texteEcrit, emisLe: c.emisLe.toISOString(), aAudio: c.audioPath !== null,
       })),
     };

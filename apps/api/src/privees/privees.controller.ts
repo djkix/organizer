@@ -3,7 +3,7 @@ import {
   BadRequestException, Body, Controller, Get, HttpCode, HttpException, Inject, NotFoundException,
   Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
-import { jourLocal, type JourPrive } from '@organizer/shared';
+import { EN_TETES_CAPTURE_PRIVEE, jourLocal, type JourPrive, type ReponseDepotPrive } from '@organizer/shared';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { SessionGuard, type RequeteAuthentifiee } from '../auth/session.guard.js';
@@ -12,7 +12,7 @@ import { CapturePriveeIntrouvable, FormatRefuse, IdentifiantRefuse, MoisInvalide
 import { AudioIllisible } from './reencodeur.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const schemaEtiquette = z.object({ etiquette: z.string().trim().max(80).nullable() });
+export const schemaEtiquette = z.object({ etiquette: z.string().trim().max(80).nullable() });
 
 function entete(req: RequeteAuthentifiee, nom: string): string | undefined {
   const v = req.headers[nom];
@@ -36,15 +36,17 @@ export class PriveesController {
   constructor(@Inject(PRIVEES) private readonly privees: CapturesPriveesService) {}
 
   @Post()
-  async deposer(@Req() req: RequeteAuthentifiee, @Res({ passthrough: true }) res: Response): Promise<{ id: string }> {
+  async deposer(@Req() req: RequeteAuthentifiee, @Res({ passthrough: true }) res: Response): Promise<ReponseDepotPrive> {
     const corps: unknown = req.body;
     if (!Buffer.isBuffer(corps) || corps.length === 0) throw new BadRequestException('Enregistrement vide.');
-    const idDemande = entete(req, 'x-capture-id');
-    const id = idDemande && UUID.test(idDemande) ? idDemande.toLowerCase() : randomUUID();
+    const idDemande = entete(req, EN_TETES_CAPTURE_PRIVEE.id.toLowerCase());
+    // Présent mais invalide : refus net, un identifiant aléatoire rendrait le rejeu non idempotent.
+    if (idDemande !== undefined && !UUID.test(idDemande)) throw new BadRequestException('Identifiant refusé.');
+    const id = idDemande ? idDemande.toLowerCase() : randomUUID();
     const mime = (entete(req, 'content-type') ?? '').split(';')[0]!.trim().toLowerCase();
     try {
       const r = await this.privees.enregistrer(req.utilisateur.id, {
-        id, donnees: corps, mime, emisLe: emisLe(entete(req, 'x-emis-le'), new Date()), dureeS: duree(entete(req, 'x-duree-s')),
+        id, donnees: corps, mime, emisLe: emisLe(entete(req, EN_TETES_CAPTURE_PRIVEE.emisLe.toLowerCase()), new Date()), dureeS: duree(entete(req, EN_TETES_CAPTURE_PRIVEE.dureeS.toLowerCase())),
       });
       res.status(r.nouvelle ? 201 : 200);
       return { id: r.id };
