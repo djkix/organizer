@@ -81,6 +81,9 @@ docs/             cahier des charges, décisions, guide d'annotation, plans
 
 - Node 22 LTS minimum.
 - pnpm, installé par Homebrew.
+- ffmpeg avec libopus, nécessaire aux tests et à l'API (réencodage des captures privées) :
+  `brew install ffmpeg`, puis `ffmpeg -hide_banner -encoders | grep libopus` doit répondre.
+- Le dossier `prompts/` : l'API le lit au démarrage (types d'échéance), comme le worker.
 - Accès SSH à l'hôte Docker du homelab, pour la base de dev.
 - Le jeton du bot `@organizer_lud_bot` (décision R10 : pas de bot de dev distinct).
 - Une clé d'API Gemini sur un projet Google Cloud avec facturation activée.

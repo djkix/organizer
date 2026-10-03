@@ -11,6 +11,7 @@ Le projet n'a pas encore de version publiée.
 - La connexion n'accorde plus créance à X-Forwarded-For que du proxy de confiance, un changement de mot de passe révoque les sessions, et la saisie du mot de passe est masquée et confirmée (2026-10-03).
 
 ### Corrigé
+- Le README demande ffmpeg avec libopus et précise que l'API lit `prompts/` au démarrage (2026-10-03).
 - Le bouton « Prochaine capture privée » revient avec chaque accusé et avec /start pour un chat déjà lié (2026-10-03).
 - L'historique d'une correction d'échéance garde l'expression d'origine du modèle (2026-10-03).
 - À revoir ne dépasse plus vingt lignes en tout, les plus récentes d'abord (2026-10-03).
