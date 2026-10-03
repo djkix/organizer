@@ -38,6 +38,9 @@ model Utilisateur {
   creeLe         DateTime      @default(now()) @map("cree_le")
   captures       Capture[]
   codes          CodeLiaison[]
+  motDePasseHash  String?   @map("mot_de_passe_hash")
+  prochainePrivee Boolean   @default(false) @map("prochaine_privee")
+  sessions        Session[]
 
   @@map("utilisateur")
 }
@@ -65,6 +68,7 @@ model Capture {
   dureeS        Int?        @map("duree_s")
   texteEcrit    String?     @map("texte_ecrit")
   texteBrut     String?     @map("texte_brut")
+  etiquette     String?
   emisLe        DateTime    @map("emis_le")
   recuLe        DateTime    @default(now()) @map("recu_le")
   etat          EtatCapture
@@ -152,4 +156,15 @@ model Correction {
   item           Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@map("correction")
+}
+
+model Session {
+  id            String      @id @default(uuid()) @db.Uuid
+  jetonHash     String      @unique @map("jeton_hash")
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  creeLe        DateTime    @default(now()) @map("cree_le")
+  expireLe      DateTime    @map("expire_le")
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@map("session")
 }
