@@ -6,3 +6,4 @@ export const INGESTION = Symbol('INGESTION');
 export const AUTH = Symbol('AUTH');
 export const VUES = Symbol('VUES');
 export const ITEMS = Symbol('ITEMS');
+export const PRIVEES = Symbol('PRIVEES');

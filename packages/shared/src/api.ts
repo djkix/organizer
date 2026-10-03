@@ -16,3 +16,8 @@ export interface VueHorizons { bornes: { fin: string; libelle: string | null; ac
 export interface ItemARevoir { itemId: string; captureId: string; texte: string; emisLe: string; aAudio: boolean }
 export interface CaptureARevoir { captureId: string; texte: string | null; emisLe: string; aAudio: boolean }
 export interface VueARevoir { items: ItemARevoir[]; captures: CaptureARevoir[] }
+
+export interface JourPrive {
+  jour: string;
+  captures: { id: string; heure: string; dureeS: number | null; etiquette: string | null }[];
+}
