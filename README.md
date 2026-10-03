@@ -4,7 +4,7 @@ Capture vocale qui trie automatiquement notes et choses à faire. Auto-hébergé
 
 - `CLAUDE.md` — règles du projet, chargé automatiquement par Claude Code
 - `docs/cahier-des-charges.md` — spécification complète
-- `docs/decisions.md` — les 20 décisions fermées
+- `docs/decisions.md` — les 21 décisions fermées
 - `design/tokens.css` et `design/tokens.json` — couleurs, formes, règles d'interface
 - `design/maquettes.html` — prototype navigable (ouvrir dans un navigateur)
 - `fixtures/` — énoncés fabriqués pour tester le tri. Jamais de captures réelles.
