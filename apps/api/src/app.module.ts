@@ -12,10 +12,12 @@ import { lireConfigApi, type ConfigApi } from './config.js';
 import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
-import { AUTH, BOT, CONFIG, INGESTION, PRISMA, REDIS } from './jetons.js';
+import { AUTH, BOT, CONFIG, INGESTION, PRISMA, REDIS, VUES } from './jetons.js';
 import { creerBot } from './telegram/bot.js';
 import { LiaisonService } from './telegram/liaison.service.js';
 import { TelegramController } from './telegram/telegram.controller.js';
+import { VuesController } from './vues/vues.controller.js';
+import { VuesService } from './vues/vues.service.js';
 
 class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
   private minuterie?: NodeJS.Timeout;
@@ -57,7 +59,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
 }
 
 @Module({
-  controllers: [TelegramController, AuthController],
+  controllers: [TelegramController, AuthController, VuesController],
   providers: [
     { provide: CONFIG, useFactory: lireConfigApi },
     { provide: PRISMA, useFactory: () => creerPrisma() },
@@ -90,6 +92,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
         creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion }),
     },
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
+    { provide: VUES, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new VuesService(prisma) },
     SessionGuard,
     Cycle,
   ],
