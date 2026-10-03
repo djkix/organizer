@@ -55,6 +55,19 @@ describe('AuthService', () => {
   });
 });
 
+describe('changement de mot de passe', () => {
+  it('révoque toutes les sessions du compte', async () => {
+    const s = await auth.ouvrirSession('l', 'un mot de passe assez long');
+    await auth.definirMotDePasse('l', 'un autre mot de passe long');
+    expect(await auth.utilisateurDeSession(s!.jeton)).toBeNull();
+    expect(await auth.ouvrirSession('l', 'un autre mot de passe long')).not.toBeNull();
+  });
+
+  it('un compte inconnu donne une erreur claire', async () => {
+    await expect(auth.definirMotDePasse('inconnu', 'un mot de passe assez long')).rejects.toThrow('Compte introuvable.');
+  });
+});
+
 describe('/api/session', () => {
   it('pose un cookie de session HttpOnly, Secure, SameSite=Lax, 90 jours', async () => {
     const r = await connecter('un mot de passe assez long');
