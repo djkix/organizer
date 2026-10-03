@@ -20,6 +20,7 @@ Le projet n'a pas encore de version publiée.
 - L'ordre des vues est stable à égalité, le libellé d'un horizon vient de la première expression connue, et À revoir exclut les items privés (2026-10-03).
 
 ### Ajouté
+- La conversion d'une heure murale en instant, sûre aux changements d'heure, et les libellés de dates de la PWA (2026-10-04).
 - Le socle de la PWA : SvelteKit 2 en mode statique, tokens de design, règles produit et contrastes vérifiés par des tests (2026-10-04).
 - Le plan du lot 1-B2 : la PWA, ses écrans, l'enregistreur privé et la file hors ligne (2026-10-04).
 - Le dossier de revue du lot 1-B1, à transmettre à un relecteur externe (2026-10-03).

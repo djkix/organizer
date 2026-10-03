@@ -30,3 +30,30 @@ export function debutJour(jour: string, fuseau: string): Date {
   const decalage = isoLocal(new Date(`${jour}T00:00:00Z`), fuseau).slice(19);
   return new Date(`${jour}T00:00:00${decalage}`);
 }
+
+function decalageMs(instant: Date, fuseau: string): number {
+  const d = isoLocal(instant, fuseau).slice(19);
+  const signe = d.startsWith('-') ? -1 : 1;
+  return signe * (Number(d.slice(1, 3)) * 60 + Number(d.slice(4, 6))) * 60_000;
+}
+
+/**
+ * Instant d'une heure murale (jour AAAA-MM-JJ, heure HH:MM) dans le fuseau.
+ * Heure répétée (passage à l'heure d'hiver) : la première occurrence.
+ * Heure inexistante (passage à l'heure d'été) : avancée de la durée du saut, 02:30 devient 03:30.
+ */
+export function instantLocal(jour: string, heure: string, fuseau: string): Date {
+  const mur = Date.parse(`${jour}T${heure}:00Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(jour) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(heure)
+    || Number.isNaN(mur) || new Date(mur).toISOString().slice(0, 10) !== jour
+  ) {
+    throw new Error(`Jour ou heure illisible : ${jour} ${heure}`);
+  }
+  // Un changement d'heure au plus par jour : les décalages possibles sont ceux de la veille et du lendemain.
+  const avant = decalageMs(new Date(mur - 86_400_000), fuseau);
+  const apres = decalageMs(new Date(mur + 86_400_000), fuseau);
+  const voulu = `${jour}T${heure}`;
+  const justes = [mur - avant, mur - apres].filter((t) => isoLocal(new Date(t), fuseau).slice(0, 16) === voulu);
+  return new Date(justes.length > 0 ? Math.min(...justes) : mur - avant);
+}
