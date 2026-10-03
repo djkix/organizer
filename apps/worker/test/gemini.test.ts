@@ -9,14 +9,21 @@ const prompt = chargerPrompt(join(import.meta.dirname, '../../../prompts'), 'tri
 
 interface Appel { url: string; corps: Record<string, unknown>; entetes: Record<string, string> }
 
-function faux(reponses: Array<{ status: number; texte?: string; tier?: string }>) {
+function faux(reponses: Array<{ status: number; texte?: string; tier?: string | null }>) {
   const appels: Appel[] = [];
   const f = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
     appels.push({ url: String(url), corps: JSON.parse(String(init?.body)), entetes: init?.headers as Record<string, string> });
     const r = reponses.shift();
     if (!r) throw new Error('appel inattendu');
+    let usageMetadata: Record<string, unknown>;
+    if (r.tier === null) {
+      // tier: null means serviceTier is absent from response
+      usageMetadata = { promptTokenCount: 100, candidatesTokenCount: 20 };
+    } else {
+      usageMetadata = { promptTokenCount: 100, candidatesTokenCount: 20, serviceTier: r.tier ?? 'standard' };
+    }
     const corps = r.status === 200
-      ? { candidates: [{ content: { parts: [{ text: r.texte ?? '' }] } }], usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 20, serviceTier: r.tier ?? 'standard' } }
+      ? { candidates: [{ content: { parts: [{ text: r.texte ?? '' }] } }], usageMetadata }
       : { error: { message: 'contenu de la requête qui ne doit pas fuiter', status: 'ERREUR' } };
     return new Response(JSON.stringify(corps), { status: r.status });
   };
@@ -85,6 +92,17 @@ describe('GeminiProvider.classer', () => {
     expect(String((err as Error).message)).not.toMatch(/secret de L|fuiter/);
     expect(appels).toHaveLength(1);
   });
+
+  it('ne fuite jamais le contenu du modèle en erreur, même avec JSON.parse ou schéma invalide', async () => {
+    const { fetch } = faux([
+      { status: 200, texte: 'secret de L pas du json' },
+      { status: 200, texte: 'secret de L dans un mauvais schéma' },
+    ]);
+    const err = await provider(fetch).classer({ systeme: 'S', texte: 'x' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SortieNonConforme);
+    const fullText = JSON.stringify({ m: (err as Error).message, c: String((err as Error).cause), s: (err as Error).stack });
+    expect(fullText).not.toMatch(/secret de L|fuiter/);
+  });
 });
 
 describe('GeminiProvider.verifierPalierPaye', () => {
@@ -95,6 +113,11 @@ describe('GeminiProvider.verifierPalierPaye', () => {
 
   it('refuse un palier inconnu ou absent', async () => {
     const { fetch } = faux([{ status: 200, texte: '{}', tier: 'free' }]);
+    await expect(provider(fetch).verifierPalierPaye()).rejects.toBeInstanceOf(PalierNonPaye);
+  });
+
+  it('refuse une réponse sans serviceTier', async () => {
+    const { fetch } = faux([{ status: 200, texte: '{}', tier: null }]);
     await expect(provider(fetch).verifierPalierPaye()).rejects.toBeInstanceOf(PalierNonPaye);
   });
 });
