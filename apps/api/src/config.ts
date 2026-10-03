@@ -1,4 +1,4 @@
-import { chargerPrompt, cheminDepuisRacine, exigerVar, lireVar, valeursAdmises } from '@organizer/shared';
+import { chargerPrompt, cheminConfigure, exigerVar, lireVar, valeursAdmises } from '@organizer/shared';
 
 export interface ConfigApi {
   port: number;
@@ -21,9 +21,9 @@ export function lireConfigApi(): ConfigApi {
     telegramToken: exigerVar('TELEGRAM_BOT_TOKEN'),
     telegramMode: mode,
     webhookSecret,
-    audioRacine: cheminDepuisRacine(exigerVar('AUDIO_STORAGE_PATH')),
+    audioRacine: cheminConfigure('AUDIO_STORAGE_PATH', exigerVar('AUDIO_STORAGE_PATH')),
     typesEcheance: valeursAdmises(
-      chargerPrompt(cheminDepuisRacine(lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v1'),
+      chargerPrompt(cheminConfigure('PROMPTS_DIR', lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v1'),
       'echeance_type',
     ),
   };

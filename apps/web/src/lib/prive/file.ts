@@ -1,4 +1,4 @@
-import { EN_TETES_CAPTURE_PRIVEE } from '@organizer/shared/api';
+import { delaiEnvoiPriveMs, EN_TETES_CAPTURE_PRIVEE } from '@organizer/shared/api';
 import { openDB, type DBSchema, type IDBPDatabase, type OpenDBCallbacks } from 'idb';
 
 /** Ce que rend l'enregistreur. emisLe : début de l'enregistrement (CAP-05), ISO 8601. */
@@ -102,8 +102,8 @@ export const plusRecentesDAbord = (l: readonly CapturePrivee[]): CapturePrivee[]
 
 export type IssueEnvoi = { issue: 'livre' } | { issue: 'refuse'; statut: number } | { issue: 'reseau' };
 
-/** 60 s de base, puis 20 Ko/s au plancher : un envoi muet ne bloque jamais la file. */
-export const delaiEnvoiMs = (octets: number): number => 60_000 + Math.ceil(octets / 20);
+/** Contrat partagé avec l'API et le proxy : voir delaiEnvoiPriveMs. */
+export const delaiEnvoiMs = delaiEnvoiPriveMs;
 
 /** 200 (déjà reçue) ou 201 (nouvelle) : livrée. Tout autre statut, ou une coupure : la copie locale reste. */
 export async function envoyerCapture(c: CapturePrivee, f: typeof fetch = (e, i) => fetch(e, i)): Promise<IssueEnvoi> {
