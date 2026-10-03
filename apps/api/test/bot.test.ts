@@ -90,6 +90,27 @@ describe('creerBot', () => {
     expect(JSON.stringify(envois[0]!.payload.reply_markup)).toContain('Prochaine capture privée');
   });
 
+  it('les accusés de réception ramènent le bouton privé', async () => {
+    const { bot, envois } = monter(true);
+    await bot.handleUpdate(maj(1, { text: 'pain' }));
+    expect(JSON.stringify(envois[0]!.payload.reply_markup)).toContain('Prochaine capture privée');
+    await bot.handleUpdate(maj(2, { text: 'Prochaine capture privée' }));
+    await bot.handleUpdate(maj(3, { message_id: 43, text: 'lait' }));
+    expect(envois[2]!.payload.text).toBe('Reçu. Elle reste sur le serveur.');
+    expect(JSON.stringify(envois[2]!.payload.reply_markup)).toContain('Prochaine capture privée');
+  });
+
+  it('/start sans code, chat lié, rend le bouton ; non lié, garde la réponse actuelle', async () => {
+    const entites = [{ type: 'bot_command', offset: 0, length: 6 }];
+    const lie = monter(true);
+    await lie.bot.handleUpdate(maj(1, { text: '/start', entities: entites }));
+    expect(lie.envois[0]!.payload.text).toBe('Le bouton privé est revenu.');
+    expect(JSON.stringify(lie.envois[0]!.payload.reply_markup)).toContain('Prochaine capture privée');
+    const nonLie = monter(false);
+    await nonLie.bot.handleUpdate(maj(1, { text: '/start', entities: entites }));
+    expect(nonLie.envois[0]!.payload.text).toBe('Envoie /start suivi de ton code.');
+  });
+
   it('un format non pris en charge reçoit une réponse sans capture', async () => {
     const { bot, envois, recues } = monter(true);
     await bot.handleUpdate(maj(1, { sticker: { file_id: 'S', file_unique_id: 'U' } }));
