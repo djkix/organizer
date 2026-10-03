@@ -12,7 +12,9 @@ import { lireConfigApi, type ConfigApi } from './config.js';
 import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
-import { AUTH, BOT, CONFIG, INGESTION, PRISMA, REDIS, VUES } from './jetons.js';
+import { AUTH, BOT, CONFIG, INGESTION, ITEMS, PRISMA, REDIS, VUES } from './jetons.js';
+import { ItemsController } from './items/items.controller.js';
+import { ItemsService } from './items/items.service.js';
 import { creerBot } from './telegram/bot.js';
 import { LiaisonService } from './telegram/liaison.service.js';
 import { TelegramController } from './telegram/telegram.controller.js';
@@ -59,7 +61,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
 }
 
 @Module({
-  controllers: [TelegramController, AuthController, VuesController],
+  controllers: [TelegramController, AuthController, VuesController, ItemsController],
   providers: [
     { provide: CONFIG, useFactory: lireConfigApi },
     { provide: PRISMA, useFactory: () => creerPrisma() },
@@ -93,6 +95,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     },
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
     { provide: VUES, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new VuesService(prisma) },
+    { provide: ITEMS, inject: [CONFIG, PRISMA], useFactory: (c: ConfigApi, prisma: PrismaClient) => new ItemsService(prisma, c.typesEcheance) },
     SessionGuard,
     Cycle,
   ],
