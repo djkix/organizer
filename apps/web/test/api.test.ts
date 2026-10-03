@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { creerClientApi, ErreurApi, HorsLigne, urlAudio } from '../src/lib/api.js';
 import { MESSAGES } from '../src/lib/messages.js';
 
@@ -85,5 +85,38 @@ describe('client API', () => {
 
   it('urlAudio encode l\'identifiant', () => {
     expect(urlAudio('a/b')).toBe('/api/captures/a%2Fb/audio');
+  });
+
+  it('un message brut du serveur (400, 413, 500) n\'est jamais montré', async () => {
+    const { f } = fauxFetch([
+      Response.json({ message: 'Validation failed (uuid is expected)' }, { status: 400 }),
+      Response.json({ message: 'request entity too large' }, { status: 413 }),
+      Response.json({ message: 'Internal server error' }, { status: 500 }),
+    ]);
+    const api = creerClientApi({ fetch: f });
+    const e1 = (await api.cocher('x').catch((x: unknown) => x)) as ErreurApi;
+    const e2 = (await api.cocher('x').catch((x: unknown) => x)) as ErreurApi;
+    const e3 = (await api.cocher('x').catch((x: unknown) => x)) as ErreurApi;
+    expect(e1.message).toBe(MESSAGES.serveurIndisponible);
+    expect(e2.message).toBe(MESSAGES.enregistrementTropLong);
+    expect(e3.message).toBe(MESSAGES.serveurIndisponible);
+    expect(e1.statut).toBe(400);
+  });
+
+  it('un appel qui ne répond jamais devient HorsLigne après 15 s, sans signaler de déconnexion', async () => {
+    vi.useFakeTimers();
+    try {
+      let signalee = 0;
+      const f = ((_u: unknown, init: RequestInit) => new Promise<Response>((_ok, ko) => {
+        init.signal?.addEventListener('abort', () => ko(new DOMException('abort', 'AbortError')));
+      })) as typeof fetch;
+      const api = creerClientApi({ fetch: f, surNonConnecte: () => { signalee++; } });
+      const p = api.moi().catch((x: unknown) => x);
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(await p).toBeInstanceOf(HorsLigne);
+      expect(signalee).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
