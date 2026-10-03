@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { CorpsCorrection, LigneAction } from '@organizer/shared/api';
   import { urlAudio } from '$lib/api';
   import { api } from '$lib/client';
@@ -18,8 +19,12 @@
   } = $props();
   let message = $state<string | null>(null);
   let envoi = $state(false);
+  let titre = $state<HTMLElement>();
+
+  onMount(() => titre?.focus());
 
   async function corriger(corps: CorpsCorrection, apres: string | null): Promise<void> {
+    if (envoi) return;
     envoi = true;
     message = null;
     try {
@@ -40,18 +45,20 @@
     echeance(choixDepuisChamp(type, (e.currentTarget as HTMLInputElement).value));
 </script>
 
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape') surFermer(); }} />
+
 <div class="panneau" role="dialog" aria-modal="true" aria-labelledby="titre-detail">
   <header><button class="bouton-icone" onclick={surFermer} aria-label="Retour"><Icone nom="retour" /></button></header>
-  <h2 id="titre-detail" class="titre">{ligne.texte}</h2>
+  <h2 id="titre-detail" class="titre" tabindex="-1" bind:this={titre}>{ligne.texte}</h2>
 
   <section class="carte">
     <h3 class="etiquette">Quand</h3>
     <p class="quand">{echeanceEnClair(ligne, FUSEAU)}</p>
     <div class="choix">
-      <button class="bouton" disabled={envoi} onclick={() => echeance({ type: 'aucune' })}>Sans date</button>
-      <label class="champ">Un jour<input type="date" disabled={envoi} onchange={depuisChamp('jour')} /></label>
-      <label class="champ">Jour et heure<input type="datetime-local" disabled={envoi} onchange={depuisChamp('datee')} /></label>
-      <label class="champ">Avant le<input type="date" disabled={envoi} onchange={depuisChamp('avant')} /></label>
+      <button class="bouton" aria-disabled={envoi} onclick={() => echeance({ type: 'aucune' })}>Sans date</button>
+      <label class="champ">Un jour<input type="date" aria-disabled={envoi} onchange={depuisChamp('jour')} /></label>
+      <label class="champ">Jour et heure<input type="datetime-local" aria-disabled={envoi} onchange={depuisChamp('datee')} /></label>
+      <label class="champ">Avant le<input type="date" aria-disabled={envoi} onchange={depuisChamp('avant')} /></label>
     </div>
   </section>
 
@@ -68,7 +75,7 @@
 
   <div class="bas">
     {#if message}<p class="discret" role="status">{message}</p>{/if}
-    <button class="lien" disabled={envoi} onclick={() => corriger(corpsNature('pensee'), MESSAGES.rangeEnPensee)}>
+    <button class="lien" aria-disabled={envoi} onclick={() => corriger(corpsNature('pensee'), MESSAGES.rangeEnPensee)}>
       {MESSAGES.pasUneAction}
     </button>
   </div>
@@ -80,6 +87,7 @@
     background: var(--bg); padding: 8px 0 env(safe-area-inset-bottom);
   }
   header { padding: 0 8px; }
+  .titre:focus { outline: none; }
   .titre { font-size: 22px; font-weight: 400; line-height: 1.3; padding: 4px 20px 14px; }
   .etiquette { font-size: var(--font-meta); font-weight: 400; color: var(--muted); margin-bottom: 8px; }
   .quand { margin-bottom: 12px; }
