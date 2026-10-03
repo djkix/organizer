@@ -29,4 +29,19 @@ describe('extraireCapture', () => {
     expect(extraireCapture(msg({ text: '/start 123' }))).toBeNull();
     expect(extraireCapture(msg({ sticker: { file_id: 'S' } }))).toBeNull();
   });
+
+  it('la légende d\'un vocal devient son texte', () => {
+    const c = extraireCapture(msg({ voice: { file_id: 'F', file_unique_id: 'U', duration: 3 }, caption: 'pour jeudi' }));
+    expect(c).toMatchObject({ texte: 'pour jeudi', fichier: { id: 'F', mime: 'audio/ogg' } });
+  });
+
+  it('une photo avec légende est captée comme du texte', () => {
+    const c = extraireCapture(msg({ photo: [{ file_id: 'P', file_unique_id: 'U', width: 1, height: 1 }], caption: 'idée déco' }));
+    expect(c).toMatchObject({ texte: 'idée déco', fichier: null, dureeS: null });
+  });
+
+  it('un sticker ou une photo sans légende ne donne rien', () => {
+    expect(extraireCapture(msg({ sticker: { file_id: 'S' } }))).toBeNull();
+    expect(extraireCapture(msg({ photo: [{ file_id: 'P', file_unique_id: 'U', width: 1, height: 1 }] }))).toBeNull();
+  });
 });

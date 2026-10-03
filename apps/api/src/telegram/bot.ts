@@ -25,7 +25,10 @@ export function creerBot(token: string, d: DepsBot, options?: BotConfig<Context>
       return;
     }
     const e = extraireCapture(ctx.message);
-    if (!e) return;
+    if (!e) {
+      if (!ctx.message.text?.startsWith('/')) await ctx.reply('Je garde seulement la voix et le texte.');
+      return;
+    }
     const { id, nouvelle } = await d.ingestion.recevoir(u.id, e);
     if (!nouvelle) return;
     await ctx.reply('Reçu.', { reply_parameters: { message_id: ctx.message.message_id } });

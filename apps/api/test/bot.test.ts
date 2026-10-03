@@ -67,11 +67,21 @@ describe('creerBot', () => {
     expect(envois[0]!.payload.text).toBe("C'est lié. Envoie un vocal quand tu veux.");
   });
 
+  it('un format non pris en charge reçoit une réponse sans capture', async () => {
+    const { bot, envois, recues } = monter(true);
+    await bot.handleUpdate(maj(1, { sticker: { file_id: 'S', file_unique_id: 'U' } }));
+    expect(recues).toHaveLength(0);
+    expect(envois[0]!.payload.text).toBe('Je garde seulement la voix et le texte.');
+  });
+
   it('les messages du bot font moins de 12 mots et sans emoji', async () => {
     const { bot, envois } = monter(false);
     await bot.handleUpdate(maj(1, { text: '/start', entities: [{ type: 'bot_command', offset: 0, length: 6 }] }));
     await bot.handleUpdate(maj(2, { text: '/start 000000', entities: [{ type: 'bot_command', offset: 0, length: 6 }] }));
     await bot.handleUpdate(maj(3, { text: 'pain' }));
+    const { bot: lie, envois: envoisLie } = monter(true);
+    await lie.handleUpdate(maj(4, { sticker: { file_id: 'S', file_unique_id: 'U' } }));
+    envois.push(...envoisLie);
     for (const e of envois) {
       const texte = String(e.payload.text);
       expect(texte.split(/\s+/).length).toBeLessThan(12);

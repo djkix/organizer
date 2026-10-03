@@ -26,6 +26,7 @@ Le projet n'a pas encore de version publiée.
 - Le cadrage initial : décisions, cahier des charges et règles du projet (2026-10-01).
 
 ### Modifié
+- Une légende de message est gardée comme texte, et le bot répond aux formats qu'il ne prend pas en charge (2026-10-03).
 - Les lots 0 et 1 sont menés en parallèle (décision 21) (2026-10-03).
 - Les tests appliquent les migrations sans réinitialiser la base (2026-10-03).
 - La stack est hébergée sur l'hôte Docker existant (décision 13) et son empreinte mémoire est réduite à environ 2,7 Go (2026-10-02).
