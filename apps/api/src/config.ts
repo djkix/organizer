@@ -1,4 +1,4 @@
-import { cheminDepuisRacine, exigerVar, lireVar } from '@organizer/shared';
+import { chargerPrompt, cheminDepuisRacine, exigerVar, lireVar, valeursAdmises } from '@organizer/shared';
 
 export interface ConfigApi {
   port: number;
@@ -7,6 +7,7 @@ export interface ConfigApi {
   telegramMode: 'polling' | 'webhook';
   webhookSecret: string | undefined;
   audioRacine: string;
+  typesEcheance: string[];
 }
 
 export function lireConfigApi(): ConfigApi {
@@ -21,5 +22,9 @@ export function lireConfigApi(): ConfigApi {
     telegramMode: mode,
     webhookSecret,
     audioRacine: cheminDepuisRacine(exigerVar('AUDIO_STORAGE_PATH')),
+    typesEcheance: valeursAdmises(
+      chargerPrompt(cheminDepuisRacine(lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v1'),
+      'echeance_type',
+    ),
   };
 }
