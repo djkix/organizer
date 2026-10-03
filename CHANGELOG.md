@@ -6,6 +6,9 @@ Le projet n'a pas encore de version publiée.
 
 ## [Non publié]
 
+### Modifié
+- Les images Docker seront publiées sur GHCR en public, et non en privé (2026-10-04).
+
 ### Sécurité
 - Le réencodage des captures privées restreint ffmpeg aux protocoles et conteneurs attendus, retire les métadonnées du téléphone et plafonne la durée (2026-10-03).
 - La connexion n'accorde plus créance à X-Forwarded-For que du proxy de confiance, un changement de mot de passe révoque les sessions, et la saisie du mot de passe est masquée et confirmée (2026-10-03).

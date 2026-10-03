@@ -671,7 +671,7 @@ flowchart LR
   DOCKGE --> STACK[Stack organizer]
 ```
 
-Build multi-étages, images publiées sur GHCR en privé, déploiement déclenché manuellement depuis Dockge. Pas de déploiement automatique : le volume de changements ne le justifie pas et une régression sur la capture serait invisible jusqu'à la prochaine pensée perdue.
+Build multi-étages, images publiées sur GHCR en public (décidé par Franck le 4 octobre 2026 : le code est déjà public, les images ne contiennent ni secret ni donnée), déploiement déclenché manuellement depuis Dockge. Pas de déploiement automatique : le volume de changements ne le justifie pas et une régression sur la capture serait invisible jusqu'à la prochaine pensée perdue.
 
 ## Sécurité et confidentialité
 
