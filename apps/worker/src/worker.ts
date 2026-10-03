@@ -27,7 +27,13 @@ export function demarrerWorker(d: DepsWorker): Worker<JobClassement> {
           // Indisponibilité, pas un échec : la file s'arrête et garde l'ordre.
           if (!creditSignale) {
             creditSignale = true;
-            await d.alerter('Crédit Gemini épuisé : classement suspendu.');
+            try {
+              await d.alerter('Crédit Gemini épuisé : classement suspendu.');
+            } catch (err) {
+              // L'alerte ne doit jamais empêcher la pause : on la retentera au prochain 402.
+              creditSignale = false;
+              console.error(`Alerte crédit impossible : ${(err as Error).name}`);
+            }
           }
           await w.rateLimit(d.pauseCreditMs ?? 15 * 60_000);
           throw Worker.RateLimitError();
@@ -56,8 +62,9 @@ export async function reprendre(prisma: PrismaClient, file: Queue<JobClassement>
     where: { etat: 'a_transcrire', prive: false }, orderBy: { emisLe: 'asc' }, select: { id: true },
   });
   for (const { id } of captures) {
-    await prisma.capture.update({ where: { id }, data: { etat: 'en_file' } });
+    // D'abord la file : un échec ici laisse la capture en a_transcrire, reprise au prochain passage.
     await file.add('classer', { captureId: id }, { ...OPTIONS_JOB_CLASSEMENT, jobId: `${id}-reprise-${Date.now()}` });
+    await prisma.capture.updateMany({ where: { id, etat: 'a_transcrire' }, data: { etat: 'en_file' } });
   }
   return captures.length;
 }

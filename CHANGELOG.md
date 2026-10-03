@@ -33,6 +33,7 @@ Le projet n'a pas encore de version publiée.
 - Les plafonds Gemini et le traitement du crédit épuisé sont décrits (2026-10-01).
 
 ### Corrigé
+- Le worker attend au démarrage si le contrôle du palier échoue, survit à une alerte en panne et ne perd plus de capture à la reprise (2026-10-03).
 - Les erreurs de schéma ne contiennent plus le contenu du modèle (2026-10-03).
 - Les fichiers embarqués du banc d'essai sont lisibles par l'utilisateur du bot (2026-10-02).
 - Les fixtures et le schéma de sortie sont alignés sur l'alarme et le contexte (2026-10-01).

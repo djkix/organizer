@@ -6,6 +6,8 @@ import {
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { GeminiProvider } from './classement/gemini.js';
+import { PalierNonPaye } from './classement/provider.js';
+import { verifierPalierAuDemarrage } from './demarrage.js';
 import { demarrerWorker, reprendre } from './worker.js';
 
 const prisma = creerPrisma();
@@ -20,7 +22,13 @@ const provider = new GeminiProvider({
 });
 
 // Règle n° 8 : pas de palier payé, pas de worker.
-await provider.verifierPalierPaye();
+try {
+  await verifierPalierAuDemarrage(provider, (ms) => new Promise((r) => setTimeout(r, ms)), console.error);
+} catch (e) {
+  if (!(e instanceof PalierNonPaye)) throw e;
+  console.error('Palier Gemini non payé : le worker refuse de démarrer.');
+  process.exit(1);
+}
 
 const alertes = new Queue<JobAlerte>(FILE_ALERTES, { connection: connexion });
 const file = new Queue<JobClassement>(FILE_CLASSEMENT, { connection: connexion });
