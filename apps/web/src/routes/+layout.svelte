@@ -2,6 +2,7 @@
   import '../app.css';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
+  import BoutonPrive from '$lib/composants/BoutonPrive.svelte';
   import Navigation from '$lib/composants/Navigation.svelte';
   import { CHEMINS } from '$lib/config';
   import { demarrerPrive } from '$lib/prive/demarrage';
@@ -16,4 +17,4 @@
 </script>
 
 {@render children()}
-{#if !plein}<Navigation />{/if}
+{#if !plein}<Navigation />{:else if chemin === CHEMINS.connexion}<BoutonPrive sansNavigation />{/if}

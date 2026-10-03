@@ -55,7 +55,7 @@
 <style>
   .connexion {
     min-height: 100dvh; display: flex; flex-direction: column; justify-content: flex-end; gap: 24px;
-    padding: 24px 20px calc(32px + env(safe-area-inset-bottom));
+    padding: 24px 20px calc(120px + env(safe-area-inset-bottom));
   }
   h1 { font-size: var(--font-title); font-weight: 600; }
   form { display: flex; flex-direction: column; gap: 16px; }
