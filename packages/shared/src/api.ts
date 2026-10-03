@@ -45,3 +45,12 @@ export interface ReponseDepotPrive { id: string }
  * Réponses : 201 nouvelle, 200 déjà reçue, 415 format, 422 illisible, 400 vide ou identifiant refusé.
  */
 export const EN_TETES_CAPTURE_PRIVEE = { id: 'X-Capture-Id', emisLe: 'X-Emis-Le', dureeS: 'X-Duree-S' } as const;
+
+/** Taille maximale d'une capture privée envoyée par la PWA : 30 Mio (une heure à 48 kbit/s en fait environ 22). */
+export const TAILLE_MAX_CAPTURE_PRIVEE = 30 * 1024 * 1024;
+
+/** Délai d'un envoi de la PWA : 60 s de base, puis 20 Ko/s au plancher. Proxy et API attendent au moins autant. */
+export const delaiEnvoiPriveMs = (octets: number): number => 60_000 + Math.ceil(octets / 20);
+
+/** Délai de la plus grosse capture admise (environ 27 min). */
+export const DELAI_ENVOI_PRIVE_MAX_MS = delaiEnvoiPriveMs(TAILLE_MAX_CAPTURE_PRIVEE);

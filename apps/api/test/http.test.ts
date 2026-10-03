@@ -1,7 +1,10 @@
 import 'reflect-metadata';
+import { createServer } from 'node:http';
 import { Module } from '@nestjs/common';
-import { afterEach, expect, it } from 'vitest';
+import { DELAI_ENVOI_PRIVE_MAX_MS } from '@organizer/shared';
+import { afterEach, describe, expect, it } from 'vitest';
 import { AuthController } from '../src/auth/auth.controller.js';
+import { configurerServeur, lireConfianceProxy } from '../src/http.js';
 import { AUTH } from '../src/jetons.js';
 import { demarrerAppTest } from './aides-http.js';
 
@@ -37,4 +40,21 @@ it('un proxy de confiance fait foi : chaque client a son budget', async () => {
   process.env.TRUSTED_PROXY = '127.0.0.1';
   const statuts = await essais((i) => `1.2.3.${i}`);
   expect(statuts.every((s) => s === 401)).toBe(true);
+});
+
+describe('production', () => {
+  it('TRUSTED_PROXY est obligatoire en production', () => {
+    expect(() => lireConfianceProxy({ NODE_ENV: 'production' })).toThrow('TRUSTED_PROXY obligatoire en production');
+    expect(lireConfianceProxy({ NODE_ENV: 'production', TRUSTED_PROXY: '10.201.1.0/24, 192.168.1.10' }))
+      .toBe('10.201.1.0/24, 192.168.1.10');
+    expect(lireConfianceProxy({ NODE_ENV: 'test' })).toBe('loopback');
+  });
+
+  it('une capture d\'une heure n\'est jamais coupée par le serveur HTTP (5 min par défaut dans Node)', () => {
+    const serveur = createServer();
+    configurerServeur(serveur);
+    expect(serveur.requestTimeout).toBeGreaterThan(DELAI_ENVOI_PRIVE_MAX_MS);
+    expect(serveur.keepAliveTimeout).toBeGreaterThan(120_000);
+    expect(serveur.headersTimeout).toBeGreaterThan(serveur.keepAliveTimeout);
+  });
 });
