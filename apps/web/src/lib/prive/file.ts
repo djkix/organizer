@@ -1,5 +1,5 @@
 import { EN_TETES_CAPTURE_PRIVEE } from '@organizer/shared/api';
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { openDB, type DBSchema, type IDBPDatabase, type OpenDBCallbacks } from 'idb';
 
 /** Ce que rend l'enregistreur. emisLe : début de l'enregistrement (CAP-05), ISO 8601. */
 export interface Enregistrement { blob: Blob; mime: string; dureeS: number; emisLe: string }
@@ -27,15 +27,45 @@ interface Schema extends DBSchema {
   'captures-privees': { key: string; value: CapturePrivee };
 }
 
-export function ouvrirFilePrivee(nom = 'organizer'): FilePrivee {
+/** Au-delà, la base est tenue pour muette : l'appelant bascule sur le chemin « en mémoire ». */
+export const DELAI_ECRITURE_MS = 10_000;
+
+type Ouvrir = (nom: string, version: number, options: OpenDBCallbacks<Schema>) => Promise<IDBPDatabase<Schema>>;
+
+export function ouvrirFilePrivee(
+  nom = 'organizer', deps: { ouvrir?: Ouvrir; delaiMs?: number } = {},
+): FilePrivee {
+  const ouvrir: Ouvrir = deps.ouvrir ?? ((n, v, o) => openDB<Schema>(n, v, o));
+  const delaiMs = deps.delaiMs ?? DELAI_ECRITURE_MS;
   let base: Promise<IDBPDatabase<Schema>> | null = null;
-  const db = (): Promise<IDBPDatabase<Schema>> =>
-    (base ??= openDB<Schema>(nom, 1, {
+
+  /** Rejette si l'opération ne répond pas à temps : jamais d'attente sans fin, ni de verrou gardé. */
+  async function bornee<T>(operation: () => Promise<T>): Promise<T> {
+    let minuteur: ReturnType<typeof setTimeout> | undefined;
+    const delai = new Promise<never>((_, rejeter) => {
+      minuteur = setTimeout(() => rejeter(new Error('Base locale muette')), delaiMs);
+    });
+    try {
+      return await Promise.race([operation(), delai]);
+    } finally {
+      clearTimeout(minuteur);
+    }
+  }
+
+  const db = (): Promise<IDBPDatabase<Schema>> => {
+    if (base) return base;
+    const ouverte: Promise<IDBPDatabase<Schema>> = ouvrir(nom, 1, {
       upgrade(d) {
         d.createObjectStore('captures-privees', { keyPath: 'id' });
       },
-      // Le service worker ouvre la même base : ne jamais rester bloqué, ni garder une connexion morte.
+      // Le service worker ouvre la même base : une autre version ne doit jamais rester bloquée par une
+      // connexion que celle-ci garde ; on la ferme, la suivante rouvre.
       blocking() {
+        base = null;
+        void ouverte.then((d) => d.close(), () => undefined);
+      },
+      // Notre ouverture attend la fermeture d'une autre connexion : la prochaine demande rouvre.
+      blocked() {
         base = null;
       },
       terminated() {
@@ -44,19 +74,16 @@ export function ouvrirFilePrivee(nom = 'organizer'): FilePrivee {
     }).catch((e: unknown) => {
       base = null;
       throw e;
-    }));
+    });
+    base = ouverte;
+    return ouverte;
+  };
+  const avecBase = <T>(f: (d: IDBPDatabase<Schema>) => Promise<T>): Promise<T> => bornee(async () => f(await db()));
   return {
-    async ajouter(c) {
-      await (await db()).put('captures-privees', c);
-    },
-    async lister() {
-      return (await (await db()).getAll('captures-privees')).sort((a, b) => a.emisLe.localeCompare(b.emisLe));
-    },
-    async retirer(id) {
-      await (await db()).delete('captures-privees', id);
-    },
-    async marquerRefusee(id, refuse) {
-      const d = await db();
+    ajouter: (c) => avecBase((d) => d.put('captures-privees', c).then(() => undefined)),
+    lister: () => avecBase(async (d) => (await d.getAll('captures-privees')).sort((a, b) => a.emisLe.localeCompare(b.emisLe))),
+    retirer: (id) => avecBase((d) => d.delete('captures-privees', id)),
+    marquerRefusee: (id, refuse) => avecBase(async (d) => {
       const tx = d.transaction('captures-privees', 'readwrite');
       const c = await tx.store.get(id);
       if (c) {
@@ -65,7 +92,7 @@ export function ouvrirFilePrivee(nom = 'organizer'): FilePrivee {
         await tx.store.put(c);
       }
       await tx.done;
-    },
+    }),
   };
 }
 

@@ -1,4 +1,5 @@
 import { ETIQUETTE_SYNC } from '../config.js';
+import type { BilanVidage } from './file.js';
 
 type Cible = Pick<EventTarget, 'addEventListener' | 'removeEventListener'>;
 
@@ -48,4 +49,13 @@ export async function demanderSynchro(
   } catch {
     return false;
   }
+}
+
+/** Dès qu'un bilan laisse des captures, demande un Background Sync : le navigateur réessaiera application fermée. */
+export function synchroSiRestantes(
+  ecouter: (f: (b: BilanVidage) => void) => () => void, demander: () => Promise<unknown>,
+): () => void {
+  return ecouter((b) => {
+    if (b.restantes > 0) void demander();
+  });
 }
