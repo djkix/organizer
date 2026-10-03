@@ -52,6 +52,21 @@ export async function traiterCapture(id: string, d: DepsTraitement): Promise<Iss
     return 'a_revoir';
   }
 
+  if (r.sortie.items.length === 0) {
+    // Vocal vide ou inaudible : non classifiable, donc visible en « à revoir » (règle n° 5).
+    await d.prisma.$transaction([
+      d.prisma.item.deleteMany({ where: { captureId: id } }),
+      d.prisma.capture.update({
+        where: { id },
+        data: {
+          etat: 'a_revoir', erreur: 'aucun_item', texteBrut: r.sortie.transcription, versionPrompt: d.prompt.version,
+          modele: r.modele, tokensEntree: r.tokensEntree, tokensSortie: r.tokensSortie,
+        },
+      }),
+    ]);
+    return 'a_revoir';
+  }
+
   await enregistrer(d.prisma, id, r, d.prompt.version, (d.maintenant ?? (() => new Date()))());
   return 'classee';
 }
