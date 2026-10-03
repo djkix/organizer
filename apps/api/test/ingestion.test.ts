@@ -1,0 +1,113 @@
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { creerPrisma } from '@organizer/db';
+import { viderBase } from '@organizer/db/test';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import type { CaptureEntrante } from '../src/ingestion/extraire.js';
+import { IngestionService, type FileClassement, type Telechargeur } from '../src/ingestion/ingestion.service.js';
+import { StockageAudio } from '../src/ingestion/stockage.js';
+
+const prisma = creerPrisma();
+afterAll(() => prisma.$disconnect());
+
+class FausseFile implements FileClassement {
+  ids: string[] = [];
+  async enfiler(id: string): Promise<void> { this.ids.push(id); }
+}
+
+class FauxTelechargeur implements Telechargeur {
+  appels = 0;
+  echoue = false;
+  async telecharger(): Promise<{ donnees: Buffer; extension: string }> {
+    this.appels++;
+    if (this.echoue) throw new Error('réseau');
+    return { donnees: Buffer.from('OggS-faux'), extension: 'oga' };
+  }
+}
+
+let racine: string;
+let file: FausseFile;
+let tele: FauxTelechargeur;
+let service: IngestionService;
+let utilisateurId: string;
+
+beforeEach(async () => {
+  await viderBase(prisma);
+  racine = mkdtempSync(join(tmpdir(), 'audio-'));
+  file = new FausseFile();
+  tele = new FauxTelechargeur();
+  service = new IngestionService(prisma, new StockageAudio(racine), tele, file, () => {});
+  utilisateurId = (await prisma.utilisateur.create({ data: { nom: 'test' } })).id;
+});
+
+const vocal = (ref = 'tg:7:42'): CaptureEntrante => ({
+  sourceRef: ref, emisLe: new Date('2026-10-06T06:12:00Z'), dureeS: 12, fichier: { id: 'F', mime: 'audio/ogg' }, texte: null,
+});
+
+describe('IngestionService', () => {
+  it('recevoir est idempotent sur la référence Telegram', async () => {
+    const a = await service.recevoir(utilisateurId, vocal());
+    const b = await service.recevoir(utilisateurId, vocal());
+    expect(a.nouvelle).toBe(true);
+    expect(b).toEqual({ id: a.id, nouvelle: false });
+    expect(await prisma.capture.count()).toBe(1);
+  });
+
+  it('recevoir crée une capture ordinaire horodatée à l\'émission', async () => {
+    const { id } = await service.recevoir(utilisateurId, vocal());
+    expect(await prisma.capture.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      prive: false, canal: 'telegram', etat: 'recue', emisLe: new Date('2026-10-06T06:12:00Z'), sourceFichier: 'F',
+    });
+  });
+
+  it('finaliser range l\'audio, enfile une fois et passe en_file', async () => {
+    const { id } = await service.recevoir(utilisateurId, vocal());
+    await service.finaliser(id);
+    await service.finaliser(id);
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id } });
+    expect(c.etat).toBe('en_file');
+    expect(c.audioPath).toBe(`ordinaire/2026/10/${id}.oga`);
+    expect(readFileSync(join(racine, c.audioPath!), 'utf8')).toBe('OggS-faux');
+    expect(file.ids).toEqual([id]);
+    expect(tele.appels).toBe(1);
+  });
+
+  it('finaliser un texte n\'appelle pas Telegram', async () => {
+    const { id } = await service.recevoir(utilisateurId, { ...vocal(), fichier: null, dureeS: null, texte: 'pain' });
+    await service.finaliser(id);
+    expect(tele.appels).toBe(0);
+    expect(file.ids).toEqual([id]);
+  });
+
+  it('un téléchargement en échec laisse la capture en recue, puis reprendre la finalise', async () => {
+    const { id } = await service.recevoir(utilisateurId, vocal());
+    tele.echoue = true;
+    await expect(service.finaliser(id)).rejects.toThrow();
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id } })).etat).toBe('recue');
+    expect(file.ids).toEqual([]);
+
+    tele.echoue = false;
+    expect(await service.reprendre(new Date(Date.now() + 5 * 60_000))).toBe(1);
+    expect(file.ids).toEqual([id]);
+  });
+
+  it('ne passe pas en_file une capture déjà classée par le worker', async () => {
+    const { id } = await service.recevoir(utilisateurId, { ...vocal(), fichier: null, texte: 'x' });
+    file.enfiler = async (cid) => { await prisma.capture.update({ where: { id: cid }, data: { etat: 'classee' } }); };
+    await service.finaliser(id);
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id } })).etat).toBe('classee');
+  });
+
+  it('refuse d\'enfiler une capture privée', async () => {
+    const c = await prisma.capture.create({ data: { utilisateurId, canal: 'pwa', prive: true, etat: 'privee', emisLe: new Date() } });
+    await expect(service.finaliser(c.id)).rejects.toThrow('privée');
+    expect(file.ids).toEqual([]);
+  });
+
+  it('assainit l\'extension du fichier', async () => {
+    const chemin = await new StockageAudio(racine).ecrire('abc', new Date('2026-01-15T00:00:00Z'), Buffer.from('x'), '../../etc', 'ordinaire');
+    expect(chemin).toBe('ordinaire/2026/01/abc.bin');
+    expect(existsSync(join(racine, chemin))).toBe(true);
+  });
+});
