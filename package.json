@@ -1,0 +1,21 @@
+{
+  "name": "organizer",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --parallel --filter ./apps/* dev",
+    "test": "pnpm --filter @organizer/db migrate:test && vitest run --no-file-parallelism",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r typecheck",
+    "prisma": "pnpm --filter @organizer/db exec prisma"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "eslint": "^9.36.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.44.0",
+    "vitest": "^3.2.0"
+  }
+}

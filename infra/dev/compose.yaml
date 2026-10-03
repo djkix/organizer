@@ -1,0 +1,34 @@
+# Stack de dev et de test, sur la VM Docker. Ports liés à 127.0.0.1 de la VM,
+# joints depuis le Mac par le tunnel SSH de tunnel.sh. Aucune donnée réelle.
+name: organizer-dev
+
+services:
+  db:
+    image: pgvector/pgvector:0.8.0-pg17
+    environment:
+      POSTGRES_USER: organizer
+      POSTGRES_PASSWORD: organizer
+      POSTGRES_DB: organizer
+      TZ: Europe/Paris
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U organizer -d organizer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  queue:
+    image: valkey/valkey:8.1-alpine
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
