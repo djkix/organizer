@@ -11,7 +11,7 @@
   } = $props();
 </script>
 
-<li class="ligne" class:coche>
+<li class="ligne" class:coche data-item={ligne.itemId}>
   <button
     class="case"
     role="checkbox"

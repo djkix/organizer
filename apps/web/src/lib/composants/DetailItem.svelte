@@ -4,7 +4,7 @@
   import { urlAudio } from '$lib/api';
   import { api } from '$lib/client';
   import { FUSEAU } from '$lib/config';
-  import { choixDepuisChamp, corpsEcheance, corpsNature, type ChoixEcheance } from '$lib/correction';
+  import { appliquerCorrection, choixDepuisChamp, corpsEcheance, corpsNature, type ChoixEcheance } from '$lib/correction';
   import { echeanceEnClair } from '$lib/format';
   import { MESSAGES } from '$lib/messages';
   import Icone from './Icone.svelte';
@@ -23,22 +23,21 @@
 
   onMount(() => titre?.focus());
 
-  async function corriger(corps: CorpsCorrection, apres: string | null): Promise<void> {
+  async function corriger(construire: () => CorpsCorrection, apres: string | null): Promise<void> {
     if (envoi) return;
     envoi = true;
     message = null;
     try {
-      await enfiler(() => api.corriger(ligne.itemId, corps));
-      surCorrige(apres);
-    } catch {
-      message = MESSAGES.correctionRatee;
+      const r = await appliquerCorrection(construire, (corps) => enfiler(() => api.corriger(ligne.itemId, corps)));
+      if (r === 'faite') surCorrige(apres);
+      else message = MESSAGES.correctionRatee;
     } finally {
       envoi = false;
     }
   }
 
   function echeance(c: ChoixEcheance | null): void {
-    if (c) void corriger(corpsEcheance(c, FUSEAU), null);
+    if (c) void corriger(() => corpsEcheance(c, FUSEAU), MESSAGES.cestNote);
   }
 
   const depuisChamp = (type: 'jour' | 'avant' | 'datee') => (e: Event): void =>
@@ -75,7 +74,7 @@
 
   <div class="bas">
     {#if message}<p class="discret" role="status">{message}</p>{/if}
-    <button class="lien" aria-disabled={envoi} onclick={() => corriger(corpsNature('pensee'), MESSAGES.rangeEnPensee)}>
+    <button class="lien" aria-disabled={envoi} onclick={() => corriger(() => corpsNature('pensee'), MESSAGES.rangeEnPensee)}>
       {MESSAGES.pasUneAction}
     </button>
   </div>

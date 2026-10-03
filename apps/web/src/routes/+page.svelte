@@ -105,6 +105,26 @@
   }
 
   const liste = $derived(donnees && donnees.nom === vue ? groupes(donnees, aujourdhui, FUSEAU, cochage.retires) : []);
+
+  // Une ligne cochée quitte la liste à la fin du délai d'annulation : si le focus s'y trouvait,
+  // il passe à la ligne suivante, sinon au titre. Jamais volé à qui est déjà ailleurs.
+  let ordreAvant: string[] = [];
+  let nbRetires = 0;
+  $effect(() => {
+    const ordre = liste.flatMap((g) => g.lignes.map((l) => l.itemId));
+    const retires = cochage.retires.size;
+    const avant = ordreAvant;
+    const grandi = retires > nbRetires;
+    ordreAvant = ordre;
+    nbRetires = retires;
+    if (!grandi) return;
+    const actif = document.activeElement;
+    if (actif && actif !== document.body && actif.isConnected) return;
+    const parti = avant.findIndex((id) => !ordre.includes(id));
+    const suivant = parti < 0 ? undefined : avant.slice(parti + 1).find((id) => ordre.includes(id));
+    const ligne = suivant ? document.querySelector<HTMLElement>(`[data-item="${CSS.escape(suivant)}"] button`) : null;
+    (ligne ?? document.querySelector<HTMLElement>('main h1'))?.focus();
+  });
 </script>
 
 <main class="ecran" inert={selection !== null}>

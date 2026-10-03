@@ -96,6 +96,10 @@ export function ouvrirFilePrivee(
   };
 }
 
+/** Pour l'affichage (« En attente d'envoi ») : la file se vide du plus ancien au plus récent, la vue Privé se lit à l'inverse. */
+export const plusRecentesDAbord = (l: readonly CapturePrivee[]): CapturePrivee[] =>
+  [...l].sort((a, b) => b.emisLe.localeCompare(a.emisLe));
+
 export type IssueEnvoi = { issue: 'livre' } | { issue: 'refuse'; statut: number } | { issue: 'reseau' };
 
 /** 60 s de base, puis 20 Ko/s au plancher : un envoi muet ne bloque jamais la file. */

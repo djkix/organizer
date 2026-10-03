@@ -215,7 +215,8 @@ Elle part dès que le réseau revient, ou après la connexion si la session manq
 Un envoi qui échoue laisse la copie en place. Une capture refusée pour de bon est mise de côté : elle ne part plus toute seule et n'est jamais supprimée.
 
 Le service worker ne garde que la coquille de l'application. Aucune réponse de l'API n'est mise en cache.
-Une mise à jour s'applique à la prochaine ouverture, jamais en plein enregistrement.
+Une mise à jour s'applique une fois toutes les fenêtres de l'application fermées, jamais en plein enregistrement.
+Android peut garder l'ancienne version tant que l'application reste dans les applications récentes : la fermer pour de bon, puis la rouvrir.
 
 ## Administration
 

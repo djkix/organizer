@@ -32,3 +32,18 @@ export function choixDepuisChamp(type: 'jour' | 'avant' | 'datee', valeur: strin
   }
   return /^\d{4}-\d{2}-\d{2}$/.test(valeur) ? { type, jour: valeur } : null;
 }
+
+/**
+ * Construit puis envoie une correction. Tout échec, y compris un corps impossible à construire
+ * (jour ou heure illisible), donne « rate » : rien ne lève hors de l'appelant.
+ */
+export async function appliquerCorrection(
+  construire: () => CorpsCorrection, envoyer: (c: CorpsCorrection) => Promise<unknown>,
+): Promise<'faite' | 'rate'> {
+  try {
+    await envoyer(construire());
+    return 'faite';
+  } catch {
+    return 'rate';
+  }
+}
