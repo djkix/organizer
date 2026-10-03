@@ -523,7 +523,7 @@ Le back-end reste en TypeScript/NestJS, par cohérence avec le projet d'inventai
 | Base | PostgreSQL + pgvector | 17 | Relationnel et recherche vectorielle dans un seul moteur |
 | File de jobs | BullMQ sur Valkey | Valkey 8 | Reprise, priorités, retards natifs ; évite la licence Redis |
 | Worker | Process Node séparé | — | Isolation des traitements longs, mise à l'échelle indépendante |
-| Transcription et tri | API Gemini, `@google/genai` | `gemini-3.1-flash-lite` | Audio natif, sortie JSON sous schéma, un seul appel |
+| Transcription et tri | API Gemini en REST, sans SDK | `gemini-3.1-flash-lite` | Audio natif, sortie JSON sous schéma, un seul appel ; appel éprouvé par le banc d'essai, `serviceTier` lisible |
 | Repli modèle | API Gemini | `gemini-3.8-flash` | Reprise en cas de sortie non conforme |
 | Embeddings | fastembed, `bge-small` | — | Local, 130 Mo, seul modèle présent sur le serveur |
 | Agenda | API Google Calendar | v3 | Écriture des rendez-vous dans un agenda dédié |

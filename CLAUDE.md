@@ -56,9 +56,11 @@ apps/worker       traitement asynchrone : appel Gemini, items, rattachement
 apps/scheduler    échéances, écriture dans Google Agenda
 apps/web          PWA SvelteKit
 packages/shared   types et schémas Zod partagés
+packages/db       schéma Prisma, migrations, garde-fous SQL du mode privé
 prompts/          prompts Gemini versionnés + responseSchema
 fixtures/         énoncés FABRIQUÉS pour les tests
 infra/            docker-compose.yml, Caddyfile
+infra/dev/        Postgres et Valkey de dev sur la VM Docker, tunnel SSH
 design/           tokens et maquettes
 docs/             cahier des charges, décisions
 ```
@@ -85,12 +87,11 @@ Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.
 ## Commandes
 
 ```bash
+infra/dev/tunnel.sh      # à laisser ouvert : base et file de dev/test sur la VM
 pnpm install
 pnpm dev                 # api + worker + web en parallèle
 pnpm test                # tests unitaires
-pnpm test:prompt         # rejoue fixtures/ contre le prompt de tri
 pnpm lint && pnpm typecheck
-docker compose -f infra/docker-compose.yml up -d
 pnpm prisma migrate dev
 ```
 
