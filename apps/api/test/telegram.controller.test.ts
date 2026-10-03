@@ -83,4 +83,23 @@ describe('TelegramController en mode webhook', () => {
     await c.recevoir(requete(maj(5), 'faux'), res);
     expect(r.statut).toBe(401);
   });
+
+  it('une erreur du bot répond 500 sans rien journaliser du contenu', async () => {
+    const bot = new Bot('0:test', { botInfo });
+    bot.use(() => { throw new Error('Argument texteEcrit invalide : secret de L'); });
+    const c = new TelegramController(bot, config('webhook'));
+    const journal: string[] = [];
+    const capter = (...a: unknown[]) => { journal.push(a.map((x) => (x instanceof Error ? `${x.message} ${x.stack}` : String(x))).join(' ')); };
+    for (const m of ['error', 'warn', 'log', 'info', 'debug'] as const) vi.spyOn(console, m).mockImplementation(capter);
+    vi.spyOn(process.stdout, 'write').mockImplementation((s) => { journal.push(String(s)); return true; });
+    vi.spyOn(process.stderr, 'write').mockImplementation((s) => { journal.push(String(s)); return true; });
+    const { res, r } = reponse();
+    await c.recevoir(requete(maj(9)), res);
+    vi.restoreAllMocks();
+    expect(r.statut).toBe(500);
+    expect(r.terminee).toBe(true);
+    expect(String(r.corps ?? '')).not.toContain('secret');
+    expect(journal.join('\n')).not.toContain('secret');
+    expect(journal.join('\n')).toContain('9');
+  });
 });

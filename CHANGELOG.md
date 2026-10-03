@@ -26,6 +26,7 @@ Le projet n'a pas encore de version publiée.
 - Le cadrage initial : décisions, cahier des charges et règles du projet (2026-10-01).
 
 ### Sécurité
+- Une erreur du webhook Telegram ou une erreur de validation de la base ne recopie plus le contenu d'une capture dans les journaux (2026-10-03).
 - La liaison d'un compte Telegram est limitée à dix échecs par dix minutes, ne remplace jamais un lien existant (commande « délier » pour l'admin) (2026-10-03).
 
 ### Modifié
