@@ -20,6 +20,7 @@ Le projet n'a pas encore de version publiée.
 - L'ordre des vues est stable à égalité, le libellé d'un horizon vient de la première expression connue, et À revoir exclut les items privés (2026-10-03).
 
 ### Ajouté
+- Le dossier de revue du lot 1-B1, à transmettre à un relecteur externe (2026-10-03).
 - Le contrat des requêtes de la PWA dans le package partagé, l'indicateur d'audio des captures privées et le refus d'un `X-Capture-Id` invalide (2026-10-03).
 - Le bouton « Prochaine capture privée » du bot : la capture suivante reste sur le serveur, sans transcription ni classement (2026-10-03).
 - Les captures privées par la PWA : audio réencodé en Opus et gardé sur le serveur, jamais transcrit ni classé, étiquette facultative, liste par jour (2026-10-03).
