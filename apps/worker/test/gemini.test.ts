@@ -2,8 +2,8 @@ import { join } from 'node:path';
 import { chargerPrompt } from '@organizer/shared';
 import { describe, expect, it } from 'vitest';
 import { sortieExemple } from '../../../packages/shared/test/sortie-exemple.js';
-import { GeminiProvider } from '../src/classement/gemini.js';
-import { CreditEpuise, PalierNonPaye, SortieNonConforme } from '../src/classement/provider.js';
+import { formaterDiagnostic, GeminiProvider } from '../src/classement/gemini.js';
+import { CreditEpuise, FournisseurIndisponible, PalierNonPaye, SortieNonConforme } from '../src/classement/provider.js';
 
 const prompt = chargerPrompt(join(import.meta.dirname, '../../../prompts'), 'tri/v1');
 
@@ -119,5 +119,64 @@ describe('GeminiProvider.verifierPalierPaye', () => {
   it('refuse une réponse sans serviceTier', async () => {
     const { fetch } = faux([{ status: 200, texte: '{}', tier: null }]);
     await expect(provider(fetch).verifierPalierPaye()).rejects.toBeInstanceOf(PalierNonPaye);
+  });
+});
+
+describe('GeminiProvider : indisponibilités, réflexion, délai', () => {
+  it.each([403, 429])('HTTP %i : indisponibilité temporaire, sans tenter le repli', async (statut) => {
+    const { fetch, appels } = faux([{ status: statut }]);
+    const e = await provider(fetch).classer({ systeme: 'S', texte: 'x' }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(FournisseurIndisponible);
+    expect((e as FournisseurIndisponible).statut).toBe(statut);
+    expect((e as Error).message).not.toContain('contenu');
+    expect(appels).toHaveLength(1);
+  });
+
+  it('HTTP 402 reste un crédit épuisé, qui est une indisponibilité', async () => {
+    const { fetch } = faux([{ status: 402 }]);
+    const e = await provider(fetch).classer({ systeme: 'S', texte: 'x' }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(CreditEpuise);
+    expect(e).toBeInstanceOf(FournisseurIndisponible);
+  });
+
+  it('demande le niveau de réflexion configuré, et rien s\'il n\'est pas configuré', async () => {
+    const avec = faux([{ status: 200, texte: JSON.stringify(sortieExemple()) }]);
+    await new GeminiProvider({ cle: 'c', modele: 'm', repli: 'r', prompt, tiersPayes: ['standard'], fetch: avec.fetch, niveauReflexion: 'minimal' })
+      .classer({ systeme: 'S', texte: 'x' });
+    expect((avec.appels[0]!.corps.generationConfig as Record<string, unknown>).thinkingConfig).toEqual({ thinkingLevel: 'minimal' });
+    const sans = faux([{ status: 200, texte: JSON.stringify(sortieExemple()) }]);
+    await provider(sans.fetch).classer({ systeme: 'S', texte: 'x' });
+    expect((sans.appels[0]!.corps.generationConfig as Record<string, unknown>).thinkingConfig).toBeUndefined();
+  });
+
+  it('borne l\'appel par un délai', async () => {
+    const lent = ((_u: string | URL | Request, init?: RequestInit) => new Promise<Response>((_, rejeter) => {
+      init?.signal?.addEventListener('abort', () => rejeter(init.signal!.reason as Error));
+    })) as typeof fetch;
+    const p = new GeminiProvider({ cle: 'c', modele: 'm', repli: 'r', prompt, tiersPayes: ['standard'], fetch: lent, delaiMs: 20 });
+    await expect(p.classer({ systeme: 'S', texte: 'x' })).rejects.toMatchObject({ name: 'TimeoutError' });
+  });
+});
+
+describe('GeminiProvider.diagnostiquer', () => {
+  it('palier payé : statut, palier, jetons ; aucun contenu', async () => {
+    const { fetch } = faux([{ status: 200, texte: '{}', tier: 'standard' }]);
+    const d = await provider(fetch).diagnostiquer();
+    expect(d).toEqual({ statut: 200, tier: 'standard', paye: true, niveauReflexion: null, jetons: { entree: 100, sortie: 20, reflexion: 0 } });
+    expect(formaterDiagnostic(d)).toBe('HTTP 200 · palier « standard » : payé · réflexion non demandée · jetons : entrée 100, sortie 20, réflexion 0');
+  });
+
+  it('palier absent : REFUSÉ', async () => {
+    const { fetch } = faux([{ status: 200, texte: '{}', tier: null }]);
+    const d = await provider(fetch).diagnostiquer();
+    expect(d.paye).toBe(false);
+    expect(formaterDiagnostic(d)).toContain('palier « absent » : REFUSÉ');
+  });
+
+  it('erreur HTTP : non vérifiable, sans lever', async () => {
+    const { fetch } = faux([{ status: 400 }]);
+    const d = await provider(fetch).diagnostiquer();
+    expect(d).toMatchObject({ statut: 400, paye: false, jetons: null });
+    expect(formaterDiagnostic(d)).toBe('HTTP 400 : palier non vérifiable.');
   });
 });

@@ -1,26 +1,18 @@
 import { creerPrisma } from '@organizer/db';
 import {
-  chargerPrompt, cheminConfigure, creerFetchSortant, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar, OPTIONS_JOB_ALERTE,
+  cheminConfigure, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar, OPTIONS_JOB_ALERTE,
   type JobAlerte, type JobClassement,
 } from '@organizer/shared';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
-import { GeminiProvider } from './classement/gemini.js';
 import { PalierNonPaye } from './classement/provider.js';
+import { lireConfigWorker } from './configuration.js';
 import { verifierPalierAuDemarrage } from './demarrage.js';
 import { demarrerWorker, reprendre } from './worker.js';
 
 const prisma = creerPrisma();
 const connexion = new Redis(exigerVar('REDIS_URL'), { maxRetriesPerRequest: null });
-const prompt = chargerPrompt(cheminConfigure('PROMPTS_DIR', lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v1');
-const provider = new GeminiProvider({
-  cle: exigerVar('GEMINI_API_KEY'),
-  modele: lireVar('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
-  repli: lireVar('GEMINI_MODEL_FALLBACK') ?? 'gemini-3.8-flash',
-  prompt,
-  tiersPayes: (lireVar('GEMINI_TIERS_PAYES') ?? 'standard').split(',').map((s) => s.trim()),
-  fetch: creerFetchSortant(),
-});
+const { prompt, provider } = lireConfigWorker();
 
 // Règle n° 8 : pas de palier payé, pas de worker.
 try {

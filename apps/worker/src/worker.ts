@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@organizer/db';
 import { FILE_CLASSEMENT, OPTIONS_JOB_CLASSEMENT, type JobClassement } from '@organizer/shared';
 import { UnrecoverableError, Worker, type ConnectionOptions, type Queue } from 'bullmq';
-import { CreditEpuise } from './classement/provider.js';
+import { FournisseurIndisponible } from './classement/provider.js';
 import { CapturePriveeRefusee, traiterCapture, type DepsTraitement } from './classement/traiter.js';
 
 export interface DepsWorker extends DepsTraitement {
@@ -12,26 +12,33 @@ export interface DepsWorker extends DepsTraitement {
   pauseCreditMs?: number;
 }
 
+/** Alerte administrateur selon le refus de Gemini. L ne reçoit jamais rien. */
+export function messageIndisponibilite(statut: number): string {
+  if (statut === 402) return 'Crédit Gemini épuisé : classement suspendu.';
+  if (statut === 429) return 'Gemini refuse pour quota ou budget (429) : classement suspendu.';
+  return `Gemini refuse la clé ou le projet (${statut}) : classement suspendu.`;
+}
+
 export function demarrerWorker(d: DepsWorker): Worker<JobClassement> {
-  let creditSignale = false;
+  let indisponibiliteSignalee = false;
   const w: Worker<JobClassement> = new Worker<JobClassement>(
     d.nomFile ?? FILE_CLASSEMENT,
     async (job) => {
       try {
         const issue = await traiterCapture(job.data.captureId, d);
-        creditSignale = false;
+        indisponibiliteSignalee = false;
         return issue;
       } catch (e) {
         if (e instanceof CapturePriveeRefusee) throw new UnrecoverableError('capture privée refusée');
-        if (e instanceof CreditEpuise) {
+        if (e instanceof FournisseurIndisponible) {
           // Indisponibilité, pas un échec : la file s'arrête et garde l'ordre.
-          if (!creditSignale) {
-            creditSignale = true;
+          if (!indisponibiliteSignalee) {
+            indisponibiliteSignalee = true;
             try {
-              await d.alerter('Crédit Gemini épuisé : classement suspendu.');
+              await d.alerter(messageIndisponibilite(e.statut));
             } catch (err) {
               // L'alerte ne doit jamais empêcher la pause : on la retentera au prochain 402.
-              creditSignale = false;
+              indisponibiliteSignalee = false;
               console.error(`Alerte crédit impossible : ${(err as Error).name}`);
             }
           }

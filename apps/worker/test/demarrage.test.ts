@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CreditEpuise, PalierNonPaye } from '../src/classement/provider.js';
+import { CreditEpuise, ErreurFournisseur, PalierNonPaye } from '../src/classement/provider.js';
 import { verifierPalierAuDemarrage } from '../src/demarrage.js';
 
 function faux(erreurs: Error[]) {
@@ -42,5 +42,12 @@ describe('verifierPalierAuDemarrage', () => {
     const lignes: string[] = [];
     await verifierPalierAuDemarrage(p, async () => {}, (m) => lignes.push(m));
     expect(lignes.join()).not.toContain('secret');
+  });
+
+  it('journalise le statut HTTP de Gemini, jamais plus', async () => {
+    const p = faux([new ErreurFournisseur(400, 'Gemini principal : HTTP 400')]);
+    const journal: string[] = [];
+    await verifierPalierAuDemarrage(p, async () => {}, (m) => { journal.push(m); });
+    expect(journal[0]).toContain('Gemini principal : HTTP 400');
   });
 });

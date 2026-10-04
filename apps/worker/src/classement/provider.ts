@@ -19,9 +19,25 @@ export interface ClassificationProvider {
   verifierPalierPaye(): Promise<void>;
 }
 
-/** Crédit ou plafond atteint : indisponibilité temporaire, pas une erreur de classement. */
-export class CreditEpuise extends Error {
+/** Erreur HTTP du fournisseur. Le message ne contient que le modèle et le statut, jamais le corps. */
+export class ErreurFournisseur extends Error {
+  override name = 'ErreurFournisseur';
+  constructor(readonly statut: number, message: string) {
+    super(message);
+  }
+}
+
+/** Crédit, budget, quota ou clé refusés (402, 403, 429) : indisponibilité temporaire, pas une erreur de classement. */
+export class FournisseurIndisponible extends ErreurFournisseur {
+  override name = 'FournisseurIndisponible';
+}
+
+/** Prépaiement épuisé (HTTP 402). */
+export class CreditEpuise extends FournisseurIndisponible {
   override name = 'CreditEpuise';
+  constructor(message = 'HTTP 402') {
+    super(402, message);
+  }
 }
 
 /** Sortie hors schéma sur le modèle principal puis le repli. */
