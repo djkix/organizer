@@ -16,6 +16,7 @@ Le projet n'a pas encore de version publiée.
 - L'API démarre et sert la PWA même si Telegram est injoignable ; la CLI pose, retire et décrit le webhook (une connexion, secret, messages en attente gardés) et lie un compte à un chat sans code (2026-10-04).
 
 ### Modifié
+- La stack de production : proxy sortant à liste fermée, API et worker sans route vers Internet, seul le port de Caddy publié, proxy de confiance et migrations obligatoires ; essai de fumée sur la topologie réelle en CI, publication des images sur GHCR à chaque étiquette de version (2026-10-04).
 - Les images Docker seront publiées sur GHCR en public, et non en privé (2026-10-04).
 
 ### Sécurité

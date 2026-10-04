@@ -1,17 +1,21 @@
 # Stack Organizer — déployée par Dockge, publiée par le Nginx Proxy Manager existant.
-# Référence : docs/cahier-des-charges.md, section « Déploiement Docker ».
+# Référence : docs/cahier-des-charges.md (Déploiement Docker) et docs/exploitation.md.
 #
-# Dans Dockge : ce fichier est le compose.yaml de la stack « organizer »
-# (/opt/stacks/organizer/), avec .env, Caddyfile et secrets/ dans le même dossier.
+# Dans Dockge : ce fichier est le compose.yaml de la stack « organizer » (/opt/stacks/organizer/),
+# avec son .env (modèle : infra/.env.example) et le dossier secrets/ (un fichier par secret).
 #
-# 50 Go maximum pour toute la stack, tenus par la rotation de l'audio (décision 12).
-# Pas de sauvegarde au démarrage (décision 11) : elle arrive au lot 2.
-#
-# Aucun modèle d'IA ne tourne ici, sauf les embeddings bge-small dans le worker.
-# Les secrets ne sont jamais dans ce fichier : .env pour la configuration,
-# infra/secrets/ (ignoré par Git) pour les clés.
+# Réseaux : web seul est publié ; api et worker n'ont aucune route vers Internet et sortent
+# par le proxy « sortie », qui n'ouvre que leur liste fermée de domaines (infra/sortie/squid.conf).
+# 50 Go maximum pour la stack (décision 12). Pas de sauvegarde avant le lot 2 (décision 11).
+# Le scheduler (agenda, rotation de l'audio) arrive au lot 2.
 
 name: organizer
+
+x-journal: &journal
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
 
 x-app: &app
   restart: unless-stopped
@@ -19,55 +23,64 @@ x-app: &app
   read_only: true
   tmpfs:
     - /tmp
-  # Pas d'env_file : les clés passent uniquement par les secrets ci-dessous.
+  logging: *journal
+  # Pas d'env_file : les clés passent uniquement par les secrets.
   environment: &app-env
     NODE_ENV: production
     TZ: Europe/Paris
+    HOME: /tmp
     DATABASE_URL: postgresql://organizer:${POSTGRES_PASSWORD:?}@db:5432/organizer
     REDIS_URL: redis://queue:6379
-  logging: &logging
-    driver: json-file
-    options:
-      max-size: 10m
-      max-file: "3"
+    PROMPTS_DIR: /app/prompts
+    PROMPT_VERSION: ${PROMPT_VERSION:-tri/v1}
+    AUDIO_STORAGE_PATH: /data/audio
+    HTTPS_PROXY: http://sortie:3128
+    NO_PROXY: db,queue,localhost,127.0.0.1
 
 services:
-  # Migrations Prisma jouées avant le démarrage de l'API.
+  # Migrations Prisma jouées avant le démarrage de l'API et du worker.
   migrate:
     <<: *app
     image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:?}
     restart: "no"
-    command: ["pnpm", "prisma", "migrate", "deploy"]
+    command: ["node", "packages/db/node_modules/prisma/build/index.js", "migrate", "deploy", "--schema", "packages/db/prisma/schema.prisma"]
     networks: [core]
     depends_on:
       db:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
   api:
     <<: *app
     image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:?}
     environment:
       <<: *app-env
+      TELEGRAM_MODE: webhook
       TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token
       TELEGRAM_WEBHOOK_SECRET_FILE: /run/secrets/telegram_webhook_secret
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
-      VAPID_PRIVATE_KEY_FILE: /run/secrets/vapid_private_key
-      HOME_ASSISTANT_WEBHOOK_URL_FILE: /run/secrets/home_assistant_webhook_url
-      AUDIO_STORAGE_PATH: /data/audio
-    secrets: [telegram_bot_token, telegram_webhook_secret, vapid_private_key, home_assistant_webhook_url]
+      TELEGRAM_WEBHOOK_URL: https://${DOMAINE_BOT:?}/telegram/webhook
+      # X-Forwarded-For cru de Caddy (réseau edge) et du Nginx Proxy Manager, seulement.
+      TRUSTED_PROXY: 10.201.1.0/24, ${NPM_IP:?}
+    secrets: [telegram_bot_token, telegram_webhook_secret]
     volumes:
       - audio:/data/audio
-    # Joignable uniquement par le Nginx Proxy Manager : filtrage au pare-feu de l'hôte.
-    ports:
-      - "3000:3000"
-    networks: [edge, core, egress]
+    networks:
+      edge: {}
+      core: {}
+      sortie:
+        ipv4_address: 10.201.2.10
     depends_on:
       migrate:
         condition: service_completed_successfully
       queue:
         condition: service_healthy
+      sortie:
+        condition: service_started
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:3000/api/sante"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -84,66 +97,69 @@ services:
       GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
       GEMINI_MODEL_FALLBACK: ${GEMINI_MODEL_FALLBACK:-gemini-3.8-flash}
-      AUDIO_STORAGE_PATH: /data/audio
+      GEMINI_TIERS_PAYES: ${GEMINI_TIERS_PAYES:-standard}
+      # Vide dans le .env : rien n'est demandé (modèle qui refuserait thinkingLevel).
+      GEMINI_THINKING_LEVEL: ${GEMINI_THINKING_LEVEL-minimal}
       # Plafond de concurrence : ne pas saturer le quota Gemini en rattrapage.
       WORKER_CONCURRENCY: "2"
-      EMBEDDINGS_CACHE_DIR: /models
     secrets: [gemini_api_key]
     volumes:
       - audio:/data/audio:ro
-      - models-emb:/models
-    networks: [core, egress]
+    networks:
+      core: {}
+      sortie:
+        ipv4_address: 10.201.2.11
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       queue:
         condition: service_healthy
+      sortie:
+        condition: service_started
     deploy:
       resources:
         limits:
           memory: 768m
 
-  scheduler:
-    <<: *app
-    image: ghcr.io/djkix/organizer-scheduler:${ORGANIZER_VERSION:?}
+  # Coquille de la PWA, en-têtes, et passage vers l'API (infra/caddy/Caddyfile).
+  web:
+    image: ghcr.io/djkix/organizer-web:${ORGANIZER_VERSION:?}
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /data
+      - /config
     environment:
-      <<: *app-env
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-      GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/google_oauth_client_secret
-      GOOGLE_CALENDAR_SCOPE: https://www.googleapis.com/auth/calendar.app.created
-      # Rotation de l'audio ordinaire déjà transcrit, chaque nuit à 4h (décision 12).
-      AUDIO_STORAGE_PATH: /data/audio
-      AUDIO_ROTATION_MAX_GB: ${AUDIO_ROTATION_MAX_GB:-40}
-      AUDIO_ROTATION_TARGET_GB: ${AUDIO_ROTATION_TARGET_GB:-35}
-      AUDIO_ROTATION_MIN_AGE_DAYS: ${AUDIO_ROTATION_MIN_AGE_DAYS:-30}
-    secrets: [google_oauth_client_secret]
-    volumes:
-      - audio:/data/audio
-    networks: [core, egress]
-    depends_on:
-      db:
-        condition: service_healthy
-      queue:
-        condition: service_healthy
+      NPM_IP: ${NPM_IP:?}
+      DOMAINE_BOT: ${DOMAINE_BOT:?}
+    # Seul port publié de la stack, sur l'adresse de la VM, pour le Nginx Proxy Manager.
+    ports:
+      - "${IP_PUBLICATION:?}:8080:8080"
+    networks: [publication, edge]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *journal
     deploy:
       resources:
         limits:
-          memory: 256m
+          memory: 64m
 
-  web:
-    image: caddy:2.10-alpine
+  # Proxy sortant : seule route vers Internet (infra/sortie/squid.conf).
+  sortie:
+    image: ghcr.io/djkix/organizer-sortie:${ORGANIZER_VERSION:?}
     restart: unless-stopped
     read_only: true
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - web-dist:/srv:ro
-      - caddy-data:/data
     tmpfs:
-      - /config
-    ports:
-      - "8080:80"
-    networks: [edge]
-    logging: *logging
+      - /tmp
+    networks:
+      sortie:
+        ipv4_address: 10.201.2.2
+      egress: {}
+    logging: *journal
     deploy:
       resources:
         limits:
@@ -167,7 +183,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *logging
+    logging: *journal
     deploy:
       resources:
         limits:
@@ -185,41 +201,42 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *logging
+    logging: *journal
     deploy:
       resources:
         limits:
           memory: 128m
 
 networks:
-  # Seul réseau publié vers le reverse proxy.
-  edge: {}
-  # Réseau interne : aucune route vers Internet.
+  # Publication du seul port de web vers le Nginx Proxy Manager.
+  publication: {}
+  # web ↔ api. Interne : l'API n'y trouve aucune route vers Internet.
+  edge:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.201.1.0/24
+  # api, worker, migrations, base, file. Aucune sortie Internet.
   core:
     internal: true
-  # Sortie Internet pour api, worker et scheduler.
-  # Docker ne filtre pas par domaine : la liste fermée du cahier
-  # (Telegram, FCM, Gemini, Google Agenda) est appliquée par un proxy sortant, au lot 1.
+  # api et worker vers le proxy sortant ; adresses fixes reprises dans squid.conf.
+  sortie:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.201.2.0/24
+  # Le proxy sortant seul atteint Internet.
   egress: {}
 
 volumes:
   pgdata:
   audio:
-  models-emb:
   valkeydata:
-  web-dist:
-  caddy-data:
 
 secrets:
-  gemini_api_key:
-    file: ./secrets/gemini_api_key
   telegram_bot_token:
     file: ./secrets/telegram_bot_token
   telegram_webhook_secret:
     file: ./secrets/telegram_webhook_secret
-  vapid_private_key:
-    file: ./secrets/vapid_private_key
-  home_assistant_webhook_url:
-    file: ./secrets/home_assistant_webhook_url
-  google_oauth_client_secret:
-    file: ./secrets/google_oauth_client_secret
+  gemini_api_key:
+    file: ./secrets/gemini_api_key

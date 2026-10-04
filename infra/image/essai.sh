@@ -1,0 +1,74 @@
+#!/bin/sh
+# Essai de fumée des images dans la topologie réelle (infra/docker-compose.yml), secrets factices.
+# Usage : infra/image/essai.sh [étiquette]   (défaut : essai ; images ghcr.io/djkix/organizer-*:<étiquette> déjà construites)
+# Ne touche à aucune stack existante : projet « organizer-essai », dossier temporaire, tout est retiré à la fin.
+set -eu
+ETIQUETTE="${1:-essai}"
+RACINE="$(cd "$(dirname "$0")/../.." && pwd)"
+TRAVAIL="$(mktemp -d)"
+PROJET=organizer-essai
+URL=http://127.0.0.1:8080
+
+dc() { docker compose -p "$PROJET" --project-directory "$TRAVAIL" -f "$TRAVAIL/compose.yaml" "$@"; }
+nettoyer() { dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$TRAVAIL"; }
+trap nettoyer EXIT
+echec() { echo "ÉCHEC : $1" >&2; dc ps -a >&2 || true; dc logs --no-color --tail 40 >&2 || true; exit 1; }
+entete() { curl -sS -D - -o /dev/null "$URL$1" | tr -d '\r' | grep -i "^$2:" | head -1 | cut -d' ' -f2-; }
+statut() { curl -sS -o /dev/null -w '%{http_code}' "$@"; }
+
+mkdir -p "$TRAVAIL/secrets"
+printf '0:faux' > "$TRAVAIL/secrets/telegram_bot_token"
+printf 'secret-essai' > "$TRAVAIL/secrets/telegram_webhook_secret"
+printf 'cle-essai' > "$TRAVAIL/secrets/gemini_api_key"
+chmod 644 "$TRAVAIL"/secrets/*
+cp "$RACINE/infra/docker-compose.yml" "$TRAVAIL/compose.yaml"
+cat > "$TRAVAIL/.env" <<EOF
+ORGANIZER_VERSION=$ETIQUETTE
+POSTGRES_PASSWORD=essai
+NPM_IP=127.0.0.1
+IP_PUBLICATION=127.0.0.1
+DOMAINE_BOT=bot.essai
+EOF
+
+dc up -d
+i=0
+until curl -fsS "$URL/api/sante" 2>/dev/null | grep -q '"ok":true'; do
+  i=$((i + 1)); [ "$i" -lt 60 ] || echec "la stack ne répond pas sur /api/sante"; sleep 3
+done
+[ "$(dc ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | grep '^migrate ')" = "migrate exited 0" ] || echec "migrations"
+
+# Coquille, repli, en-têtes
+curl -sS "$URL/" -o "$TRAVAIL/index.html"
+[ "$(statut "$URL/prive/enregistrer")" = 200 ] || echec "repli index.html"
+EMPREINTE="$(node "$RACINE/apps/web/scripts/entetes.mjs" empreintes "$TRAVAIL/index.html" | head -1)"
+[ -n "$EMPREINTE" ] || echec "aucun script en ligne dans la coquille servie"
+entete / content-security-policy | grep -qF "$EMPREINTE" || echec "CSP sans l'empreinte du script de la coquille servie"
+entete / content-security-policy | grep -qF "frame-ancestors 'none'" || echec "frame-ancestors"
+[ "$(entete / cache-control)" = "no-cache" ] || echec "index.html doit être no-cache"
+[ "$(entete /sw.js cache-control)" = "no-cache" ] || echec "sw.js doit être no-cache"
+IMMUABLE="$(grep -o '/_app/immutable/[^"]*\.js' "$TRAVAIL/index.html" | head -1)"
+entete "$IMMUABLE" cache-control | grep -q immutable || echec "_app/immutable doit être immutable"
+entete /manifest.webmanifest content-type | grep -q '^application/manifest+json' || echec "type du manifeste"
+entete / permissions-policy | grep -qF 'microphone=(self)' || echec "Permissions-Policy"
+[ "$(entete / referrer-policy)" = "no-referrer" ] || echec "Referrer-Policy"
+[ "$(entete / x-content-type-options)" = "nosniff" ] || echec "nosniff"
+
+# API derrière Caddy
+[ "$(entete /api/session/moi cache-control)" = "no-store" ] || echec "/api doit être no-store"
+[ "$(statut "$URL/api/session/moi")" = 401 ] || echec "/api/session/moi sans session"
+
+# Webhook : seulement sur le domaine du bot, secret vérifié
+[ "$(statut -X POST "$URL/telegram/webhook")" = 404 ] || echec "webhook ouvert sur le domaine principal"
+CODE="$(statut -X POST -H 'Host: bot.essai' -H 'X-Telegram-Bot-Api-Secret-Token: faux' -H 'content-type: application/json' -d '{"update_id":1}' "$URL/telegram/webhook")"
+[ "$CODE" = 401 ] || echec "webhook sans secret valide : $CODE au lieu de 401"
+
+# Sortie : par le proxy seulement, vers la liste fermée seulement
+dc exec -T api node apps/api/dist/cli.mjs essai-sortie https://api.telegram.org | grep -q '^joignable' || echec "api : Telegram devrait être joignable"
+dc exec -T api node apps/api/dist/cli.mjs essai-sortie https://example.com | grep -q '^refusé' || echec "api : example.com devrait être refusé"
+dc exec -T worker node apps/worker/dist/sonde.mjs sortie https://generativelanguage.googleapis.com | grep -q '^joignable' || echec "worker : Gemini devrait être joignable"
+dc exec -T worker node apps/worker/dist/sonde.mjs sortie https://api.telegram.org | grep -q '^refusé' || echec "worker : Telegram devrait être refusé"
+dc exec -T api node -e "fetch('https://example.com',{signal:AbortSignal.timeout(5000)}).then(()=>process.exit(1),()=>process.exit(0))" \
+  || echec "api : sortie directe possible sans le proxy"
+dc exec -T api ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libopus || echec "ffmpeg sans libopus"
+
+echo "Essai de fumée réussi."
