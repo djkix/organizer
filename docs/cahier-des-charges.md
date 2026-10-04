@@ -595,7 +595,7 @@ Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dock
 | --- | --- | --- | --- | --- |
 | `api` | `ghcr.io/djkix/organizer-api` (Node 22, ffmpeg) | 3000 | `audio` | `db`, `queue`, API Telegram, FCM |
 | `worker` | `ghcr.io/djkix/organizer-worker` (Node 22) | — | `audio` (lecture seule) | `db`, `queue`, API Gemini |
-| `web` | `ghcr.io/djkix/organizer-web` (Caddy 2.10, coquille de la PWA incluse) | 8080 | — | `api` |
+| `web` | `ghcr.io/djkix/organizer-web` (Caddy 2.11, coquille de la PWA incluse) | 8080 | — | `api` |
 | `sortie` | `ghcr.io/djkix/organizer-sortie` (Squid) | 3128 | — | Internet, liste fermée |
 | `db` | `pgvector/pgvector:0.8.0-pg17` | 5432 | `pgdata` | — |
 | `queue` | `valkey/valkey:8.1-alpine` | 6379 | `valkeydata` | — |

@@ -3,7 +3,7 @@
 # Construites par la CI (.github/workflows/ci.yml) ; publiées sur GHCR à chaque étiquette v*.
 
 ARG NODE_IMAGE=node:22.22-alpine3.22
-ARG CADDY_IMAGE=caddy:2.10-alpine
+ARG CADDY_IMAGE=caddy:2.11-alpine
 ARG ALPINE_IMAGE=alpine:3.22
 
 # Manifestes seulement : la couche d'installation ne bouge que si les dépendances changent.
@@ -34,7 +34,7 @@ FROM outils AS dependances-worker
 RUN pnpm install --frozen-lockfile --prod --filter @organizer/worker...
 
 FROM ${NODE_IMAGE} AS base-node
-RUN apk add --no-cache openssl tini
+RUN apk upgrade --no-cache && apk add --no-cache openssl tini
 WORKDIR /app
 ENV NODE_ENV=production PROMPTS_DIR=/app/prompts CHECKPOINT_DISABLE=1 PRISMA_HIDE_UPDATE_MESSAGE=1
 COPY prompts /app/prompts
@@ -64,6 +64,7 @@ CMD ["node", "apps/worker/dist/main.mjs"]
 FROM ${CADDY_IMAGE} AS web
 # Racine en lecture seule : Caddy range son état éventuel dans /tmp (tmpfs).
 ENV XDG_DATA_HOME=/tmp XDG_CONFIG_HOME=/tmp
+RUN apk upgrade --no-cache
 COPY infra/caddy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=construction /csp.caddy /etc/caddy/csp.caddy
 COPY --from=construction /depot/apps/web/build /srv
@@ -72,7 +73,7 @@ USER 1000:1000
 EXPOSE 8080
 
 FROM ${ALPINE_IMAGE} AS sortie
-RUN apk add --no-cache squid
+RUN apk upgrade --no-cache && apk add --no-cache squid
 COPY infra/sortie/squid.conf /etc/squid/squid.conf
 LABEL org.opencontainers.image.source=https://github.com/djkix/organizer
 USER squid

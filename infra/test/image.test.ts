@@ -26,7 +26,7 @@ describe('.dockerignore', () => {
     const lignes = lire('.dockerignore').split('\n').map((l) => l.trim());
     for (const motif of [
       '.env', '.env.*', '**/.env', '*.pem', '*.key', 'infra/secrets', 'corpus', 'data', 'audio', 'transcriptions',
-      '**/*.ogg', '**/*.oga', '**/*.opus', '**/*.m4a', '**/node_modules', '.git', '**/dist', '**/build', '**/.svelte-kit',
+      '**/*.ogg', '**/*.oga', '**/*.opus', '**/*.m4a', '**/node_modules', '.git', '.superpowers', '**/dist', '**/build', '**/.svelte-kit',
     ]) expect(lignes, motif).toContain(motif);
   });
 });
@@ -62,6 +62,17 @@ describe('Dockerfile', () => {
       const c = cible(nom);
       expect(c, nom).toMatch(/^RUN rm -rf \/usr\/local\/lib\/node_modules\/npm \/usr\/local\/lib\/node_modules\/corepack \/usr\/local\/bin\/npm \/usr\/local\/bin\/npx \/usr\/local\/bin\/corepack$/m);
       expect(c, nom).not.toMatch(/^(CMD|ENTRYPOINT).*\b(npm|npx|pnpm|corepack)\b/m);
+    }
+  });
+
+  it('web, sortie et base Node appliquent les correctifs Alpine avant tout USER ; Caddy 2.11', () => {
+    expect(d).toContain('ARG CADDY_IMAGE=caddy:2.11-alpine');
+    for (const nom of ['base-node', 'web', 'sortie']) {
+      const c = cible(nom);
+      const i = c.search(/^RUN .*apk upgrade --no-cache/m);
+      expect(i, nom).toBeGreaterThanOrEqual(0);
+      const u = c.search(/^USER /m);
+      if (u >= 0) expect(i, nom).toBeLessThan(u);
     }
   });
 
@@ -124,6 +135,9 @@ describe('squid.conf', () => {
     const js = (x: string): boolean => /^[\]0-9.:[]+$/.test(x);
     for (const x of brutes) expect(posix(x) ?? js(x), x).toBe(true);
     for (const x of noms) expect(posix(x) ?? js(x), x).toBe(false);
+  });
+  it('descripteurs de fichiers plafonnés', () => {
+    expect(s).toMatch(/^max_filedescriptors 4096$/m);
   });
   it('liste fermée : Telegram pour l\'API, Gemini pour le worker, CONNECT 443 seulement, refus du reste', () => {
     expect(s).toContain('acl depuis_api src 10.201.2.10/32');
