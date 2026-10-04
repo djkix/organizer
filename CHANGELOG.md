@@ -7,6 +7,7 @@ Le projet n'a pas encore de version publiée.
 ## [Non publié]
 
 ### Ajouté
+- Le dossier de revue du lot 1-C (déploiement), pour un relecteur externe (2026-10-05).
 - La documentation d'exploitation : stack, commandes, Nginx Proxy Manager, mise à jour, retour arrière, changement des secrets, supervision et sauvegarde manuelle (2026-10-04).
 - Les images api, worker, web (Caddy, coquille et CSP du build) et sortie (Squid, liste fermée de domaines), et la CI GitHub Actions : tests avec base et file, e2e, construction et analyse des images (2026-10-04).
 - L'API et le worker s'empaquettent avec esbuild en `dist/*.mjs`, dépendances externes vérifiées par un test ; Prisma devient une dépendance de production pour les migrations (2026-10-04).

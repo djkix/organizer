@@ -294,6 +294,7 @@ Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.
 - [Dossier de revue du lot 1-A](docs/revue/2026-10-03-lot1-a.md) : synthèse autonome pour un relecteur externe.
 - [Dossier de revue du lot 1-B1](docs/revue/2026-10-03-lot1-b1.md) : la suite, pour l'API de la PWA et le mode privé.
 - [Dossier de revue du lot 1-B2](docs/revue/2026-10-04-lot1-b2.md) : la PWA, l'enregistreur privé et la file hors ligne.
+- [Dossier de revue du lot 1-C](docs/revue/2026-10-05-lot1-c.md) : le déploiement (stack Docker, proxy sortant, images, CI) ; la mise en service n'est pas faite.
 
 ## Journal des modifications
 
