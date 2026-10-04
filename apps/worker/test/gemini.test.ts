@@ -180,3 +180,28 @@ describe('GeminiProvider.diagnostiquer', () => {
     expect(formaterDiagnostic(d)).toBe('HTTP 400 : palier non vérifiable.');
   });
 });
+
+describe('GeminiProvider : statuts d\'indisponibilité configurables', () => {
+  const avec = (f: typeof fetch, statutsIndisponibles: number[]) =>
+    new GeminiProvider({ cle: 'c', modele: 'm', repli: 'r', prompt, tiersPayes: ['standard'], fetch: f, statutsIndisponibles });
+
+  it('un statut ajouté (ex. 503) devient une indisponibilité', async () => {
+    const { fetch } = faux([{ status: 503 }]);
+    const e = await avec(fetch, [402, 503]).classer({ systeme: 'S', texte: 'x' }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(FournisseurIndisponible);
+    expect((e as FournisseurIndisponible).statut).toBe(503);
+  });
+
+  it('un statut retiré de la liste redevient une erreur ordinaire', async () => {
+    const { fetch } = faux([{ status: 429 }]);
+    const e = await avec(fetch, [402]).classer({ systeme: 'S', texte: 'x' }).catch((x: unknown) => x);
+    expect(e).not.toBeInstanceOf(FournisseurIndisponible);
+    expect((e as Error).name).toBe('ErreurFournisseur');
+  });
+
+  it('402 reste un crédit épuisé même absent de la liste', async () => {
+    const { fetch } = faux([{ status: 402 }]);
+    const e = await avec(fetch, [429]).classer({ systeme: 'S', texte: 'x' }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(CreditEpuise);
+  });
+});

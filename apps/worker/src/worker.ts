@@ -12,7 +12,7 @@ export interface DepsWorker extends DepsTraitement {
   pauseCreditMs?: number;
 }
 
-/** Alerte administrateur selon le refus de Gemini. L ne reçoit jamais rien. */
+/** Alerte administrateur selon le refus de Gemini. Alerte réservée à l'administrateur ; L n'est jamais sollicitée. */
 export function messageIndisponibilite(statut: number): string {
   if (statut === 402) return 'Crédit Gemini épuisé : classement suspendu.';
   if (statut === 429) return 'Gemini refuse pour quota ou budget (429) : classement suspendu.';

@@ -18,6 +18,8 @@ export interface OptionsGemini {
   niveauReflexion?: string;
   /** Délai d'un appel, en ms. Défaut : 120 s. */
   delaiMs?: number;
+  /** Statuts HTTP traités comme indisponibilité temporaire. Défaut : 402, 403, 429. 402 reste un CreditEpuise. */
+  statutsIndisponibles?: number[];
   fetch?: typeof fetch;
 }
 
@@ -132,8 +134,8 @@ export class GeminiProvider implements ClassificationProvider {
   private async appeler(modele: string, e: EntreeClassement): Promise<Brut> {
     const { statut, brut } = await this.requete(modele, e);
     if (statut === 402) throw new CreditEpuise(`Gemini ${modele} : HTTP 402`);
-    // 403 et 429 : clé, budget en pause ou quota. Le code exact d'une pause de budget n'est pas documenté.
-    if (statut === 403 || statut === 429) throw new FournisseurIndisponible(statut, `Gemini ${modele} : HTTP ${statut}`);
+    // Clé, budget en pause ou quota. Le code exact d'une pause de budget n'est pas documenté : la liste est réglable.
+    if ((this.o.statutsIndisponibles ?? [402, 403, 429]).includes(statut)) throw new FournisseurIndisponible(statut, `Gemini ${modele} : HTTP ${statut}`);
     if (!brut) throw new ErreurFournisseur(statut, `Gemini ${modele} : HTTP ${statut}`);
     return brut;
   }

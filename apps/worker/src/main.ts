@@ -14,23 +14,25 @@ const prisma = creerPrisma();
 const connexion = new Redis(exigerVar('REDIS_URL'), { maxRetriesPerRequest: null });
 const { prompt, provider } = lireConfigWorker();
 
+const alertes = new Queue<JobAlerte>(FILE_ALERTES, { connection: connexion });
+const alerter = async (message: string): Promise<void> => { await alertes.add('alerte', { message }, OPTIONS_JOB_ALERTE); };
+
 // Règle n° 8 : pas de palier payé, pas de worker.
 try {
-  await verifierPalierAuDemarrage(provider, (ms) => new Promise((r) => setTimeout(r, ms)), console.error);
+  await verifierPalierAuDemarrage(provider, (ms) => new Promise((r) => setTimeout(r, ms)), console.error, alerter);
 } catch (e) {
   if (!(e instanceof PalierNonPaye)) throw e;
   console.error('Palier Gemini non payé : le worker refuse de démarrer.');
   process.exit(1);
 }
 
-const alertes = new Queue<JobAlerte>(FILE_ALERTES, { connection: connexion });
 const file = new Queue<JobClassement>(FILE_CLASSEMENT, { connection: connexion });
 const worker = demarrerWorker({
   prisma, provider, prompt,
   audioRacine: cheminConfigure('AUDIO_STORAGE_PATH', exigerVar('AUDIO_STORAGE_PATH')),
   connexion,
   concurrence: Number(lireVar('WORKER_CONCURRENCY') ?? '2'),
-  alerter: async (message) => { await alertes.add('alerte', { message }, OPTIONS_JOB_ALERTE); },
+  alerter,
 });
 
 const lancerReprise = (): void => {
