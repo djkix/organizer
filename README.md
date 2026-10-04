@@ -25,7 +25,7 @@ Livré sur la branche `lot1-b2-pwa` :
 
 - la PWA (`apps/web`) : connexion, À faire, cochage avec annulation, correction, À revoir, enregistreur et vue Privé, file hors ligne, installation Android avec raccourcis.
 
-Pas encore livré : le déploiement (plan 1-C). L'application n'est pas en service.
+Le déploiement est prêt (plan 1-C) : images, stack de production, CI. La mise en service attend la sortie du lot 0.
 
 ## Principes
 
@@ -74,7 +74,11 @@ packages/shared   types, schémas Zod et configuration partagés
 packages/db       schéma Prisma, migrations, garde-fous SQL du mode privé
 prompts/          prompts Gemini versionnés et responseSchema
 fixtures/         énoncés fabriqués pour les tests
-infra/            stack de production (docker-compose.yml, Caddyfile)
+infra/            docker-compose.yml (production), .env.example
+infra/caddy/      Caddyfile : coquille, en-têtes, relais de /api et du webhook
+infra/image/      Dockerfile (api, worker, web, sortie) et essai de fumée
+infra/sortie/     squid.conf : liste fermée de domaines en sortie
+scripts/          empaquetage esbuild de l'API et du worker
 infra/dev/        Postgres et Valkey de dev sur la VM Docker, tunnel SSH
 infra/terrain/    banc d'essai du lot 0 : bot Telegram seul, retiré à la fin du lot 1
 tools/relecture/  outil de relecture des captures du banc d'essai
@@ -151,13 +155,18 @@ docs/             cahier des charges, décisions, guide d'annotation, plans
 | `AUDIO_STORAGE_PATH` | dossier de l'audio, commun à l'API et au worker |
 | `PROMPTS_DIR`, `PROMPT_VERSION` | dossier des prompts (défaut `prompts`) et version (défaut `tri/v1`) |
 | `GEMINI_TIERS_PAYES` | valeurs de `serviceTier` acceptées comme palier payé |
-| `TRUSTED_PROXY` | adresse du proxy dont l'API croit `X-Forwarded-For` (défaut `loopback`) ; sert à la limitation de débit par IP |
+| `TRUSTED_PROXY` | adresses dont l'API croit `X-Forwarded-For`, séparées par des virgules ; **obligatoire en production** (sous-réseau de Caddy et IP du Nginx Proxy Manager) ; défaut ailleurs : `loopback` |
+| `TELEGRAM_WEBHOOK_URL` | adresse publique du webhook, pour `cli telegram-webhook poser` |
+| `TELEGRAM_API_ROOT` | racine de l'API Bot (tests) ; défaut `https://api.telegram.org` |
+| `GEMINI_THINKING_LEVEL` | niveau de réflexion demandé à Gemini ; vide : rien n'est demandé |
+| `HTTPS_PROXY`, `NO_PROXY` | proxy sortant ; en production `http://sortie:3128` |
 
-Chaque variable peut aussi être lue depuis un fichier, par `<NOM>_FILE` (secrets Docker).
+Chaque variable peut aussi être lue depuis un fichier, par `<NOM>_FILE` (secrets Docker). En production, `PROMPTS_DIR` et `AUDIO_STORAGE_PATH` doivent être absolus.
 
 L'API expose :
 
 - `GET /health` : répond `{ "ok": true }`, pour la sonde de santé ;
+- `GET /api/sante` : base et file joignables (200 ou 503) et adresse vue par l'API, pour la supervision ;
 - `POST /telegram/webhook` : le webhook Telegram, en mode `webhook` seulement (404 en mode `polling`).
   Une erreur de traitement répond 500 : Telegram relivre, et l'ingestion est idempotente.
 
@@ -228,6 +237,14 @@ Aucune inscription libre : les comptes se créent en ligne de commande. La CLI l
 | `pnpm --filter @organizer/api cli code-liaison <nom>` | affiche un code à usage unique, valable 10 minutes, à envoyer au bot par `/start <code>` |
 | `pnpm --filter @organizer/api cli mot-de-passe <nom>` | pose ou change le mot de passe (Argon2id, 12 caractères minimum, saisie masquée et confirmée) ; révoque les sessions du compte |
 | `pnpm --filter @organizer/api cli delier <nom>` | retire le lien entre un compte et son chat Telegram (une liaison ne remplace jamais un lien existant) |
+| `pnpm --filter @organizer/api cli lier-chat <nom> <chat_id>` | lie un compte à un chat sans code (bascule depuis le banc d'essai) |
+| `pnpm --filter @organizer/api cli telegram-webhook poser\|retirer\|etat` | pose, retire ou décrit le webhook |
+| `pnpm --filter @organizer/api cli veille` | mesures de la supervision |
+| `pnpm --filter @organizer/api cli alerte-essai` | alerte d'essai vers les administrateurs |
+| `pnpm --filter @organizer/api cli essai-sortie <url>` | essai de sortie par le proxy |
+| `pnpm --filter @organizer/api cli importer-terrain <dossier> [--essai]` | importe les captures du banc d'essai |
+
+En production, les mêmes commandes : `docker compose exec api node apps/api/dist/cli.mjs <commande>` (voir [`docs/exploitation.md`](docs/exploitation.md)).
 
 ## Commandes
 
@@ -240,6 +257,9 @@ Aucune inscription libre : les comptes se créent en ligne de commande. La CLI l
 | `pnpm prisma …` | CLI Prisma sans charger le `.env` : exporter `DATABASE_URL` avant |
 | `pnpm dev` | lance en parallèle les applications de `apps/`, PWA comprise |
 | `pnpm --filter @organizer/web e2e` | tests de bout en bout de la PWA (Playwright, API simulée) |
+| `pnpm --filter @organizer/worker sonde palier` | palier Gemini du projet de la clé, réflexion, jetons ; aucun contenu |
+| `pnpm --filter @organizer/api build`, `pnpm --filter @organizer/worker build` | empaquetage en `dist/*.mjs` |
+| `infra/image/essai.sh [étiquette]` | essai de fumée des images (Docker requis) |
 | `python3 tools/relecture/relecture.py` | relecture des captures du banc d'essai (voir [`tools/relecture/README.md`](tools/relecture/README.md)) |
 
 ## Tests
@@ -247,6 +267,10 @@ Aucune inscription libre : les comptes se créent en ligne de commande. La CLI l
 - Les tests utilisent la base `organizer_test` sur la VM, jointe par le tunnel.
 - `pnpm test` applique les migrations (`migrate deploy`) et chaque test vide ses tables. La base n'est jamais réinitialisée.
 - Aucune donnée réelle : uniquement des énoncés fabriqués.
+
+## Déploiement
+
+Images construites et analysées par la CI à chaque poussée ; publiées sur GHCR à chaque étiquette `v<version>`. Déploiement manuel depuis Dockge. Tout le reste : [`docs/exploitation.md`](docs/exploitation.md).
 
 ## Confidentialité et dépôt public
 
@@ -260,6 +284,7 @@ Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.
 
 ## Documentation
 
+- [Exploitation](docs/exploitation.md) : stack, commandes, Nginx Proxy Manager, mise à jour, secrets, supervision.
 - [Cahier des charges](docs/cahier-des-charges.md) : la spécification complète.
 - [Décisions](docs/decisions.md) : les 21 décisions fermées.
 - [Guide d'annotation](docs/guide-annotation.md) : format du corpus du lot 0.

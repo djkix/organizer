@@ -59,10 +59,8 @@ packages/shared   types et schémas Zod partagés
 packages/db       schéma Prisma, migrations, garde-fous SQL du mode privé
 prompts/          prompts Gemini versionnés + responseSchema
 fixtures/         énoncés FABRIQUÉS pour les tests
-infra/            docker-compose.yml de la stack de production, .env.example
-infra/caddy/      Caddyfile de l'image web
-infra/image/      Dockerfile des quatre images, essai.sh (essai de fumée)
-infra/sortie/     squid.conf du proxy sortant (liste fermée)
+infra/            docker-compose.yml, caddy/, image/, sortie/ (production)
+scripts/          empaquetage esbuild
 infra/dev/        Postgres et Valkey de dev sur la VM Docker, tunnel SSH
 design/           tokens et maquettes
 docs/             cahier des charges, décisions
@@ -116,3 +114,5 @@ vocal à Gemini avec le prompt de tri et garde audio et résultats sur le serveu
 à éprouver le prompt en conditions réelles et à constituer le corpus du lot 0. Ce n'est
 pas l'application : il sera retiré quand le lot 1 sera livré. `compose.yaml` est généré
 par `genere.py`.
+
+Lot 1-C : déploiement prêt (images, stack, CI, `docs/exploitation.md`) ; la mise en service suit la procédure du plan `docs/superpowers/plans/2026-10-05-lot1-c-deploiement.md`, après la sortie du lot 0.
