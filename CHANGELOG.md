@@ -20,6 +20,7 @@ Le projet n'a pas encore de version publiée.
 - Les images Docker seront publiées sur GHCR en public, et non en privé (2026-10-04).
 
 ### Sécurité
+- Les images api et worker n'embarquent plus npm ni corepack (CVE critique de tar) ; le proxy de sortie refuse les adresses IP brutes, résout les noms sans reverse DNS et journalise sans chemin d'URL ; `NPM_IP` est obligatoire dans la stack ; les actions de la CI sont épinglées par empreinte, avec délais et annulation des exécutions périmées (2026-10-04).
 - La PWA est servie et testée sous une CSP stricte calculée à chaque build (empreinte du script de la coquille, aucun style en ligne), avec micro limité à l'origine, sans référent ni devinette de type (2026-10-04).
 - L'API vérifie la session (et non la seule présence d'un cookie) avant de lire un envoi privé de 30 Mio, un cookie forgé reçoit 401 sans que le corps soit lu (2026-10-04).
 - L'API plafonne ffmpeg à deux réencodages simultanés et quatre en attente (503 au-delà, la PWA réessaie), refuse un envoi privé sans cookie avant d'en lire le corps, et purge les sessions et codes de liaison expirés (2026-10-04).

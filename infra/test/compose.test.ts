@@ -72,7 +72,7 @@ describe('stack de production', () => {
 
   it('API : proxy de confiance obligatoire (Caddy et NPM), webhook en production', () => {
     const env = service('api').environment!;
-    expect(env.TRUSTED_PROXY).toBe('10.201.1.0/24, ${NPM_IP:?}');
+    expect(env.TRUSTED_PROXY).toMatch(/^10\.201\.1\.0\/24, \$\{NPM_IP:\?[^}]+\}$/);
     expect(env.TELEGRAM_MODE).toBe('webhook');
     expect(env.TELEGRAM_WEBHOOK_URL).toBe('https://${DOMAINE_BOT:?}/telegram/webhook');
   });

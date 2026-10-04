@@ -43,6 +43,8 @@ ENTRYPOINT ["/sbin/tini", "--"]
 
 FROM base-node AS api
 RUN apk add --no-cache ffmpeg
+# Ni npm, ni npx, ni corepack à l'exécution (le CVE de tar est dans npm) : tout passe par node.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 COPY --from=dependances-api /depot /app
 COPY --from=construction /depot/apps/api/dist /app/apps/api/dist
 USER 1000:1000
@@ -50,6 +52,8 @@ EXPOSE 3000
 CMD ["node", "apps/api/dist/main.mjs"]
 
 FROM base-node AS worker
+# Ni npm, ni npx, ni corepack à l'exécution (le CVE de tar est dans npm) : tout passe par node.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 COPY --from=dependances-worker /depot /app
 COPY --from=construction /depot/apps/worker/dist /app/apps/worker/dist
 USER 1000:1000
