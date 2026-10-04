@@ -1,9 +1,12 @@
 import { creerPrisma, type PrismaClient } from '@organizer/db';
-import { creerFetchSortant, essayerSortie, exigerVar, lireVar } from '@organizer/shared';
+import { cheminConfigure, creerFetchSortant, essayerSortie, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar, OPTIONS_JOB_ALERTE } from '@organizer/shared';
+import { Queue } from 'bullmq';
 import { Api } from 'grammy';
+import { Redis } from 'ioredis';
 import { AuthService } from './auth/auth.service.js';
 import { optionsClientTelegram } from './telegram/client.js';
 import { chatPriveValide, LiaisonService } from './telegram/liaison.service.js';
+import { formaterMesures, mesurer } from './veille/mesures.js';
 import { etatWebhook, poserWebhook, retirerWebhook } from './telegram/webhook.js';
 
 /** Lit une ligne sans l'afficher : la sortie de readline est coupée pendant la frappe. */
@@ -29,6 +32,18 @@ class Usage extends Error {}
 
 export function apiTelegram(): Api {
   return new Api(exigerVar('TELEGRAM_BOT_TOKEN'), optionsClientTelegram(lireVar('TELEGRAM_API_ROOT')));
+}
+
+/** Ouvre une file BullMQ le temps d'une commande. */
+async function avecFile<T>(nom: string, travail: (file: Queue) => Promise<T>): Promise<T> {
+  const connexion = new Redis(exigerVar('REDIS_URL'), { maxRetriesPerRequest: null });
+  const file = new Queue(nom, { connection: connexion });
+  try {
+    return await travail(file);
+  } finally {
+    await file.close();
+    connexion.disconnect();
+  }
 }
 
 interface Commande { usage: string; lancer(args: string[], prisma: PrismaClient): Promise<void> }
@@ -97,6 +112,20 @@ const COMMANDES: Record<string, Commande> = {
         throw new Usage();
       }
       console.log(await etatWebhook(api));
+    },
+  },
+  veille: {
+    usage: 'veille',
+    async lancer(_args, prisma) {
+      const audioRacine = cheminConfigure('AUDIO_STORAGE_PATH', exigerVar('AUDIO_STORAGE_PATH'));
+      console.log(formaterMesures(await avecFile(FILE_CLASSEMENT, (file) => mesurer({ prisma, file, audioRacine }))));
+    },
+  },
+  'alerte-essai': {
+    usage: 'alerte-essai',
+    async lancer() {
+      await avecFile(FILE_ALERTES, (file) => file.add('alerte', { message: 'Essai d\'alerte : la veille joint les administrateurs.' }, OPTIONS_JOB_ALERTE));
+      console.log('Alerte d\'essai en file : elle part vers les administrateurs liés.');
     },
   },
 };
