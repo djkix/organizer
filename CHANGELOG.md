@@ -14,6 +14,7 @@ Le projet n'a pas encore de version publiée.
 - Les images Docker seront publiées sur GHCR en public, et non en privé (2026-10-04).
 
 ### Sécurité
+- L'API vérifie la session (et non la seule présence d'un cookie) avant de lire un envoi privé de 30 Mio, un cookie forgé reçoit 401 sans que le corps soit lu (2026-10-04).
 - L'API plafonne ffmpeg à deux réencodages simultanés et quatre en attente (503 au-delà, la PWA réessaie), refuse un envoi privé sans cookie avant d'en lire le corps, et purge les sessions et codes de liaison expirés (2026-10-04).
 - Une erreur inattendue ou un corps illisible ne recopie plus rien dans la réponse ni dans le journal, aucune réponse de l'API n'est mise en cache, et `GET /api/sante` sert de sonde de supervision (2026-10-04).
 - En production, l'API refuse de démarrer sans proxy de confiance ou avec un chemin relatif, et n'interrompt plus une capture d'une heure au bout de 5 minutes ; taille et délai d'envoi des captures privées sont un contrat partagé entre la PWA et l'API (2026-10-04).
@@ -21,6 +22,7 @@ Le projet n'a pas encore de version publiée.
 - La connexion n'accorde plus créance à X-Forwarded-For que du proxy de confiance, un changement de mot de passe révoque les sessions, et la saisie du mot de passe est masquée et confirmée (2026-10-03).
 
 ### Corrigé
+- Le bouton « Prochaine capture privée » prévient quand il n'a pas pu s'activer et Telegram rejoue le message ; le démarrage de Telegram ne laisse plus d'écouteurs s'accumuler pendant une longue panne et ne lance pas le polling après l'arrêt ; `lier-chat` refuse les identifiants de groupe ; le commentaire du webhook ne promet plus l'ordre absolu (2026-10-04).
 - La PWA ne marque plus l'audio indisponible après un play/pause rapide et nomme chaque lecteur par son heure, annonce « C'est noté. » après une date corrigée et ne lève plus sur une date illisible, rend le focus à la ligne suivante quand une ligne cochée quitte la liste, trie « En attente d'envoi » du plus récent au plus ancien, et le README dit quand une mise à jour s'applique (2026-10-04).
 - La file privée garde le même identifiant entre l'envoi direct et « Réessayer », demande un nouvel essai au navigateur tant qu'il reste des captures (429 et 5xx compris), ne recharge jamais la page à une mise à jour, borne l'écriture locale à 10 s et ferme sa connexion pour une nouvelle version de la base ; l'enregistreur n'écoute pas si l'écran se verrouille pendant l'ouverture du micro (2026-10-04).
 - Sur un réseau faible, la PWA affiche l'écran après 2,5 s au lieu de 15 s, retient l'état « hors ligne » le temps de la page et renvoie à la connexion si la session est partie ; l'écran de connexion garde le bouton violet vers l'enregistreur privé (2026-10-04).

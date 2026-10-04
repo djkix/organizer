@@ -3,7 +3,7 @@ import { creerFetchSortant, essayerSortie, exigerVar, lireVar } from '@organizer
 import { Api } from 'grammy';
 import { AuthService } from './auth/auth.service.js';
 import { optionsClientTelegram } from './telegram/client.js';
-import { LiaisonService } from './telegram/liaison.service.js';
+import { chatPriveValide, LiaisonService } from './telegram/liaison.service.js';
 import { etatWebhook, poserWebhook, retirerWebhook } from './telegram/webhook.js';
 
 /** Lit une ligne sans l'afficher : la sortie de readline est coupée pendant la frappe. */
@@ -53,7 +53,7 @@ const COMMANDES: Record<string, Commande> = {
   'lier-chat': {
     usage: 'lier-chat <nom> <chat_id>',
     async lancer([nom, chat], prisma) {
-      if (!nom || !chat || !/^-?\d{1,20}$/.test(chat)) throw new Usage();
+      if (!nom || !chat || !chatPriveValide(chat)) throw new Usage();
       await new LiaisonService(prisma).lierDirectement(nom, BigInt(chat));
       console.log(`Compte ${nom} lié au chat ${chat}.`);
     },

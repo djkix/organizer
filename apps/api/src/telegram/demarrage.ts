@@ -31,6 +31,7 @@ export async function demarrerTelegram(o: OptionsTelegram): Promise<void> {
   }
   if (o.signal.aborted || o.mode !== 'polling') return;
   await o.bot.api.deleteWebhook({ drop_pending_updates: false });
+  if (o.signal.aborted) return;
   // Le polling tourne en tâche de fond : s'il meurt (jeton refusé, conflit), l'API s'arrête, délibérément.
   o.bot.start().catch((err: unknown) => {
     o.journal(`Bot Telegram arrêté : ${(err as Error).name}`);
@@ -40,6 +41,8 @@ export async function demarrerTelegram(o: OptionsTelegram): Promise<void> {
 
 export const dormir = (ms: number, signal: AbortSignal): Promise<void> =>
   new Promise((resoudre) => {
-    const minuteur = setTimeout(resoudre, ms);
-    signal.addEventListener('abort', () => { clearTimeout(minuteur); resoudre(); }, { once: true });
+    if (signal.aborted) return resoudre();
+    const fin = (): void => { clearTimeout(minuteur); signal.removeEventListener('abort', fin); resoudre(); };
+    const minuteur = setTimeout(fin, ms);
+    signal.addEventListener('abort', fin, { once: true });
   });

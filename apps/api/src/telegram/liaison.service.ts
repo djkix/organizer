@@ -5,6 +5,9 @@ const VALIDITE_MS = 10 * 60_000;
 const FENETRE_MS = 10 * 60_000;
 const MAX_ECHECS = 10;
 
+/** Chat privé Telegram : identifiant positif ; les groupes (négatifs) sont refusés. */
+export const chatPriveValide = (chat: string): boolean => /^\d{1,19}$/.test(chat);
+
 export class LiaisonService {
   constructor(private readonly prisma: PrismaClient, private readonly maintenant: () => Date = () => new Date()) {}
 

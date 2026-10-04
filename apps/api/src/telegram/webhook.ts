@@ -5,8 +5,9 @@ const SECRET = /^[A-Za-z0-9_-]{1,256}$/;
 
 /**
  * Pose le webhook : c'est l'instant de la bascule depuis le banc d'essai.
- * max_connections 1 : une mise à jour à la fois, donc « prochaine capture privée » est toujours
- * enregistré avant le vocal suivant (dernier chemin d'une pensée voulue privée vers Gemini).
+ * max_connections 1 : une mise à jour à la fois, donc « prochaine capture privée » est en pratique
+ * enregistré avant le vocal suivant ; la garantie pour l'utilisatrice reste le message de confirmation
+ * (dernier chemin d'une pensée voulue privée vers Gemini).
  * drop_pending_updates false : les messages arrivés pendant la bascule sont livrés, jamais jetés.
  */
 export async function poserWebhook(api: Api, o: { url: string; secret: string }): Promise<void> {
