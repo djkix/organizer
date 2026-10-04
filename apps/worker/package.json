@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file=../../.env src/main.ts",
+    "sonde": "tsx --env-file=../../.env src/sonde.ts",
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {

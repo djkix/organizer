@@ -7,7 +7,7 @@ import { chargerPrompt, OPTIONS_JOB_CLASSEMENT, type JobClassement } from '@orga
 import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CreditEpuise } from '../src/classement/provider.js';
+import { CreditEpuise, FournisseurIndisponible } from '../src/classement/provider.js';
 import { demarrerWorker, reprendre } from '../src/worker.js';
 import { creerCaptureTexte, FauxProvider, resultatExemple } from './aides.js';
 
@@ -81,6 +81,16 @@ describe('demarrerWorker', () => {
     });
     await file.add('classer', { captureId: a.id }, { ...OPTIONS_JOB_CLASSEMENT, jobId: a.id });
     await attendre(async () => (await etat(a.id)) === 'classee');
+  });
+
+  it('quota ou budget (429) : comme un crédit épuisé, file gardée, une alerte, jamais à revoir', async () => {
+    const a = await creerCaptureTexte(prisma, 'un');
+    const alertes: string[] = [];
+    lancer(new FauxProvider([new FournisseurIndisponible(429, 'Gemini principal : HTTP 429'), resultatExemple()]), alertes);
+    await file.add('classer', { captureId: a.id }, { ...OPTIONS_JOB_CLASSEMENT, jobId: a.id });
+    await attendre(async () => (await etat(a.id)) === 'classee');
+    expect(alertes).toEqual(['Gemini refuse pour quota ou budget (429) : classement suspendu.']);
+    expect(await prisma.capture.count({ where: { etat: { in: ['a_revoir', 'a_transcrire'] } } })).toBe(0);
   });
 
   it('passe en a_transcrire quand les essais sont épuisés', async () => {
