@@ -7,6 +7,7 @@ Le projet n'a pas encore de version publiée.
 ## [Non publié]
 
 ### Ajouté
+- La CLI importe les captures du banc d'essai, sans doublon avec celles que Telegram relivre après la bascule, et les fait reclasser par le prompt de l'application (2026-10-04).
 - La veille de l'API mesure toutes les 15 minutes la file, les échecs, la taille de l'audio et de la base, la latence et le silence, et alerte l'administrateur une fois par constat ; la CLI affiche les mesures et envoie une alerte d'essai (2026-10-04).
 - Le worker traite les refus de Gemini pour quota, budget ou clé (429, 403) comme le crédit épuisé, borne chaque appel à 120 s, demande le niveau de réflexion configuré, et la sonde `sonde palier` affiche statut, palier et jetons sans aucun contenu (2026-10-04).
 - L'API et le worker sortent par le proxy déclaré dans HTTPS_PROXY (fetch d'undici, agent pour grammY), le téléchargement Telegram est borné à 60 s et 20 Mio, et un audio trop gros passe en À revoir au lieu d'être retenté sans fin (2026-10-04).
