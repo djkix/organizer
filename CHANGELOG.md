@@ -6,6 +6,8 @@ Le projet n'a pas encore de version publiée.
 
 ## [Non publié]
 
+## [1.0.0] - 2026-10-04
+
 ### Ajouté
 - Le dossier de revue du lot 1-C (déploiement), pour un relecteur externe, avec l'état final de la CI et les choix de mise en service de Franck (2026-10-04).
 - La documentation d'exploitation : stack, commandes, Nginx Proxy Manager, mise à jour, retour arrière, changement des secrets, supervision et sauvegarde manuelle (2026-10-04).
