@@ -1,6 +1,6 @@
 import { Inject, Module, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { creerPrisma, type PrismaClient } from '@organizer/db';
-import { creerFetchSortant, FILE_CLASSEMENT, type JobClassement } from '@organizer/shared';
+import { creerFetchSortant, FILE_ALERTES, FILE_CLASSEMENT, OPTIONS_JOB_ALERTE, type JobAlerte, type JobClassement } from '@organizer/shared';
 import { Queue, type Worker } from 'bullmq';
 import type { Bot } from 'grammy';
 import { Redis } from 'ioredis';
@@ -27,10 +27,14 @@ import { LiaisonService } from './telegram/liaison.service.js';
 import { TelegramController } from './telegram/telegram.controller.js';
 import { VuesController } from './vues/vues.controller.js';
 import { VuesService } from './vues/vues.service.js';
+import { mesurer } from './veille/mesures.js';
+import { Veille } from './veille/veille.js';
 
 class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
   private minuterie?: NodeJS.Timeout;
   private purge?: NodeJS.Timeout;
+  private veille?: NodeJS.Timeout;
+  private files: Queue[] = [];
   private alertes?: Worker;
   private readonly arret = new AbortController();
 
@@ -65,12 +69,24 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     };
     purger();
     this.purge = setInterval(purger, 6 * 3600_000);
+    const classement = new Queue(FILE_CLASSEMENT, { connection: this.redis });
+    const alertes = new Queue<JobAlerte>(FILE_ALERTES, { connection: this.redis });
+    this.files = [classement, alertes];
+    const veille = new Veille(
+      () => mesurer({ prisma: this.prisma, file: classement, audioRacine: this.config.audioRacine }),
+      async (message) => { await alertes.add('alerte', { message }, OPTIONS_JOB_ALERTE); },
+    );
+    this.veille = setInterval(() => {
+      veille.passer().catch((err: unknown) => console.error(`Veille en échec (${(err as Error).name})`));
+    }, 15 * 60_000);
   }
 
   async onApplicationShutdown(): Promise<void> {
     this.arret.abort();
     clearInterval(this.minuterie);
     clearInterval(this.purge);
+    clearInterval(this.veille);
+    await Promise.all(this.files.map((f) => f.close()));
     if (this.config.telegramMode === 'polling' && this.bot.isRunning()) await this.bot.stop();
     await this.alertes?.close();
     await this.prisma.$disconnect();
