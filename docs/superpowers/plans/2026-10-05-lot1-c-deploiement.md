@@ -51,7 +51,7 @@
 | Empaquetage | **esbuild** (`scripts/empaquetage.mjs`) : chaque application devient `dist/*.mjs` ; le code des paquets `@organizer/*` (sources `.ts`) est inclus, toute dépendance de `node_modules` reste externe. L'image installe les dépendances de production par `pnpm install --prod --filter @organizer/<app>...` avec le même `pnpm-lock.yaml`. | Les paquets du dépôt exportent des sources TypeScript avec décorateurs : ni Node (pas de décorateurs en « type stripping ») ni `tsx` en production (transpilation au démarrage, dépendances de dev). Laisser `node_modules` externe évite d'empaqueter NestJS, Prisma et les modules natifs (Argon2) ; un test vérifie que chaque import externe est une dépendance directe de l'application. |
 | Prisma en production | `prisma` passe en dépendance de `@organizer/db` ; le service `migrate` (image de l'API) lance `node packages/db/node_modules/prisma/build/index.js migrate deploy`. | Principe 8 ; le client est généré pendant l'installation de production, dans l'image. |
 | Chemins | En production, `PROMPTS_DIR` et `AUDIO_STORAGE_PATH` doivent être absolus (`/app/prompts`, `/data/audio`), sinon arrêt au démarrage. | `RACINE_DEPOT` n'a de sens que depuis les sources : dans `dist`, il pointerait vers `/`. |
-| Frontal de la stack | **Caddy** (image `organizer-web`) sert la coquille **et** relaie `/api` et `/telegram/webhook` vers l'API. NPM n'a qu'une cible par domaine : `192.168.1.201:8080`. | Les en-têtes (CSP, cache, `no-store`, `Permissions-Policy`) vivent dans le dépôt et sont testés en CI ; NPM ne garde que TLS, HSTS, HTTP/2, taille de corps, délais et liste d'IP Telegram. |
+| Frontal de la stack | **Caddy** (image `organizer-web`) sert la coquille **et** relaie `/api` et `/telegram/webhook` vers l'API. NPM n'a qu'une cible par domaine : `192.168.1.201:7070`. | Les en-têtes (CSP, cache, `no-store`, `Permissions-Policy`) vivent dans le dépôt et sont testés en CI ; NPM ne garde que TLS, HSTS, HTTP/2, taille de corps, délais et liste d'IP Telegram. |
 | Coquille dans l'image | Le build de la PWA est copié dans l'image Caddy ; plus de volumes `web-dist` ni `caddy-data`. | Un volume nommé garderait l'ancienne coquille après une mise à jour d'image. Caddy n'a pas d'état (`auto_https off`). |
 | Empreinte CSP | Calculée **au build de l'image web** par `apps/web/scripts/entetes.mjs` (lit `build/index.html`, écrit `/etc/caddy/csp.caddy`) ; le même module sert les en-têtes de `vite preview`, donc **tous les e2e tournent sous la vraie CSP**. Le `style="display: contents"` d'`app.html` devient une classe. | Le script en ligne de SvelteKit change à chaque build (`__sveltekit_<hash>`). Une seule source pour la production et les tests. |
 | Proxy sortant | **Squid** (image `organizer-sortie`, Alpine 3.22), seule route vers Internet ; `api` et `worker` sont sur des réseaux internes. ACL par adresse source : `api` → `api.telegram.org`, `worker` → `generativelanguage.googleapis.com`, CONNECT 443 seulement. Côté code : `fetch` d'undici avec `EnvHttpProxyAgent` (jamais le `fetch` global modifié) et `https-proxy-agent` pour grammY. | Docker ne filtre pas par domaine. La liste fermée du cahier est une promesse de sécurité : elle n'est pas reportée. FCM et Google Agenda s'ajouteront à `squid.conf` avec leurs lots. |
@@ -3680,7 +3680,7 @@ describe('stack de production', () => {
 
   it('un seul port publié, sur l\'adresse de la VM', () => {
     for (const [n, s] of Object.entries(S)) if (n !== 'web') expect(s.ports, n).toBeUndefined();
-    expect(service('web').ports).toEqual(['${IP_PUBLICATION:?}:8080:8080']);
+    expect(service('web').ports).toEqual(['${IP_PUBLICATION:?}:7070:8080']);
   });
 
   it('API : proxy de confiance obligatoire (Caddy et NPM), webhook en production', () => {
@@ -3872,7 +3872,7 @@ services:
       DOMAINE_BOT: ${DOMAINE_BOT:?}
     # Seul port publié de la stack, sur l'adresse de la VM, pour le Nginx Proxy Manager.
     ports:
-      - "${IP_PUBLICATION:?}:8080:8080"
+      - "${IP_PUBLICATION:?}:7070:8080"
     networks: [publication, edge]
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8080/"]
@@ -3990,7 +3990,7 @@ ORGANIZER_VERSION=
 POSTGRES_PASSWORD=
 # Adresse IP du Nginx Proxy Manager (conteneur 101), seul proxy dont X-Forwarded-For est cru
 NPM_IP=
-# Adresse de la VM sur laquelle le port 8080 de web est publié
+# Adresse de la VM sur laquelle le port 7070 de web est publié
 IP_PUBLICATION=192.168.1.201
 # Domaine du webhook Telegram
 DOMAINE_BOT=organizer-bot.djkix.ovh
@@ -4032,7 +4032,7 @@ ETIQUETTE="${1:-essai}"
 RACINE="$(cd "$(dirname "$0")/../.." && pwd)"
 TRAVAIL="$(mktemp -d)"
 PROJET=organizer-essai
-URL=http://127.0.0.1:8080
+URL=http://127.0.0.1:7070
 
 dc() { docker compose -p "$PROJET" --project-directory "$TRAVAIL" -f "$TRAVAIL/compose.yaml" "$@"; }
 nettoyer() { dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$TRAVAIL"; }
@@ -4126,7 +4126,7 @@ Dans `.github/workflows/ci.yml`, job `images` : ajouter `permissions:` au job, p
 Dans `docs/cahier-des-charges.md` :
 - section « Services » : retirer la ligne `scheduler` du tableau et ajouter sous le tableau « Le `scheduler` rejoint la stack au lot 2, avec Google Agenda et la rotation de l'audio. » ; ligne `web` : image `ghcr.io/djkix/organizer-web` (Caddy 2.11, coquille de la PWA incluse), port interne 8080, volume « — », dépendance `api` ; ajouter la ligne `| \`sortie\` | \`ghcr.io/djkix/organizer-sortie\` (Squid) | 3128 | — | Internet, liste fermée |` ; remplacer « Six services » par « Six services au lot 1 (api, worker, web, sortie, db, queue), plus le conteneur de migrations ».
 - section « Réseaux » : remplacer les trois puces par :
-  « - `publication` : `web` seul, porte le seul port publié (8080, sur l'adresse de la VM), joint par le reverse proxy.
+  « - `publication` : `web` seul, porte le seul port publié (7070, sur l'adresse de la VM), joint par le reverse proxy.
   - `edge` : `web` et `api`, interne.
   - `core` : `api`, `worker`, `db`, `queue`, migrations. Aucune sortie Internet.
   - `sortie` : `api` et `worker` vers le proxy sortant `sortie`, interne.
@@ -4224,7 +4224,7 @@ dans `/opt/stacks/organizer/` : `compose.yaml` (copie de `infra/docker-compose.y
 
 | Service | Rôle |
 | --- | --- |
-| `web` | Caddy : coquille de la PWA, en-têtes (CSP), relais de `/api` et du webhook. Seul port publié : `192.168.1.201:8080` |
+| `web` | Caddy : coquille de la PWA, en-têtes (CSP), relais de `/api` et du webhook. Seul port publié : `192.168.1.201:7070` |
 | `api` | NestJS : PWA, webhook Telegram, ingestion, alertes, veille. Sort par `sortie` vers `api.telegram.org` seulement |
 | `worker` | Classement par Gemini. Sort par `sortie` vers `generativelanguage.googleapis.com` seulement |
 | `sortie` | Squid : seule route vers Internet, liste fermée de domaines (`infra/sortie/squid.conf`) |
@@ -4257,7 +4257,7 @@ vm() { ssh -t kix@192.168.1.201 "cd /opt/stacks/organizer && $*"; }
 
 ## Nginx Proxy Manager
 
-Deux hôtes, tous deux vers `http://192.168.1.201:8080`, certificat Let's Encrypt, « Force SSL »,
+Deux hôtes, tous deux vers `http://192.168.1.201:7070`, certificat Let's Encrypt, « Force SSL »,
 « HTTP/2 », « HSTS » activés, « Websockets » désactivé.
 
 `organizer.djkix.ovh`, onglet « Advanced » :
@@ -4463,7 +4463,7 @@ cli() { vm docker compose exec -T api node apps/api/dist/cli.mjs "$@"; }
 
 | # | Qui | Geste | Attendu | Retour arrière |
 | --- | --- | --- | --- | --- |
-| B1 | Agent | `ssh kix@192.168.1.201 'id; free -m; df -h /var/lib/docker; ls -ld /opt/stacks /opt/stacks/organizer-terrain; docker network ls -q \| xargs docker network inspect -f "{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}"; docker ps --format "{{.Names}}\t{{.Status}}"'` | `uid=1000(kix)` ; au moins 3 Go de RAM disponibles et 50 Go libres ; aucun réseau en `10.201.1.0/24` ni `10.201.2.0/24` ; `organizer-terrain-bot-1` « Up ». Noter si `/opt/stacks` est inscriptible par `kix` | — (lecture) |
+| B1 | Agent | `ssh kix@192.168.1.201 'id; free -m; df -h /var/lib/docker; ls -ld /opt/stacks /opt/stacks/organizer-terrain; docker network ls -q \| xargs docker network inspect -f "{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}"; docker ps --format "{{.Names}}\t{{.Status}}"; ss -ltn | grep -c ":7070 "'` | `uid=1000(kix)` ; `0` pour le dernier (port 7070 libre) ; au moins 3 Go de RAM disponibles et 50 Go libres ; aucun réseau en `10.201.1.0/24` ni `10.201.2.0/24` ; `organizer-terrain-bot-1` « Up ». Noter si `/opt/stacks` est inscriptible par `kix` | — (lecture) |
 | B2 | Franck | DNS : `dig +short organizer.djkix.ovh organizer-bot.djkix.ovh` | L'adresse publique du homelab pour les deux ; sinon créer les enregistrements chez OVH | Supprimer les enregistrements créés |
 | B3 | Franck puis agent | Accès aux images (question 4). Images privées : Franck crée un jeton GitHub classique `read:packages` ; puis `ssh -t kix@192.168.1.201 'docker login ghcr.io -u djkix'` et `ssh -t kix@192.168.1.201 'docker exec -it $(docker ps -qf name=dockge) docker login ghcr.io -u djkix'` (Franck colle le jeton) | « Login Succeeded » deux fois | `docker logout ghcr.io` (VM et Dockge) ; révoquer le jeton |
 | B4 | Agent | Publier la version : sur `main`, dans `CHANGELOG.md`, renommer « [Non publié] » en « [1.0.0] - <date> » et rouvrir une rubrique « [Non publié] » vide ; commit « Publie la version 1.0.0 » (+ ligne vide + Co-Authored-By) ; `git tag -a v1.0.0 -m "Lot 1"` ; `git push origin main v1.0.0` ; `gh run watch` | Job `images` vert, étape « Publier sur GHCR » réussie ; `gh api /users/djkix/packages?package_type=container --jq '.[].name'` liste `organizer-api`, `organizer-worker`, `organizer-web`, `organizer-sortie` ; visibilité conforme à la question 4 (réglage de chaque paquet sur GitHub) | Supprimer l'étiquette (`git push origin :refs/tags/v1.0.0`) et les versions publiées ; rien n'est déployé |
@@ -4471,7 +4471,7 @@ cli() { vm docker compose exec -T api node apps/api/dist/cli.mjs "$@"; }
 | B6 | Agent | `vm docker compose pull` puis `vm docker compose up -d --wait` | `vm docker compose ps -a` : `migrate` « Exited (0) » ; `db`, `queue`, `api`, `web` « healthy » ; `worker`, `sortie` « running » ; `vm docker compose logs worker` contient « Worker démarré. Prompt <0.1> » (palier vérifié à travers le proxy). Le banc d'essai reste le lecteur du bot (API en webhook sans webhook posé) | `vm docker compose down` (volumes gardés, aucune donnée réelle) |
 | B7 | Agent | Sortie et isolement : `cli essai-sortie https://api.telegram.org` ; `cli essai-sortie https://example.com` ; `vm docker compose exec -T worker node apps/worker/dist/sonde.mjs sortie https://example.com` ; `vm docker compose exec -T worker node apps/worker/dist/sonde.mjs palier` ; `vm 'docker run --rm --network organizer_core alpine wget -T 5 -qO /dev/null https://example.com && echo SORTIE \|\| echo isolé'` | `joignable (HTTP …)` ; `refusé (…)` ; `refusé (…)` ; `… : payé …` ; `isolé` | — |
 | B8 | Franck | Nginx Proxy Manager : créer les deux hôtes **exactement** comme dans `docs/exploitation.md` (section « Nginx Proxy Manager ») ; relever l'IP du conteneur 101 vue par la VM ; si elle diffère de `NPM_IP`, corriger `.env` puis `vm docker compose up -d web api` | Certificats émis ; les deux hôtes « Online » | Désactiver ou supprimer les deux hôtes |
-| B9 | Agent | Depuis le Mac : `curl -sI http://organizer.djkix.ovh/ \| head -1` ; `curl -sI https://organizer.djkix.ovh/ \| grep -iE '^(content-security-policy\|cache-control\|permissions-policy\|referrer-policy\|x-content-type-options\|strict-transport-security):'` ; `curl -s -o /dev/null -w '%{http_code}\n' https://organizer.djkix.ovh/prive/enregistrer` ; `curl -sI https://organizer.djkix.ovh/manifest.webmanifest \| grep -i content-type` ; `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://organizer-bot.djkix.ovh/telegram/webhook` ; `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://organizer.djkix.ovh/telegram/webhook` ; `curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Host: organizer-bot.djkix.ovh' -H 'X-Telegram-Bot-Api-Secret-Token: faux' -H 'content-type: application/json' -d '{"update_id":1}' http://192.168.1.201:8080/telegram/webhook`. Puis Franck, sur son téléphone **en 4G**, ouvre `https://organizer.djkix.ovh/api/sante` | Redirection 301 vers HTTPS ; CSP avec `'sha256-…'` et `frame-ancestors 'none'`, `no-cache`, `microphone=(self)`, `no-referrer`, `nosniff`, HSTS ; `200` ; `application/manifest+json` ; `403` (liste d'accès Telegram) ; `404` ; `401` (secret vérifié). Sur le téléphone : `{"ok":true,"vu":"<adresse publique du téléphone>"}`, ni l'IP du NPM ni une 192.168.x | Corriger NPM ou `NPM_IP` |
+| B9 | Agent | Depuis le Mac : `curl -sI http://organizer.djkix.ovh/ \| head -1` ; `curl -sI https://organizer.djkix.ovh/ \| grep -iE '^(content-security-policy\|cache-control\|permissions-policy\|referrer-policy\|x-content-type-options\|strict-transport-security):'` ; `curl -s -o /dev/null -w '%{http_code}\n' https://organizer.djkix.ovh/prive/enregistrer` ; `curl -sI https://organizer.djkix.ovh/manifest.webmanifest \| grep -i content-type` ; `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://organizer-bot.djkix.ovh/telegram/webhook` ; `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://organizer.djkix.ovh/telegram/webhook` ; `curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Host: organizer-bot.djkix.ovh' -H 'X-Telegram-Bot-Api-Secret-Token: faux' -H 'content-type: application/json' -d '{"update_id":1}' http://192.168.1.201:7070/telegram/webhook`. Puis Franck, sur son téléphone **en 4G**, ouvre `https://organizer.djkix.ovh/api/sante` | Redirection 301 vers HTTPS ; CSP avec `'sha256-…'` et `frame-ancestors 'none'`, `no-cache`, `microphone=(self)`, `no-referrer`, `nosniff`, HSTS ; `200` ; `application/manifest+json` ; `403` (liste d'accès Telegram) ; `404` ; `401` (secret vérifié). Sur le téléphone : `{"ok":true,"vu":"<adresse publique du téléphone>"}`, ni l'IP du NPM ni une 192.168.x | Corriger NPM ou `NPM_IP` |
 | B10 | Agent, Franck pour le mot de passe | Compte de répétition et gros envoi : `cli creer-utilisateur essai --admin` ; `vm docker compose exec api node apps/api/dist/cli.mjs mot-de-passe essai` (Franck tape) ; puis sur le Mac : `read -rs MDP; curl -s -c /tmp/c.txt -H 'content-type: application/json' -d "{\"nom\":\"essai\",\"motDePasse\":\"$MDP\"}" -o /dev/null -w '%{http_code}\n' https://organizer.djkix.ovh/api/session` ; `head -c 31000000 /dev/urandom > /tmp/gros.bin` ; `curl -s -b /tmp/c.txt --limit-rate 100k -H 'content-type: audio/webm' -H "X-Capture-Id: $(uuidgen \| tr A-Z a-z)" --data-binary @/tmp/gros.bin -w '\n%{http_code} %{time_total}\n' https://organizer.djkix.ovh/api/captures/privees` ; `rm /tmp/gros.bin /tmp/c.txt` | `204` ; après plus de 5 minutes : `{"message":"Enregistrement illisible."}` puis `422 <plus de 300 s>` (le corps de 31 Mo a traversé NPM, Caddy et Node sans 413 ni coupure ; ffmpeg refuse des octets aléatoires) | — |
 | B11 | Franck | Essai sur un vrai Android 12 ou plus (Chrome 120 ou plus), compte `essai` : (1) installer depuis Chrome ; (2) appui long sur l'icône : « Enregistrement privé » et « Aujourd'hui » ; (3) mode avion, raccourci privé, enregistrer 10 s : l'enregistreur s'ouvre, « Il partira au retour du réseau. », puis réseau rétabli : la capture apparaît dans Privé ; (4) mode avion, enregistrer, **fermer l'application** (balayer), rétablir le réseau, attendre 5 min sans l'ouvrir, puis `vm 'docker compose exec -T db psql -U organizer -c "select count(*) from capture where prive"'` augmente ; (5) verrouiller l'écran pendant un enregistrement : il s'arrête et la capture est gardée ; (6) une heure d'enregistrement : arrêt automatique à 60:00, envoi réussi, `vm 'docker compose exec -T api sh -c "ls -l /data/audio/prive/*/*/ \| tail -3"'` montre un fichier d'environ 14 Mo (Opus 32 kbit/s après réencodage ; environ 22 Mo envoyés) ; (7) réécouter depuis Privé | Les sept points conformes. (La mise à jour sans rechargement se vérifie à la première mise à jour, étape E1) | Désinstaller la PWA |
 | B12 | Franck | Uptime Kuma : deux sondes comme dans `docs/exploitation.md` (section « Supervision »), canal de notification de Franck (question 7) | Les deux sondes « Up » | Supprimer les sondes |
@@ -4544,7 +4544,7 @@ cli() { vm docker compose exec -T api node apps/api/dist/cli.mjs "$@"; }
   lecture seule, sortie ouverte vers `cloudbilling.googleapis.com` et `oauth2.googleapis.com`).
 - Rotation de l'audio et scheduler : lot 2.
 - FCM et Google Agenda dans la liste de sortie : avec leurs lots.
-- Pare-feu de l'hôte limitant le port 8080 au seul NPM (question 10) : geste d'exploitation séparé, sur accord.
+- Pare-feu de l'hôte limitant le port 7070 au seul NPM (question 10) : geste d'exploitation séparé, sur accord.
 - Dettes différées des lots 1-A, 1-B1 et 1-B2 non citées ici (dossiers de revue, sections 6) : inchangées.
 - Captures privées Telegram dont l'audio dépasse 20 Mio : la reprise reste sans plafond (dette 1-B1, T6).
 - Sauvegarde automatique : lot 2 (décision 11).
@@ -4560,5 +4560,5 @@ cli() { vm docker compose exec -T api node apps/api/dist/cli.mjs "$@"; }
 7. **Uptime Kuma** : existe-t-il déjà ? Par quel canal t'alerte-t-il ? Le jeton du bot Organizer ne doit pas y être copié.
 8. **Volume du banc d'essai** : l'archiver ? Le supprimer, et quand ? La relecture du corpus (`tools/relecture`) en dépend.
 9. **Rotation de l'audio reportée au lot 2**, avec une alerte à 30 Go : d'accord ?
-10. **Pare-feu** : limiter le port 8080 de la VM au seul NPM (règle `DOCKER-USER` sur l'hôte partagé) ? Sans elle, le réseau local joint Caddy directement. X-Forwarded-For n'est cru que du NPM et le webhook exige son secret.
+10. **Pare-feu** : limiter le port 7070 de la VM au seul NPM (règle `DOCKER-USER` sur l'hôte partagé) ? Sans elle, le réseau local joint Caddy directement. X-Forwarded-For n'est cru que du NPM et le webhook exige son secret.
 11. **Dockge** : préfères-tu déployer depuis l'interface de Dockge ou par les commandes `docker compose` en SSH de ce plan ? Les deux pilotent la même stack.

@@ -136,7 +136,7 @@ services:
       DOMAINE_BOT: ${DOMAINE_BOT:?}
     # Seul port publié de la stack, sur l'adresse de la VM, pour le Nginx Proxy Manager.
     ports:
-      - "${IP_PUBLICATION:?}:8080:8080"
+      - "${IP_PUBLICATION:?}:7070:8080"
     networks: [publication, edge]
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8080/"]

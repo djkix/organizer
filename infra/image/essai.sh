@@ -3,13 +3,13 @@
 # Usage : infra/image/essai.sh [étiquette]   (défaut : essai ; images ghcr.io/djkix/organizer-*:<étiquette> déjà construites)
 # Ne touche à aucune stack existante : projet « organizer-essai », dossier temporaire, tout est retiré à la fin.
 # Plage d'adresses : l'essai réécrit 10.201.x en 10.211.x (compose et squid.conf, montée sur l'image sortie) pour ne
-# pas chevaucher les réseaux de la stack de production sur la même VM. Le port 8080 de 127.0.0.1 doit être libre.
+# pas chevaucher les réseaux de la stack de production sur la même VM. Le port 7070 de 127.0.0.1 doit être libre.
 set -eu
 ETIQUETTE="${1:-essai}"
 RACINE="$(cd "$(dirname "$0")/../.." && pwd)"
 TRAVAIL="$(mktemp -d)"
 PROJET=organizer-essai
-URL=http://127.0.0.1:8080
+URL=http://127.0.0.1:7070
 
 dc() { docker compose -p "$PROJET" --project-directory "$TRAVAIL" -f "$TRAVAIL/compose.yaml" -f "$TRAVAIL/essai.yaml" "$@"; }
 nettoyer() { dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$TRAVAIL"; }

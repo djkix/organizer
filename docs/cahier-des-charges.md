@@ -586,7 +586,7 @@ Pas d'environnement de recette intermédiaire : le volume ne le justifie pas. Le
 
 ## Déploiement Docker
 
-Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (VM 105, décision 13), publiée par le Nginx Proxy Manager existant (conteneur 101). Seul le conteneur `web` publie un port (8080, sur l'adresse de la VM), pour le reverse proxy ; rien n'est exposé à l'extérieur.
+Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (VM 105, décision 13), publiée par le Nginx Proxy Manager existant (conteneur 101). Seul le conteneur `web` publie un port (7070, sur l'adresse de la VM, port choisi parce que 8080 risque d'être déjà pris sur l'hôte partagé), pour le reverse proxy ; rien n'est exposé à l'extérieur.
 
 Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dockge `organizer` (`/opt/stacks/organizer/`), à côté de son `.env` et du dossier `secrets/` (le Caddyfile est dans l'image `web`).
 
@@ -607,7 +607,7 @@ Le `scheduler` rejoint la stack au lot 2, avec Google Agenda et la rotation de l
 
 ### Réseaux
 
-- `publication` : `web` seul, porte le seul port publié (8080, sur l'adresse de la VM), joint par le reverse proxy.
+- `publication` : `web` seul, porte le seul port publié (7070, sur l'adresse de la VM), joint par le reverse proxy.
 - `edge` : `web` et `api`, interne.
 - `core` : `api`, `worker`, `db`, `queue`, migrations. Aucune sortie Internet.
 - `sortie` : `api` et `worker` vers le proxy sortant `sortie`, interne.
