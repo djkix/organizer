@@ -135,6 +135,21 @@ describe('stack de production', () => {
     expect((service('worker') as unknown as { volumes: string[] }).volumes).toEqual(['audio:/data/audio:ro']);
   });
 
+  it('worker : réflexion et statuts d\'indisponibilité vides par défaut, documentés', () => {
+    expect(texte).toContain('GEMINI_THINKING_LEVEL: ${GEMINI_THINKING_LEVEL:-}');
+    expect(texte).toContain('GEMINI_STATUTS_INDISPONIBLES: ${GEMINI_STATUTS_INDISPONIBLES:-}');
+    const exemple = readFileSync(join(INFRA, '.env.example'), 'utf8');
+    expect(exemple).toMatch(/^GEMINI_THINKING_LEVEL=$/m);
+    expect(exemple).toMatch(/^# GEMINI_STATUTS_INDISPONIBLES=402,403,429$/m);
+    expect(exemple).toMatch(/Ne jamais y mettre 400/);
+  });
+
+  it('CI : Trivy analyse les quatre images avant d\'échouer', () => {
+    const ci = readFileSync(join(INFRA, '../.github/workflows/ci.yml'), 'utf8');
+    expect(ci).toMatch(/--exit-code 1 "[^"]+" \|\| echec=1/);
+    expect(ci).toMatch(/exit "\$echec"/);
+  });
+
   it('plus aucun montage de Caddyfile : il est dans l\'image web', () => {
     expect(texte).not.toMatch(/Caddyfile:/);
   });

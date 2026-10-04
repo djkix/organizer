@@ -98,8 +98,10 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
       GEMINI_MODEL_FALLBACK: ${GEMINI_MODEL_FALLBACK:-gemini-3.8-flash}
       GEMINI_TIERS_PAYES: ${GEMINI_TIERS_PAYES:-standard}
-      # Vide dans le .env : rien n'est demandé (modèle qui refuserait thinkingLevel).
-      GEMINI_THINKING_LEVEL: ${GEMINI_THINKING_LEVEL-minimal}
+      # Vide : rien n'est demandé (valeur relevée à l'étape A2 de la mise en service).
+      GEMINI_THINKING_LEVEL: ${GEMINI_THINKING_LEVEL:-}
+      # Vide : défaut du worker (402,403,429). Ne jamais y mettre 400.
+      GEMINI_STATUTS_INDISPONIBLES: ${GEMINI_STATUTS_INDISPONIBLES:-}
       # Plafond de concurrence : ne pas saturer le quota Gemini en rattrapage.
       WORKER_CONCURRENCY: "2"
     secrets: [gemini_api_key]

@@ -16,6 +16,7 @@ transcriptions
 # Reconstruit dans l'image
 **/node_modules
 .git
+.superpowers
 **/dist
 **/build
 **/.svelte-kit

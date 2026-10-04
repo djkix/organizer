@@ -68,10 +68,12 @@ jobs:
           done
       - name: Analyser les vulnérabilités (critiques corrigeables bloquantes)
         run: |
+          echec=0
           for cible in api worker web sortie; do
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.63.0 image \
-              --scanners vuln --ignore-unfixed --severity CRITICAL --exit-code 1 "ghcr.io/djkix/organizer-$cible:essai"
+              --scanners vuln --ignore-unfixed --severity CRITICAL --exit-code 1 "ghcr.io/djkix/organizer-$cible:essai" || echec=1
           done
+          exit "$echec"
       - name: Essai de fumée sur la topologie réelle
         run: infra/image/essai.sh essai
 
