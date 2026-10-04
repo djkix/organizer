@@ -67,7 +67,7 @@ describe('stack de production', () => {
 
   it('un seul port publié, sur l\'adresse de la VM', () => {
     for (const [n, s] of Object.entries(S)) if (n !== 'web') expect(s.ports, n).toBeUndefined();
-    expect(service('web').ports).toEqual(['${IP_PUBLICATION:?}:8080:8080']);
+    expect(service('web').ports).toEqual(['${IP_PUBLICATION:?}:7070:8080']);
   });
 
   it('API : proxy de confiance obligatoire (Caddy et NPM), webhook en production', () => {
