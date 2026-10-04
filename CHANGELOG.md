@@ -6,6 +6,9 @@ Le projet n'a pas encore de version publiée.
 
 ## [Non publié]
 
+### Modifié
+- La stack de dev vit dans `/opt/stacks/organizer-dev`, pilotable par Dockge comme la production (2026-10-04).
+
 ## [1.0.0] - 2026-10-04
 
 ### Ajouté
