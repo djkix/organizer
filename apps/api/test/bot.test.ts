@@ -7,7 +7,7 @@ import { creerBot } from '../src/telegram/bot.js';
 
 const botInfo = { id: 1, is_bot: true, first_name: 'test', username: 'test_bot' } as UserFromGetMe;
 
-function monter(lie: boolean) {
+function monter(lie: boolean, armerEchoue = false) {
   const envois: { method: string; payload: Record<string, unknown> }[] = [];
   const recues: string[] = [];
   const finalisees: string[] = [];
@@ -27,7 +27,7 @@ function monter(lie: boolean) {
     },
     finaliser: async (id: string) => { finalisees.push(id); },
     finaliserPrivee: async (id: string) => { privees.push(id); },
-    armerPrivee: async () => { arme = true; },
+    armerPrivee: async () => { if (armerEchoue) throw new Error('base indisponible'); arme = true; },
   } as unknown as IngestionService;
   const bot = creerBot('0:test', { liaison, ingestion }, { botInfo });
   bot.api.config.use(async (_prev, method, payload) => {
@@ -82,6 +82,12 @@ describe('creerBot', () => {
     await new Promise((r) => setImmediate(r));
     expect(privees).toEqual(['c1']);
     expect(finalisees).toEqual([]);
+  });
+
+  it('si armer échoue, prévient puis relance l\'erreur pour que Telegram rejoue', async () => {
+    const { bot, envois } = monter(true, true);
+    await expect(bot.handleUpdate(maj(1, { text: 'Prochaine capture privée' }))).rejects.toThrow();
+    expect(envois[0]!.payload.text).toBe('Mode privé non activé. Réessaie.');
   });
 
   it('la liaison réussie envoie le clavier avec le bouton privé', async () => {

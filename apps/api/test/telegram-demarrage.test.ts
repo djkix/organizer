@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { demarrerTelegram } from '../src/telegram/demarrage.js';
+import { demarrerTelegram, dormir } from '../src/telegram/demarrage.js';
 
 function fauxBot(echecs: number) {
   let essais = 0;
@@ -58,5 +58,28 @@ describe('demarrerTelegram', () => {
     });
     expect(f.essais()).toBe(2);
     expect(f.appels).toEqual([]);
+  });
+
+  it('ne lance pas le polling si l\'arrêt survient pendant deleteWebhook', async () => {
+    const arret = new AbortController();
+    const f = fauxBot(0);
+    f.bot.api.deleteWebhook = async () => { f.appels.push('deleteWebhook'); arret.abort(); return true; };
+    await demarrerTelegram(options(f.bot, 'polling', [], [], arret.signal));
+    expect(f.appels).toEqual(['deleteWebhook']);
+  });
+});
+
+describe('dormir', () => {
+  it('retire son écouteur d\'arrêt quand le délai est écoulé', async () => {
+    const arret = new AbortController();
+    const ajoutes: string[] = [];
+    const retires: string[] = [];
+    const ajouter = arret.signal.addEventListener.bind(arret.signal);
+    const retirer = arret.signal.removeEventListener.bind(arret.signal);
+    arret.signal.addEventListener = ((t: string, ...r: never[]) => { ajoutes.push(t); (ajouter as (...a: unknown[]) => void)(t, ...r); }) as never;
+    arret.signal.removeEventListener = ((t: string, ...r: never[]) => { retires.push(t); (retirer as (...a: unknown[]) => void)(t, ...r); }) as never;
+    await dormir(1, arret.signal);
+    expect(ajoutes).toEqual(['abort']);
+    expect(retires).toEqual(['abort']);
   });
 });

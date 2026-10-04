@@ -33,7 +33,13 @@ export function creerBot(token: string, d: DepsBot, options?: BotConfig<Context>
       return;
     }
     if (ctx.message.text === LIBELLE_PRIVEE) {
-      await d.ingestion.armerPrivee(u.id);
+      try {
+        await d.ingestion.armerPrivee(u.id);
+      } catch (e) {
+        // Telegram rejouera la mise à jour : on prévient au mieux, puis on relance l'erreur.
+        await ctx.reply('Mode privé non activé. Réessaie.').catch(() => undefined);
+        throw e;
+      }
       await ctx.reply('La prochaine capture reste sur le serveur.');
       return;
     }
