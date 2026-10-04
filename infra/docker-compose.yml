@@ -63,7 +63,7 @@ services:
       TELEGRAM_WEBHOOK_SECRET_FILE: /run/secrets/telegram_webhook_secret
       TELEGRAM_WEBHOOK_URL: https://${DOMAINE_BOT:?}/telegram/webhook
       # X-Forwarded-For cru de Caddy (réseau edge) et du Nginx Proxy Manager, seulement.
-      TRUSTED_PROXY: 10.201.1.0/24, ${NPM_IP:?}
+      TRUSTED_PROXY: 10.201.1.0/24, ${NPM_IP:?NPM_IP vide, renseigner l'adresse du Nginx Proxy Manager dans .env}
     secrets: [telegram_bot_token, telegram_webhook_secret]
     volumes:
       - audio:/data/audio
@@ -131,7 +131,7 @@ services:
       - /data
       - /config
     environment:
-      NPM_IP: ${NPM_IP:?}
+      NPM_IP: ${NPM_IP:?NPM_IP vide, renseigner l'adresse du Nginx Proxy Manager dans .env}
       DOMAINE_BOT: ${DOMAINE_BOT:?}
     # Seul port publié de la stack, sur l'adresse de la VM, pour le Nginx Proxy Manager.
     ports:

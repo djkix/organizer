@@ -56,6 +56,14 @@ describe('Dockerfile', () => {
     expect(d).toMatch(/PROMPTS_DIR=\/app\/prompts/);
   });
 
+  it('api et worker finaux sans npm, npx ni corepack (CVE de tar dans npm)', () => {
+    for (const nom of ['api', 'worker']) {
+      const c = cible(nom);
+      expect(c, nom).toMatch(/^RUN rm -rf \/usr\/local\/lib\/node_modules\/npm \/usr\/local\/lib\/node_modules\/corepack \/usr\/local\/bin\/npm \/usr\/local\/bin\/npx \/usr\/local\/bin\/corepack$/m);
+      expect(c, nom).not.toMatch(/^(CMD|ENTRYPOINT).*\b(npm|npx|pnpm|corepack)\b/m);
+    }
+  });
+
   it('dépendances de production installées avec le même verrou', () => {
     expect(d).toContain('pnpm install --frozen-lockfile --prod --filter @organizer/api...');
     expect(d).toContain('pnpm install --frozen-lockfile --prod --filter @organizer/worker...');
@@ -106,15 +114,42 @@ describe('squid.conf', () => {
   it('liste fermée : Telegram pour l\'API, Gemini pour le worker, CONNECT 443 seulement, refus du reste', () => {
     expect(s).toContain('acl depuis_api src 10.201.2.10/32');
     expect(s).toContain('acl depuis_worker src 10.201.2.11/32');
-    expect(s).toContain('acl vers_api dstdomain api.telegram.org');
-    expect(s).toContain('acl vers_worker dstdomain generativelanguage.googleapis.com');
+    expect(s).toContain('acl vers_api dstdomain -n api.telegram.org');
+    expect(s).toContain('acl vers_worker dstdomain -n generativelanguage.googleapis.com');
+    expect(s).toContain('acl ip_brute dstdom_regex -n ^[0-9.:\\[\\]]+$');
     const regles = s.split('\n').filter((l) => l.startsWith('http_access'));
     expect(regles).toEqual([
       'http_access deny !CONNECT',
       'http_access deny !port_https',
+      'http_access deny ip_brute',
       'http_access allow depuis_api vers_api',
       'http_access allow depuis_worker vers_worker',
       'http_access deny all',
     ]);
+  });
+
+  it('journal sans chemin d\'URL : le jeton du bot ne peut pas y figurer', () => {
+    expect(s).toMatch(/^logformat sobre %ts\.%03tu %>a %rm %>rd:%>rP %>Hs %Ss$/m);
+    expect(s).toContain('access_log stdio:/dev/stdout sobre');
+    expect(s).not.toMatch(/%ru|%>ru|%rp|%>rp|%rv/);
+  });
+});
+
+describe('docker-compose.yml', () => {
+  it('NPM_IP obligatoire, avec message', () => {
+    const c = lire('infra/docker-compose.yml');
+    const usages = [...c.matchAll(/\$\{NPM_IP[^}]*\}/g)].map((m) => m[0]);
+    expect(usages.length).toBeGreaterThan(0);
+    for (const u of usages) expect(u).toMatch(/^\$\{NPM_IP:\?[^}]+\}$/);
+  });
+});
+
+describe('ci.yml', () => {
+  const y = lire('.github/workflows/ci.yml');
+  it('actions tierces épinglées par SHA, délais et concurrence', () => {
+    for (const m of y.matchAll(/^\s*- uses: (\S+)/gm)) expect(m[1], m[1]).toMatch(/@[0-9a-f]{40}$/);
+    expect(y).toMatch(/^concurrency:/m);
+    expect(y).toContain("cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}");
+    expect((y.match(/timeout-minutes:/g) ?? []).length).toBe(2);
   });
 });
