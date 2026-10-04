@@ -20,6 +20,7 @@ Le projet n'a pas encore de version publiée.
 - Les images Docker seront publiées sur GHCR en public, et non en privé (2026-10-04).
 
 ### Sécurité
+- Le motif des adresses brutes de Squid devient un ensemble POSIX valide (`^[]0-9.:[]+$`), testé avec grep -E ; la publication sur GHCR passe dans un job à part, seul à écrire des paquets, sur étiquette v* (2026-10-04).
 - Les images api et worker n'embarquent plus npm ni corepack (CVE critique de tar) ; le proxy de sortie refuse les adresses IP brutes, résout les noms sans reverse DNS et journalise sans chemin d'URL ; `NPM_IP` est obligatoire dans la stack ; les actions de la CI sont épinglées par empreinte, avec délais et annulation des exécutions périmées (2026-10-04).
 - La PWA est servie et testée sous une CSP stricte calculée à chaque build (empreinte du script de la coquille, aucun style en ligne), avec micro limité à l'origine, sans référent ni devinette de type (2026-10-04).
 - L'API vérifie la session (et non la seule présence d'un cookie) avant de lire un envoi privé de 30 Mio, un cookie forgé reçoit 401 sans que le corps soit lu (2026-10-04).
@@ -30,6 +31,7 @@ Le projet n'a pas encore de version publiée.
 - La connexion n'accorde plus créance à X-Forwarded-For que du proxy de confiance, un changement de mot de passe révoque les sessions, et la saisie du mot de passe est masquée et confirmée (2026-10-03).
 
 ### Corrigé
+- Le volume audio est inscriptible par l'API (dossier /data/audio créé pour l'utilisateur 1000 dans l'image) ; l'essai de fumée le vérifie, utilise une autre plage d'adresses que la production, affiche ses diagnostics si le démarrage échoue et nettoie sur Ctrl-C ; web range son état dans /tmp (2026-10-04).
 - L'import des captures du banc d'essai liste les lignes écartées (numéro et identifiant, jamais le contenu) et les audios orphelins, sort en erreur s'il en reste, retire l'audio copié si la création échoue, et `--essai` calcule le bilan sans rien écrire ni enfiler (2026-10-04).
 - Le worker signale par une ligne distincte et une alerte administrateur unique un refus 4xx de la configuration Gemini au démarrage (il réessaie sans planter), et les statuts d'indisponibilité de Gemini se règlent par `GEMINI_STATUTS_INDISPONIBLES` ; le niveau de réflexion est vide par défaut (2026-10-04).
 - Le bouton « Prochaine capture privée » prévient quand il n'a pas pu s'activer et Telegram rejoue le message ; le démarrage de Telegram ne laisse plus d'écouteurs s'accumuler pendant une longue panne et ne lance pas le polling après l'arrêt ; `lier-chat` refuse les identifiants de groupe ; le commentaire du webhook ne promet plus l'ordre absolu (2026-10-04).

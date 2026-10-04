@@ -56,7 +56,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-      packages: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
@@ -75,12 +74,29 @@ jobs:
           done
       - name: Essai de fumée sur la topologie réelle
         run: infra/image/essai.sh essai
-      - name: Publier sur GHCR (étiquette v* seulement)
-        if: startsWith(github.ref, 'refs/tags/v')
+
+  # Seul job qui écrit sur GHCR : étiquettes v* seulement, après les tests, l'analyse et l'essai de fumée.
+  # Reconstruit depuis le cache (mêmes couches), puis pousse sous la version.
+  publication:
+    needs: images
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Publier sur GHCR
+        env:
+          JETON: ${{ secrets.GITHUB_TOKEN }}
+          ACTEUR: ${{ github.actor }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "$JETON" | docker login ghcr.io -u "$ACTEUR" --password-stdin
           for cible in api worker web sortie; do
-            docker tag "ghcr.io/djkix/organizer-$cible:essai" "ghcr.io/djkix/organizer-$cible:$VERSION"
-            docker push "ghcr.io/djkix/organizer-$cible:$VERSION"
+            docker buildx build --push --target "$cible" -f infra/image/Dockerfile \
+              --cache-from type=gha,scope="$cible" \
+              -t "ghcr.io/djkix/organizer-$cible:$VERSION" .
           done

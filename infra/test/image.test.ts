@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -111,12 +112,25 @@ describe('Caddyfile', () => {
 
 describe('squid.conf', () => {
   const s = lire('infra/sortie/squid.conf');
+  it('ip_brute : motif POSIX (] en tête d\'ensemble) qui attrape les adresses brutes, pas les noms', () => {
+    const motif = /^acl ip_brute dstdom_regex -n (\S+)$/m.exec(s)![1]!;
+    const brutes = ['1.2.3.4', '149.154.167.220', '[::1]', '::1'];
+    const noms = ['api.telegram.org', '1e3.com', 'generativelanguage.googleapis.com'];
+    // Même moteur que Squid (regcomp POSIX) quand grep est disponible ; sinon équivalent JS.
+    const posix = (x: string): boolean | undefined => {
+      const r = spawnSync('grep', ['-Eq', '--', motif], { input: x });
+      return r.error ? undefined : r.status === 0;
+    };
+    const js = (x: string): boolean => /^[\]0-9.:[]+$/.test(x);
+    for (const x of brutes) expect(posix(x) ?? js(x), x).toBe(true);
+    for (const x of noms) expect(posix(x) ?? js(x), x).toBe(false);
+  });
   it('liste fermée : Telegram pour l\'API, Gemini pour le worker, CONNECT 443 seulement, refus du reste', () => {
     expect(s).toContain('acl depuis_api src 10.201.2.10/32');
     expect(s).toContain('acl depuis_worker src 10.201.2.11/32');
     expect(s).toContain('acl vers_api dstdomain -n api.telegram.org');
     expect(s).toContain('acl vers_worker dstdomain -n generativelanguage.googleapis.com');
-    expect(s).toContain('acl ip_brute dstdom_regex -n ^[0-9.:\\[\\]]+$');
+    expect(s).toContain('acl ip_brute dstdom_regex -n ^[]0-9.:[]+$');
     const regles = s.split('\n').filter((l) => l.startsWith('http_access'));
     expect(regles).toEqual([
       'http_access deny !CONNECT',
@@ -150,6 +164,6 @@ describe('ci.yml', () => {
     for (const m of y.matchAll(/^\s*- uses: (\S+)/gm)) expect(m[1], m[1]).toMatch(/@[0-9a-f]{40}$/);
     expect(y).toMatch(/^concurrency:/m);
     expect(y).toContain("cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}");
-    expect((y.match(/timeout-minutes:/g) ?? []).length).toBe(2);
+    expect((y.match(/timeout-minutes:/g) ?? []).length).toBe(3);
   });
 });

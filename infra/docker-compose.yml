@@ -128,8 +128,7 @@ services:
     user: "1000:1000"
     read_only: true
     tmpfs:
-      - /data
-      - /config
+      - /tmp
     environment:
       NPM_IP: ${NPM_IP:?NPM_IP vide, renseigner l'adresse du Nginx Proxy Manager dans .env}
       DOMAINE_BOT: ${DOMAINE_BOT:?}

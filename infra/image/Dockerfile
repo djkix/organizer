@@ -38,6 +38,8 @@ RUN apk add --no-cache openssl tini
 WORKDIR /app
 ENV NODE_ENV=production PROMPTS_DIR=/app/prompts CHECKPOINT_DISABLE=1 PRISMA_HIDE_UPDATE_MESSAGE=1
 COPY prompts /app/prompts
+# Le volume nommé « audio » hérite du propriétaire de ce dossier à sa création : sans lui, il serait root:root.
+RUN mkdir -p /data/audio && chown 1000:1000 /data/audio
 LABEL org.opencontainers.image.source=https://github.com/djkix/organizer
 ENTRYPOINT ["/sbin/tini", "--"]
 
