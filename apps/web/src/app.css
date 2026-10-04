@@ -1,5 +1,13 @@
 @import '../../../design/tokens.css';
 
+/* Conteneur de SvelteKit : sans boîte, comme style="display: contents", que la CSP bloquerait. */
+.coquille { display: contents; }
+/* Annonceur de navigation de SvelteKit, masqué à l'œil et lu par les lecteurs d'écran (son style en ligne est retiré, voir vite.config.ts). */
+#svelte-announcer {
+  position: absolute; left: 0; top: 0; clip: rect(0 0 0 0); clip-path: inset(50%);
+  overflow: hidden; white-space: nowrap; width: 1px; height: 1px;
+}
+
 *,
 *::before,
 *::after { box-sizing: border-box; }
