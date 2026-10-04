@@ -1,6 +1,6 @@
 import { Inject, Module, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { creerPrisma, type PrismaClient } from '@organizer/db';
-import { FILE_CLASSEMENT, type JobClassement } from '@organizer/shared';
+import { creerFetchSortant, FILE_CLASSEMENT, type JobClassement } from '@organizer/shared';
 import { Queue, type Worker } from 'bullmq';
 import type { Bot } from 'grammy';
 import { Redis } from 'ioredis';
@@ -12,6 +12,7 @@ import { lireConfigApi, type ConfigApi } from './config.js';
 import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
+import { TelechargeurTelegram } from './ingestion/telechargeur.js';
 import { AUTH, BOT, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, REDIS, VUES } from './jetons.js';
 import { ItemsController } from './items/items.controller.js';
 import { ItemsService } from './items/items.service.js';
@@ -21,6 +22,7 @@ import { ReencodeurBorne, ReencodeurFfmpeg } from './privees/reencodeur.js';
 import { SanteController } from './sante.controller.js';
 import { creerBot } from './telegram/bot.js';
 import { demarrerTelegram, dormir } from './telegram/demarrage.js';
+import { optionsClientTelegram } from './telegram/client.js';
 import { LiaisonService } from './telegram/liaison.service.js';
 import { TelegramController } from './telegram/telegram.controller.js';
 import { VuesController } from './vues/vues.controller.js';
@@ -87,19 +89,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
       inject: [CONFIG, PRISMA, REDIS],
       useFactory: (c: ConfigApi, prisma: PrismaClient, redis: Redis) => {
         const file = new FileClassementBullmq(new Queue<JobClassement>(FILE_CLASSEMENT, { connection: redis }));
-        // Le bot n'existe pas encore ici : le téléchargeur passe par l'API HTTP de Telegram.
-        const telechargeur = {
-          async telecharger(fichierId: string) {
-            const base = c.telegramApiRoot ?? 'https://api.telegram.org';
-            const r = await fetch(`${base}/bot${c.telegramToken}/getFile?file_id=${encodeURIComponent(fichierId)}`);
-            const j = (await r.json()) as { ok: boolean; result?: { file_path?: string } };
-            const chemin = j.result?.file_path;
-            if (!j.ok || !chemin) throw new Error('Telegram getFile en échec');
-            const f = await fetch(`${base}/file/bot${c.telegramToken}/${chemin}`);
-            if (!f.ok) throw new Error(`Téléchargement Telegram : HTTP ${f.status}`);
-            return { donnees: Buffer.from(await f.arrayBuffer()), extension: chemin.split('.').pop() ?? 'bin' };
-          },
-        };
+        const telechargeur = new TelechargeurTelegram(c.telegramToken, creerFetchSortant(), { apiRoot: c.telegramApiRoot });
         return new IngestionService(prisma, new StockageAudio(c.audioRacine), telechargeur, file);
       },
     },
@@ -107,8 +97,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
       provide: BOT,
       inject: [CONFIG, PRISMA, INGESTION],
       useFactory: (c: ConfigApi, prisma: PrismaClient, ingestion: IngestionService) =>
-        creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion },
-          c.telegramApiRoot ? { client: { apiRoot: c.telegramApiRoot } } : undefined),
+        creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion }, { client: optionsClientTelegram(c.telegramApiRoot) }),
     },
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
     { provide: VUES, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new VuesService(prisma) },

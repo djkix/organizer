@@ -4,3 +4,4 @@ export * from './config.js';
 export * from './dates.js';
 export * from './files.js';
 export * from './tri.js';
+export * from './sortie.js';

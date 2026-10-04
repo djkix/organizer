@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '@organizer/db';
 import type { CaptureEntrante } from './extraire.js';
 import type { StockageAudio } from './stockage.js';
+import { FichierTropGros } from './telechargeur.js';
 
 export interface Telechargeur {
   telecharger(fichierId: string): Promise<{ donnees: Buffer; extension: string }>;
@@ -68,7 +69,15 @@ export class IngestionService {
     if (c.prive) throw new Error(`Capture ${id} privée : jamais enfilée`);
     if (c.etat !== 'recue') return;
     if (c.sourceFichier && !c.audioPath) {
-      const f = await this.telechargeur.telecharger(c.sourceFichier);
+      let f: { donnees: Buffer; extension: string };
+      try {
+        f = await this.telechargeur.telecharger(c.sourceFichier);
+      } catch (e) {
+        if (!(e instanceof FichierTropGros)) throw e;
+        // Telegram ne livrera jamais ce fichier : visible dans À revoir, plus jamais retenté.
+        await this.prisma.capture.updateMany({ where: { id, etat: 'recue' }, data: { etat: 'a_revoir', erreur: 'audio_trop_gros' } });
+        return;
+      }
       const audioPath = await this.stockage.ecrire(c.id, c.emisLe, f.donnees, f.extension, 'ordinaire');
       await this.prisma.capture.update({ where: { id }, data: { audioPath } });
     }

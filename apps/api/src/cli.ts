@@ -1,7 +1,8 @@
 import { creerPrisma, type PrismaClient } from '@organizer/db';
-import { exigerVar, lireVar } from '@organizer/shared';
+import { creerFetchSortant, essayerSortie, exigerVar, lireVar } from '@organizer/shared';
 import { Api } from 'grammy';
 import { AuthService } from './auth/auth.service.js';
+import { optionsClientTelegram } from './telegram/client.js';
 import { LiaisonService } from './telegram/liaison.service.js';
 import { etatWebhook, poserWebhook, retirerWebhook } from './telegram/webhook.js';
 
@@ -27,8 +28,7 @@ async function saisirMasque(invite: string): Promise<string> {
 class Usage extends Error {}
 
 export function apiTelegram(): Api {
-  const apiRoot = lireVar('TELEGRAM_API_ROOT');
-  return new Api(exigerVar('TELEGRAM_BOT_TOKEN'), apiRoot ? { apiRoot } : undefined);
+  return new Api(exigerVar('TELEGRAM_BOT_TOKEN'), optionsClientTelegram(lireVar('TELEGRAM_API_ROOT')));
 }
 
 interface Commande { usage: string; lancer(args: string[], prisma: PrismaClient): Promise<void> }
@@ -74,6 +74,13 @@ const COMMANDES: Record<string, Commande> = {
       if (motDePasse !== (await saisirMasque('Confirme le mot de passe : '))) throw new Error('Les deux saisies diffèrent.');
       await new AuthService(prisma).definirMotDePasse(nom, motDePasse);
       console.log(`Mot de passe de ${nom} enregistré.`);
+    },
+  },
+  'essai-sortie': {
+    usage: 'essai-sortie <url>',
+    async lancer([url]) {
+      if (!url) throw new Usage();
+      console.log(await essayerSortie(url, creerFetchSortant()));
     },
   },
   'telegram-webhook': {

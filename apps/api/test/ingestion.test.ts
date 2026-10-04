@@ -7,6 +7,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import type { CaptureEntrante } from '../src/ingestion/extraire.js';
 import { IngestionService, type FileClassement, type Telechargeur } from '../src/ingestion/ingestion.service.js';
 import { StockageAudio } from '../src/ingestion/stockage.js';
+import { FichierTropGros } from '../src/ingestion/telechargeur.js';
 
 const prisma = creerPrisma();
 afterAll(() => prisma.$disconnect());
@@ -149,5 +150,20 @@ describe('prochaine capture privée', () => {
     expect(await service.reprendre(new Date(Date.now() + 5 * 60_000))).toBe(1);
     expect((await prisma.capture.findUniqueOrThrow({ where: { id } })).audioPath).not.toBeNull();
     expect(file.ids).toEqual([]);
+  });
+});
+
+describe('audio trop gros pour Telegram', () => {
+  it('passe en à revoir, sans enfilage ni boucle de reprise', async () => {
+    const s = new IngestionService(prisma, new StockageAudio(racine), {
+      telecharger: async () => { throw new FichierTropGros('25000000 octets'); },
+    }, file, () => {});
+    const { id } = await s.recevoir(utilisateurId, {
+      sourceRef: 'tg:7:99', emisLe: new Date('2026-10-06T06:00:00Z'), dureeS: 2400, fichier: { id: 'F', mime: 'audio/ogg' }, texte: null,
+    });
+    await s.finaliser(id);
+    expect(await prisma.capture.findUniqueOrThrow({ where: { id } })).toMatchObject({ etat: 'a_revoir', erreur: 'audio_trop_gros' });
+    expect(file.ids).toEqual([]);
+    expect(await s.reprendre(new Date(Date.now() + 10 * 60_000))).toBe(0);
   });
 });
