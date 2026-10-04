@@ -16,10 +16,10 @@ function config(mode: 'polling' | 'webhook'): ConfigApi {
   };
 }
 
-function requete(corps: unknown, secret: string | undefined = SECRET): Request {
+function requete(corps: unknown, secret: string | null = SECRET): Request {
   return {
     body: corps,
-    header: (nom: string) => (nom.toLowerCase() === 'x-telegram-bot-api-secret-token' ? secret : undefined),
+    header: (nom: string) => (nom.toLowerCase() === 'x-telegram-bot-api-secret-token' ? (secret ?? undefined) : undefined),
   } as unknown as Request;
 }
 
@@ -83,6 +83,23 @@ describe('TelegramController en mode webhook', () => {
     await c.recevoir(requete(maj(5), 'faux'), res);
     expect(r.statut).toBe(401);
   });
+
+  it.each([['faux', 'faux'], ['absent', null], ['trop court', 'jeton']])(
+    'secret %s : 401 sans initialiser le bot',
+    async (_nom, secret) => {
+      const bot = new Bot('0:test');
+      const init = vi.spyOn(bot, 'init').mockRejectedValue(new Error('Telegram injoignable'));
+      const vues: number[] = [];
+      bot.use((ctx) => { vues.push(ctx.update.update_id); });
+      const c = new TelegramController(bot, config('webhook'));
+      const { res, r } = reponse();
+      await c.recevoir(requete(maj(5), secret), res);
+      expect(r.statut).toBe(401);
+      expect(r.terminee).toBe(true);
+      expect(init).not.toHaveBeenCalled();
+      expect(vues).toHaveLength(0);
+    },
+  );
 
   it('une erreur du bot répond 500 sans rien journaliser du contenu', async () => {
     const bot = new Bot('0:test', { botInfo });

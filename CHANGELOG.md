@@ -34,6 +34,7 @@ Le projet n'a pas encore de version publiée.
 - La connexion n'accorde plus créance à X-Forwarded-For que du proxy de confiance, un changement de mot de passe révoque les sessions, et la saisie du mot de passe est masquée et confirmée (2026-10-03).
 
 ### Corrigé
+- Le webhook Telegram refuse (401) un secret absent ou faux avant d'initialiser le bot : plus d'appel à Telegram ni de 500 sur une requête forgée (2026-10-04).
 - Les images web, sortie et base Node appliquent les correctifs Alpine et web passe à Caddy 2.11 (l'analyse Trivy bloquait), la CI analyse les quatre images avant d'échouer, le compose transmet `GEMINI_STATUTS_INDISPONIBLES`, la réflexion Gemini est vide par défaut, Squid plafonne ses descripteurs, `.superpowers` reste hors du contexte de build, et la documentation d'exploitation décrit le premier déploiement, l'import sans conflit d'adresse et des sauvegardes privées (2026-10-04).
 - Le volume audio est inscriptible par l'API (dossier /data/audio créé pour l'utilisateur 1000 dans l'image) ; l'essai de fumée le vérifie, utilise une autre plage d'adresses que la production, affiche ses diagnostics si le démarrage échoue et nettoie sur Ctrl-C ; web range son état dans /tmp (2026-10-04).
 - L'import des captures du banc d'essai liste les lignes écartées (numéro et identifiant, jamais le contenu) et les audios orphelins, sort en erreur s'il en reste, retire l'audio copié si la création échoue, et `--essai` calcule le bilan sans rien écrire ni enfiler (2026-10-04).
