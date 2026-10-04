@@ -1,9 +1,9 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FileClassement } from '../src/ingestion/ingestion.service.js';
 import { StockageAudio } from '../src/ingestion/stockage.js';
 import { importerTerrain } from '../src/terrain/import.js';
@@ -42,7 +42,7 @@ describe('importerTerrain', () => {
   it('crée une capture ordinaire par vocal, range l\'audio, l\'enfile pour le classement', async () => {
     writeFileSync(join(dossier, 'audio', '7_10.oga'), 'OggS-faux');
     writeFileSync(join(dossier, 'captures.jsonl'), `${ligne(10)}\n${ligne(11, { audio: null, texte_ecrit: 'rappeler le garage', duree_s: null })}\n`);
-    expect(await importer()).toEqual({ importees: 2, dejaLa: 0, sansCompte: 0, illisibles: 0, sansAudio: 0 });
+    expect(await importer()).toEqual({ importees: 2, dejaLa: 0, sansCompte: 0, illisibles: 0, sansAudio: 0, ecartees: [], audiosOrphelins: [] });
     const c = await prisma.capture.findUniqueOrThrow({ where: { sourceRef: 'tg:7:10' } });
     expect(c).toMatchObject({ canal: 'telegram', prive: false, etat: 'en_file', audioMime: 'audio/ogg', dureeS: 4 });
     expect(c.emisLe.toISOString()).toBe('2026-10-02T06:12:00.000Z');
@@ -70,7 +70,55 @@ describe('importerTerrain', () => {
     writeFileSync(join(dossier, 'captures.jsonl'), [
       ligne(20, { chat: '999' }), '{"pas du json', ligne(21, { emis_le: 'hier' }), ligne(22, { audio: 'audio/../../secret.oga' }), '',
     ].join('\n'));
-    expect(await importer()).toEqual({ importees: 0, dejaLa: 0, sansCompte: 1, illisibles: 2, sansAudio: 1 });
+    expect(await importer()).toEqual({
+      importees: 0, dejaLa: 0, sansCompte: 1, illisibles: 2, sansAudio: 1, audiosOrphelins: [],
+      ecartees: [
+        { ligne: 1, id: '7_20', raison: 'sans_compte' },
+        { ligne: 2, id: null, raison: 'illisible' },
+        { ligne: 3, id: '7_21', raison: 'illisible' },
+        { ligne: 4, id: '7_22', raison: 'sans_audio' },
+      ],
+    });
     expect(await prisma.capture.count()).toBe(0);
+  });
+
+  it('deux lignes identiques : une importée, une déjà là', async () => {
+    writeFileSync(join(dossier, 'audio', '7_10.oga'), 'OggS-faux');
+    writeFileSync(join(dossier, 'captures.jsonl'), `${ligne(10)}\n${ligne(10)}\n`);
+    expect(await importer()).toMatchObject({ importees: 1, dejaLa: 1 });
+    expect(await prisma.capture.count()).toBe(1);
+  });
+
+  it('liste sans les importer les audios qu\'aucune ligne ne référence', async () => {
+    writeFileSync(join(dossier, 'audio', '7_10.oga'), 'OggS-faux');
+    writeFileSync(join(dossier, 'audio', '7_99.oga'), 'OggS-orphelin');
+    writeFileSync(join(dossier, 'captures.jsonl'), `${ligne(10)}\n`);
+    const b = await importer();
+    expect(b.audiosOrphelins).toEqual(['7_99.oga']);
+    expect(await prisma.capture.count()).toBe(1);
+  });
+
+  it('retire l\'audio copié si la création échoue, jamais la source', async () => {
+    writeFileSync(join(dossier, 'audio', '7_10.oga'), 'OggS-faux');
+    writeFileSync(join(dossier, 'captures.jsonl'), `${ligne(10)}\n`);
+    const espion = vi.spyOn(prisma.capture, 'create').mockRejectedValueOnce(new Error('panne'));
+    await expect(importer()).rejects.toThrow('panne');
+    espion.mockRestore();
+    expect(existsSync(join(racine, 'ordinaire'))
+      ? readdirSync(join(racine, 'ordinaire'), { recursive: true, withFileTypes: true }).filter((f) => f.isFile())
+      : []).toEqual([]);
+    expect(existsSync(join(dossier, 'audio', '7_10.oga'))).toBe(true);
+  });
+
+  it('--essai calcule le bilan sans rien écrire, créer ni enfiler', async () => {
+    writeFileSync(join(dossier, 'audio', '7_10.oga'), 'OggS-faux');
+    writeFileSync(join(dossier, 'audio', '7_99.oga'), 'OggS-orphelin');
+    writeFileSync(join(dossier, 'captures.jsonl'), `${ligne(10)}\n${ligne(22, { audio: 'audio/absent.oga' })}\n`);
+    const b = await importerTerrain(prisma, new StockageAudio(racine), file, dossier, { essai: true });
+    expect(b).toMatchObject({ importees: 1, sansAudio: 1, audiosOrphelins: ['7_99.oga'] });
+    expect(b.ecartees).toEqual([{ ligne: 2, id: '7_22', raison: 'sans_audio' }]);
+    expect(await prisma.capture.count()).toBe(0);
+    expect(file.ids).toEqual([]);
+    expect(readdirSync(racine)).toEqual([]);
   });
 });
