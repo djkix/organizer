@@ -1,6 +1,6 @@
 import { creerPrisma } from '@organizer/db';
 import {
-  chargerPrompt, cheminConfigure, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar, OPTIONS_JOB_ALERTE,
+  chargerPrompt, cheminConfigure, creerFetchSortant, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar, OPTIONS_JOB_ALERTE,
   type JobAlerte, type JobClassement,
 } from '@organizer/shared';
 import { Queue } from 'bullmq';
@@ -19,6 +19,7 @@ const provider = new GeminiProvider({
   repli: lireVar('GEMINI_MODEL_FALLBACK') ?? 'gemini-3.8-flash',
   prompt,
   tiersPayes: (lireVar('GEMINI_TIERS_PAYES') ?? 'standard').split(',').map((s) => s.trim()),
+  fetch: creerFetchSortant(),
 });
 
 // Règle n° 8 : pas de palier payé, pas de worker.

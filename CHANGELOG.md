@@ -7,6 +7,7 @@ Le projet n'a pas encore de version publiée.
 ## [Non publié]
 
 ### Ajouté
+- L'API et le worker sortent par le proxy déclaré dans HTTPS_PROXY (fetch d'undici, agent pour grammY), le téléchargement Telegram est borné à 60 s et 20 Mio, et un audio trop gros passe en À revoir au lieu d'être retenté sans fin (2026-10-04).
 - L'API démarre et sert la PWA même si Telegram est injoignable ; la CLI pose, retire et décrit le webhook (une connexion, secret, messages en attente gardés) et lie un compte à un chat sans code (2026-10-04).
 
 ### Modifié
