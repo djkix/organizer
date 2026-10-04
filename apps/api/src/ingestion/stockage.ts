@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 export class StockageAudio {
@@ -12,5 +12,10 @@ export class StockageAudio {
     await mkdir(dirname(join(this.racine, relatif)), { recursive: true });
     await writeFile(join(this.racine, relatif), donnees);
     return relatif;
+  }
+
+  /** Retire un fichier rangé (chemin relatif renvoyé par ecrire), sans erreur s'il manque. */
+  async supprimer(relatif: string): Promise<void> {
+    await rm(join(this.racine, relatif), { force: true });
   }
 }

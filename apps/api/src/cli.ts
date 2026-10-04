@@ -132,13 +132,17 @@ const COMMANDES: Record<string, Commande> = {
     },
   },
   'importer-terrain': {
-    usage: 'importer-terrain <dossier du banc d\'essai, qui contient captures.jsonl et audio/>',
-    async lancer([dossier], prisma) {
-      if (!dossier) throw new Usage();
+    usage: 'importer-terrain <dossier du banc d\'essai, qui contient captures.jsonl et audio/> [--essai]',
+    async lancer([dossier, option], prisma) {
+      if (!dossier || (option !== undefined && option !== '--essai')) throw new Usage();
+      const essai = option === '--essai';
       const stockage = new StockageAudio(cheminConfigure('AUDIO_STORAGE_PATH', exigerVar('AUDIO_STORAGE_PATH')));
       const b = await avecFile(FILE_CLASSEMENT, (file) =>
-        importerTerrain(prisma, stockage, new FileClassementBullmq(file as Queue<JobClassement>), dossier));
-      console.log(`Import : ${b.importees} importées, ${b.dejaLa} déjà là, ${b.sansCompte} sans compte, ${b.illisibles} illisibles, ${b.sansAudio} sans audio.`);
+        importerTerrain(prisma, stockage, new FileClassementBullmq(file as Queue<JobClassement>), dossier, { essai }));
+      console.log(`${essai ? 'Essai (rien écrit ni enfilé)' : 'Import'} : ${b.importees} importées, ${b.dejaLa} déjà là, ${b.sansCompte} sans compte, ${b.illisibles} illisibles, ${b.sansAudio} sans audio.`);
+      for (const e of b.ecartees) console.log(`Écartée : ligne ${e.ligne}, ${e.id ?? 'identifiant illisible'}, ${e.raison}.`);
+      for (const a of b.audiosOrphelins) console.log(`Audio orphelin (non importé) : ${a}`);
+      if (b.ecartees.length > 0 || b.audiosOrphelins.length > 0) process.exitCode = 1;
     },
   },
 };
