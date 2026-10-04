@@ -1,0 +1,69 @@
+# Coquille de la PWA et passage vers l'API, derrière le Nginx Proxy Manager (TLS, HSTS, HTTP/2).
+# NPM_IP : adresse du Nginx Proxy Manager, seul proxy dont X-Forwarded-For est cru.
+# DOMAINE_BOT : domaine du webhook Telegram, qui ne sert que /telegram/webhook.
+# La CSP (empreinte du script en ligne de la coquille) est calculée au build : /etc/caddy/csp.caddy.
+{
+	admin off
+	auto_https off
+	persist_config off
+	servers {
+		trusted_proxies static {$NPM_IP}
+		timeouts {
+			read_header 30s
+			read_body 30m
+			write 30m
+			idle 5m
+		}
+	}
+}
+
+:8080 {
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy "microphone=(self), camera=(), geolocation=()"
+		-Server
+	}
+
+	@bot host {$DOMAINE_BOT}
+	handle @bot {
+		handle /telegram/webhook {
+			request_body {
+				max_size 1MiB
+			}
+			reverse_proxy api:3000
+		}
+		respond 404
+	}
+
+	handle /telegram/* {
+		respond 404
+	}
+
+	handle /api/* {
+		request_body {
+			max_size 32MiB
+		}
+		reverse_proxy api:3000 {
+			header_down Cache-Control "no-store"
+			transport http {
+				read_timeout 30m
+				write_timeout 30m
+			}
+		}
+	}
+
+	handle {
+		root * /srv
+		import /etc/caddy/csp.caddy
+		@immuable path /_app/immutable/*
+		header @immuable Cache-Control "public, max-age=31536000, immutable"
+		@frais not path /_app/immutable/*
+		header @frais Cache-Control "no-cache"
+		@manifeste path /manifest.webmanifest
+		header @manifeste Content-Type "application/manifest+json"
+		encode zstd gzip
+		try_files {path} /index.html
+		file_server
+	}
+}

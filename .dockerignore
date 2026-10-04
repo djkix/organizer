@@ -1,0 +1,25 @@
+# Contexte de build : jamais de secret, jamais de donnée de L (dépôt public, images publiées).
+.env
+.env.*
+**/.env
+*.pem
+*.key
+infra/secrets
+corpus
+data
+audio
+transcriptions
+**/*.ogg
+**/*.oga
+**/*.opus
+**/*.m4a
+# Reconstruit dans l'image
+**/node_modules
+.git
+**/dist
+**/build
+**/.svelte-kit
+**/test-results
+**/playwright-report
+coverage
+.DS_Store
