@@ -2,6 +2,8 @@
 # Essai de fumée des images dans la topologie réelle (infra/docker-compose.yml), secrets factices.
 # Usage : infra/image/essai.sh [étiquette]   (défaut : essai ; images ghcr.io/djkix/organizer-*:<étiquette> déjà construites)
 # Ne touche à aucune stack existante : projet « organizer-essai », dossier temporaire, tout est retiré à la fin.
+# Plage d'adresses : l'essai réécrit 10.201.x en 10.211.x (compose et squid.conf, montée sur l'image sortie) pour ne
+# pas chevaucher les réseaux de la stack de production sur la même VM. Le port 8080 de 127.0.0.1 doit être libre.
 set -eu
 ETIQUETTE="${1:-essai}"
 RACINE="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -9,9 +11,10 @@ TRAVAIL="$(mktemp -d)"
 PROJET=organizer-essai
 URL=http://127.0.0.1:8080
 
-dc() { docker compose -p "$PROJET" --project-directory "$TRAVAIL" -f "$TRAVAIL/compose.yaml" "$@"; }
+dc() { docker compose -p "$PROJET" --project-directory "$TRAVAIL" -f "$TRAVAIL/compose.yaml" -f "$TRAVAIL/essai.yaml" "$@"; }
 nettoyer() { dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$TRAVAIL"; }
 trap nettoyer EXIT
+trap 'exit 130' INT TERM
 echec() { echo "ÉCHEC : $1" >&2; dc ps -a >&2 || true; dc logs --no-color --tail 40 >&2 || true; exit 1; }
 entete() { curl -sS -D - -o /dev/null "$URL$1" | tr -d '\r' | grep -i "^$2:" | head -1 | cut -d' ' -f2-; }
 statut() { curl -sS -o /dev/null -w '%{http_code}' "$@"; }
@@ -21,7 +24,14 @@ printf '0:faux' > "$TRAVAIL/secrets/telegram_bot_token"
 printf 'secret-essai' > "$TRAVAIL/secrets/telegram_webhook_secret"
 printf 'cle-essai' > "$TRAVAIL/secrets/gemini_api_key"
 chmod 644 "$TRAVAIL"/secrets/*
-cp "$RACINE/infra/docker-compose.yml" "$TRAVAIL/compose.yaml"
+sed 's/10\.201\./10.211./g' "$RACINE/infra/docker-compose.yml" > "$TRAVAIL/compose.yaml"
+sed 's/10\.201\./10.211./g' "$RACINE/infra/sortie/squid.conf" > "$TRAVAIL/squid.conf"
+cat > "$TRAVAIL/essai.yaml" <<'EOF'
+services:
+  sortie:
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf:ro
+EOF
 cat > "$TRAVAIL/.env" <<EOF
 ORGANIZER_VERSION=$ETIQUETTE
 POSTGRES_PASSWORD=essai
@@ -30,15 +40,19 @@ IP_PUBLICATION=127.0.0.1
 DOMAINE_BOT=bot.essai
 EOF
 
-dc up -d
+dc up -d || echec "démarrage de la stack"
 i=0
 until curl -fsS "$URL/api/sante" 2>/dev/null | grep -q '"ok":true'; do
   i=$((i + 1)); [ "$i" -lt 60 ] || echec "la stack ne répond pas sur /api/sante"; sleep 3
 done
 [ "$(dc ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | grep '^migrate ')" = "migrate exited 0" ] || echec "migrations"
 
+# Volume audio : inscriptible par l'API (uid 1000), lisible par le worker
+dc exec -T api sh -c 'touch /data/audio/.essai && rm /data/audio/.essai' || echec "volume audio non inscriptible"
+dc exec -T worker test -r /data/audio || echec "volume audio illisible par le worker"
+
 # Coquille, repli, en-têtes
-curl -sS "$URL/" -o "$TRAVAIL/index.html"
+curl -sS "$URL/" -o "$TRAVAIL/index.html" || echec "coquille injoignable"
 [ "$(statut "$URL/prive/enregistrer")" = 200 ] || echec "repli index.html"
 EMPREINTE="$(node "$RACINE/apps/web/scripts/entetes.mjs" empreintes "$TRAVAIL/index.html" | head -1)"
 [ -n "$EMPREINTE" ] || echec "aucun script en ligne dans la coquille servie"

@@ -59,7 +59,10 @@ packages/shared   types et schémas Zod partagés
 packages/db       schéma Prisma, migrations, garde-fous SQL du mode privé
 prompts/          prompts Gemini versionnés + responseSchema
 fixtures/         énoncés FABRIQUÉS pour les tests
-infra/            docker-compose.yml, Caddyfile
+infra/            docker-compose.yml de la stack de production, .env.example
+infra/caddy/      Caddyfile de l'image web
+infra/image/      Dockerfile des quatre images, essai.sh (essai de fumée)
+infra/sortie/     squid.conf du proxy sortant (liste fermée)
 infra/dev/        Postgres et Valkey de dev sur la VM Docker, tunnel SSH
 design/           tokens et maquettes
 docs/             cahier des charges, décisions

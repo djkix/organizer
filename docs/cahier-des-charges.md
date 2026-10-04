@@ -593,12 +593,12 @@ Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dock
 
 | Service | Image | Ports internes | Volumes | Dépendances |
 | --- | --- | --- | --- | --- |
-| `api` | construite | 3000 | `audio` | `db`, `queue`, API Telegram, FCM |
-| `worker` | construite | — | `audio` (lecture seule) | `db`, `queue`, API Gemini |
+| `api` | `ghcr.io/djkix/organizer-api` (Node 22, ffmpeg) | 3000 | `audio` | `db`, `queue`, API Telegram, FCM |
+| `worker` | `ghcr.io/djkix/organizer-worker` (Node 22) | — | `audio` (lecture seule) | `db`, `queue`, API Gemini |
 | `web` | `ghcr.io/djkix/organizer-web` (Caddy 2.10, coquille de la PWA incluse) | 8080 | — | `api` |
 | `sortie` | `ghcr.io/djkix/organizer-sortie` (Squid) | 3128 | — | Internet, liste fermée |
-| `db` | `pgvector/pgvector:pg17` | 5432 | `pgdata` | — |
-| `queue` | `valkey/valkey:8-alpine` | 6379 | `valkeydata` | — |
+| `db` | `pgvector/pgvector:0.8.0-pg17` | 5432 | `pgdata` | — |
+| `queue` | `valkey/valkey:8.1-alpine` | 6379 | `valkeydata` | — |
 
 Six services au lot 1 (api, worker, web, sortie, db, queue), plus le conteneur de migrations, contre neuf dans le plan initial : les conteneurs de transcription et de modèle local ont disparu, et avec eux 9 Go de modèles et les deux tiers de la RAM.
 
@@ -625,7 +625,7 @@ L'API est le seul point d'envoi de messages vers L : le scheduler déclenche une
 | Volume | Contenu | Taille | Sauvegarde |
 | --- | --- | --- | --- |
 | `pgdata` | Base complète | 2 à 5 Go à 1 an | Lot 2 |
-| `audio` | Enregistrements d'origine | 40 Go maximum, tenu par la rotation | Lot 2 |
+| `audio` | Enregistrements d'origine | 40 Go maximum ; rotation reportée au lot 2, alerte administrateur à 30 Go d'ici là | Lot 2 |
 | `valkeydata` | File de jobs | Moins de 1 Go | Aucune, reconstructible |
 
 La coquille de la PWA est dans l'image `web` : une mise à jour d'image la remplace.
@@ -674,7 +674,7 @@ flowchart LR
   DOCKGE --> STACK[Stack organizer]
 ```
 
-Build multi-étages, images publiées sur GHCR en public (décidé par Franck le 4 octobre 2026 : le code est déjà public, les images ne contiennent ni secret ni donnée), déploiement déclenché manuellement depuis Dockge. Pas de déploiement automatique : le volume de changements ne le justifie pas et une régression sur la capture serait invisible jusqu'à la prochaine pensée perdue.
+Build multi-étages, images publiées sur GHCR en public (décidé par Franck le 4 octobre 2026 : le code est déjà public, les images ne contiennent ni secret ni donnée), déploiement déclenché manuellement depuis Dockge. Une fois publié par une étiquette `v*`, chaque paquet `organizer-*` est créé en privé par GHCR : il faut passer chaque paquet organizer-* en public (page du paquet, Package settings, Change visibility) après la première publication, faute de quoi la VM, sans authentification, ne peut pas le tirer. Pas de déploiement automatique : le volume de changements ne le justifie pas et une régression sur la capture serait invisible jusqu'à la prochaine pensée perdue.
 
 ## Sécurité et confidentialité
 
@@ -894,13 +894,12 @@ Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses
 
 ### Lot 2 — Rappels et fils
 
-- Scheduler et écriture des rendez-vous dans Google Agenda, sans rappel par défaut.
+- Scheduler, écriture des rendez-vous dans Google Agenda sans rappel par défaut, et rotation de l'audio ordinaire au-delà de 40 Go.
 - Alarme activable item par item, à la capture ou dans l'application.
 - **Widget Home Assistant**, remonté du lot 3 : sans lui, plus rien ne rappelle quoi que ce soit.
 - Fils de pensées, rattachement vectoriel, vue Pensées avec filtres.
 - Question de désambiguïsation dans Telegram.
 - Sauvegarde vers le NAS et test de restauration complète.
-- Scheduler et rotation de l'audio ordinaire au-delà de 40 Go.
 
 ### Lot 3 — Confort
 

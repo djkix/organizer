@@ -127,9 +127,9 @@ describe('stack de production', () => {
     expect(service('worker').environment).toMatchObject({ GEMINI_API_KEY_FILE: '/run/secrets/gemini_api_key' });
   });
 
-  it('tmpfs pour /tmp (applicatifs, sortie) et pour l\'état de Caddy ; volumes nommés', () => {
+  it('tmpfs pour /tmp (applicatifs, sortie, web : Caddy y range son état) ; volumes nommés', () => {
     for (const n of ['api', 'worker', 'migrate', 'sortie']) expect((service(n) as unknown as { tmpfs: string[] }).tmpfs, n).toContain('/tmp');
-    expect((service('web') as unknown as { tmpfs: string[] }).tmpfs.sort()).toEqual(['/config', '/data']);
+    expect((service('web') as unknown as { tmpfs: string[] }).tmpfs).toEqual(['/tmp']);
     const volumes = Object.keys((parse(texte, { merge: true }) as { volumes: object }).volumes).sort();
     expect(volumes).toEqual(['audio', 'pgdata', 'valkeydata']);
     expect((service('worker') as unknown as { volumes: string[] }).volumes).toEqual(['audio:/data/audio:ro']);
@@ -137,5 +137,39 @@ describe('stack de production', () => {
 
   it('plus aucun montage de Caddyfile : il est dans l\'image web', () => {
     expect(texte).not.toMatch(/Caddyfile:/);
+  });
+  it('image : /data/audio existe, propriété de 1000, avant le volume nommé', () => {
+    const df = readFileSync(join(INFRA, 'image/Dockerfile'), 'utf8');
+    const base = df.slice(df.indexOf('AS base-node'), df.indexOf('AS api'));
+    expect(base).toMatch(/mkdir -p \/data\/audio && chown 1000:1000 \/data\/audio/);
+  });
+
+  it('CI : packages: write seulement sur le job de publication, étiquettes v* seulement', () => {
+    const ci = parse(readFileSync(join(INFRA, '../.github/workflows/ci.yml'), 'utf8')) as {
+      permissions: Record<string, string>;
+      jobs: Record<string, { needs?: string; if?: string; permissions?: Record<string, string> }>;
+    };
+    expect(ci.permissions).toEqual({ contents: 'read' });
+    for (const [n, j] of Object.entries(ci.jobs)) {
+      if (n === 'publication') continue;
+      expect(j.permissions?.packages, n).toBeUndefined();
+    }
+    const pub = ci.jobs.publication!;
+    expect(pub.permissions).toEqual({ contents: 'read', packages: 'write' });
+    expect(pub.needs).toBe('images');
+    expect(pub.if).toBe("startsWith(github.ref, 'refs/tags/v')");
+  });
+
+  it('essai.sh : autre plage que la production, diagnostics au démarrage, volume audio, arrêt propre', () => {
+    const sh = readFileSync(join(INFRA, 'image/essai.sh'), 'utf8');
+    expect(sh).toContain('10.211');
+    expect(sh).toContain('dc up -d || echec');
+    expect(sh).toContain("trap 'exit 130' INT TERM");
+    expect(sh).toContain('/data/audio/.essai');
+    expect(sh).toContain('test -r /data/audio');
+  });
+
+  it('documentation : paquets GHCR à passer en public après la première publication', () => {
+    expect(readFileSync(join(INFRA, '../docs/cahier-des-charges.md'), 'utf8')).toMatch(/passer chaque paquet organizer-\* en public/);
   });
 });
