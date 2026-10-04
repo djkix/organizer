@@ -1,9 +1,12 @@
 import { creerPrisma, type PrismaClient } from '@organizer/db';
-import { cheminConfigure, creerFetchSortant, essayerSortie, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar, OPTIONS_JOB_ALERTE } from '@organizer/shared';
+import { cheminConfigure, creerFetchSortant, essayerSortie, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, type JobClassement, lireVar, OPTIONS_JOB_ALERTE } from '@organizer/shared';
 import { Queue } from 'bullmq';
 import { Api } from 'grammy';
 import { Redis } from 'ioredis';
 import { AuthService } from './auth/auth.service.js';
+import { FileClassementBullmq } from './ingestion/file.js';
+import { StockageAudio } from './ingestion/stockage.js';
+import { importerTerrain } from './terrain/import.js';
 import { optionsClientTelegram } from './telegram/client.js';
 import { chatPriveValide, LiaisonService } from './telegram/liaison.service.js';
 import { formaterMesures, mesurer } from './veille/mesures.js';
@@ -126,6 +129,16 @@ const COMMANDES: Record<string, Commande> = {
     async lancer() {
       await avecFile(FILE_ALERTES, (file) => file.add('alerte', { message: 'Essai d\'alerte : la veille joint les administrateurs.' }, OPTIONS_JOB_ALERTE));
       console.log('Alerte d\'essai en file : elle part vers les administrateurs liés.');
+    },
+  },
+  'importer-terrain': {
+    usage: 'importer-terrain <dossier du banc d\'essai, qui contient captures.jsonl et audio/>',
+    async lancer([dossier], prisma) {
+      if (!dossier) throw new Usage();
+      const stockage = new StockageAudio(cheminConfigure('AUDIO_STORAGE_PATH', exigerVar('AUDIO_STORAGE_PATH')));
+      const b = await avecFile(FILE_CLASSEMENT, (file) =>
+        importerTerrain(prisma, stockage, new FileClassementBullmq(file as Queue<JobClassement>), dossier));
+      console.log(`Import : ${b.importees} importées, ${b.dejaLa} déjà là, ${b.sansCompte} sans compte, ${b.illisibles} illisibles, ${b.sansAudio} sans audio.`);
     },
   },
 };
