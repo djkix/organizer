@@ -62,6 +62,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 19 | Nom | Organizer |
 | 20 | Bot Telegram | `@organizer_lud_bot` |
 | 21 | Lots 0 et 1 | **Menés en parallèle**, décidé par Franck le 3 octobre 2026. Thèmes, types d'échéance et prompt sont des données et de la configuration, branchées en fin de lot 1 |
+| 22 | Mise en service | **Directe, sans attendre la sortie du lot 0**, décidé par Franck le 4 octobre 2026. L'application démarre en production avec le prompt actuel (`tri/v1`) ; le classement est affiné à l'usage, sur les captures réelles et les corrections. Le corpus du lot 0 continue de servir de jeu de test, sans bloquer la mise en service. Motif : le banc d'essai classe déjà les vraies captures de L avec le même prompt, et chaque élément garde la version du prompt et le modèle, donc une capture se reclasse après un changement de prompt |
 
 ## Périmètre fonctionnel
 
@@ -867,7 +868,7 @@ Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo p
 
 ## Trajectoire de livraison
 
-Quatre lots. Le lot 0 collecte le corpus réel qui déterminera les catégories de tri. Le lot 1 démarre en parallèle (décision 21) : ses briques ne dépendent pas du corpus. Ce qui en dépend, la liste des thèmes, les types d'échéance et le prompt, reste en données et en configuration. Rien de tout cela n'est codé en dur ; tout est branché en fin de lot 1, une fois le corpus annoté.
+Quatre lots. Le lot 0 collecte le corpus réel qui déterminera les catégories de tri. Le lot 1 démarre en parallèle (décision 21) : ses briques ne dépendent pas du corpus. Ce qui en dépend, la liste des thèmes, les types d'échéance et le prompt, reste en données et en configuration. Rien de tout cela n'est codé en dur ; la typologie est branchée au fil de l'usage et du corpus annoté ; la mise en service ne l'attend pas (décision 22).
 
 ### Lot 0 — Collecte et validation
 
@@ -877,7 +878,7 @@ Quatre lots. Le lot 0 collecte le corpus réel qui déterminera les catégories 
 - Annotation manuelle de ces captures : nature, échéance, thème. Ce corpus devient le jeu de test du pipeline.
 - Réponses de L aux questions de cadrage.
 
-Critère de sortie : au moins 60 énoncés réels annotés et une typologie de thèmes stabilisée.
+Critère de sortie : au moins 60 énoncés réels annotés (un nombre d'énoncés, pas de jours) et une typologie de thèmes stabilisée. Ce critère ne conditionne plus la mise en service (décision 22) : il alimente le jeu de test et l'affinage du prompt.
 
 ### Lot 1 — Capture et tri (MVP)
 
@@ -888,7 +889,7 @@ Critère de sortie : au moins 60 énoncés réels annotés et une typologie de t
 - Correction manuelle d'un classement.
 - Supervision de base.
 
-Mise en service : après la sortie du lot 0, avec la typologie et le prompt validés sur le corpus.
+Mise en service : directe, sans attendre la sortie du lot 0 (décision 22). L'application démarre avec le prompt actuel (`tri/v1`), affiné à l'usage sur les captures réelles et les corrections ; chaque élément garde la version du prompt et le modèle, ce qui permet de reclasser une capture après un changement de prompt.
 
 Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses anciennes habitudes.
 

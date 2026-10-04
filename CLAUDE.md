@@ -25,7 +25,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 Les fichiers de ce dépôt font foi. Il n'existe aucune version ailleurs qui les
 dépasse : le document de cadrage initial est archivé et n'est plus mis à jour.
 
-- @docs/decisions.md — 21 décisions fermées. Ne pas les rouvrir sans demander.
+- @docs/decisions.md — 22 décisions fermées. Ne pas les rouvrir sans demander.
 - @docs/cahier-des-charges.md — spécification complète.
 
 Quand une décision change : mettre à jour `docs/decisions.md`, répercuter dans
@@ -102,8 +102,9 @@ pnpm db migrate dev      # CLI Prisma avec le .env racine chargé
 Lots 0 et 1 menés en parallèle (décision 21, 3 octobre 2026). Le lot 0 collecte et
 annote une semaine de captures réelles. Le lot 1 construit l'application sans attendre :
 thèmes, types d'échéance et prompt ne sont jamais codés en dur (table ou configuration),
-et sont branchés en fin de lot 1 sur la typologie validée. Pas de mise en service avant
-la sortie du lot 0.
+et sont branchés sur la typologie validée. Mise en service directe, sans attendre la
+sortie du lot 0 (décision 22, 4 octobre 2026) : l'application démarre avec le prompt actuel
+(`tri/v1`), affiné à l'usage ; le corpus du lot 0 reste le jeu de test.
 
 Jalon du lot 0 franchi le 2 octobre 2026 : L confirme le besoin et accepte que ses
 vocaux ordinaires passent par Gemini en palier payé. Le prompt peut donc être testé
@@ -115,4 +116,4 @@ vocal à Gemini avec le prompt de tri et garde audio et résultats sur le serveu
 pas l'application : il sera retiré quand le lot 1 sera livré. `compose.yaml` est généré
 par `genere.py`.
 
-Lot 1-C : déploiement prêt (images, stack, CI, `docs/exploitation.md`) ; la mise en service suit la procédure du plan `docs/superpowers/plans/2026-10-05-lot1-c-deploiement.md`, après la sortie du lot 0.
+Lot 1-C : déploiement prêt (images, stack, CI, `docs/exploitation.md`) ; la mise en service suit la procédure du plan `docs/superpowers/plans/2026-10-05-lot1-c-deploiement.md`, sans attendre la sortie du lot 0 (décision 22).

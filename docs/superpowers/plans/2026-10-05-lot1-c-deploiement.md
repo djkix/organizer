@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- « Pas de mise en service avant la sortie du lot 0. » (CLAUDE.md) La procédure de mise en service commence par cette condition.
+- Mise en service directe, sans attendre la sortie du lot 0 (décision 22, 4 octobre 2026) : le prompt en service est `tri/v1`, affiné à l'usage. La procédure commence par confirmer cette version.
 - « Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (VM 105, décision 13), publiée par le Nginx Proxy Manager existant (conteneur 101). Aucun conteneur n'expose de port sur l'extérieur. »
 - Réseaux : « `core` : `api`, `worker`, `scheduler`, `db`, `queue`. Aucune sortie Internet. » « `egress` : `api`, `worker` et `scheduler` uniquement, chacun avec une sortie HTTPS restreinte à une liste fermée de domaines. Aucun autre domaine, aucun autre conteneur. » `api` : `api.telegram.org` (et `fcm.googleapis.com` au lot des notifications) ; `worker` : `generativelanguage.googleapis.com`.
 - Principes de configuration : « 1. Aucun secret dans le fichier Compose : un fichier `.env` hors dépôt, plus les secrets Docker [...]. 2. Images épinglées par version majeure et mineure, jamais `latest`. 3. `restart: unless-stopped` sur tous les services applicatifs. 4. Sondes de santé sur `api`, `db` et `queue`, avec dépendance conditionnée à l'état sain. 5. Limites mémoire explicites par service, et plafond de concurrence sur le worker [...]. 6. Journalisation en JSON, rotation à 10 Mo et trois fichiers. 7. Conteneurs applicatifs en utilisateur non root, système de fichiers racine en lecture seule. 8. Migrations Prisma jouées par un conteneur d'initialisation avant le démarrage de l'API. »
@@ -4446,7 +4446,7 @@ cli() { vm docker compose exec -T api node apps/api/dist/cli.mjs "$@"; }
 
 | # | Qui | Geste | Attendu | Retour arrière |
 | --- | --- | --- | --- | --- |
-| 0.1 | Franck | Constater la sortie du lot 0 (au moins 60 énoncés annotés, typologie stable) et le branchement du prompt validé (version publiée sous `prompts/`, par exemple `tri/v2`) | Version de prompt connue, pour `PROMPT_VERSION` | — |
+| 0.1 | Franck | Confirmer la version de prompt en service : `tri/v1` (décision 22, pas d'attente de la sortie du lot 0) | Version de prompt connue, pour `PROMPT_VERSION` | — |
 | 0.2 | Franck | Branche `lot1-c-deploiement` relue et fusionnée dans `main` | CI verte sur `main` (`gh run list --branch main --limit 1`) | — |
 | 0.3 | Franck | Répondre aux « Questions pour Franck » (fin du plan) | Décisions notées | — |
 
