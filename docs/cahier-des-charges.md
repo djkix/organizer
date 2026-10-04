@@ -585,28 +585,32 @@ Pas d'environnement de recette intermédiaire : le volume ne le justifie pas. Le
 
 ## Déploiement Docker
 
-Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (VM 105, décision 13), publiée par le Nginx Proxy Manager existant (conteneur 101). Aucun conteneur n'expose de port sur l'extérieur.
+Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (VM 105, décision 13), publiée par le Nginx Proxy Manager existant (conteneur 101). Seul le conteneur `web` publie un port (8080, sur l'adresse de la VM), pour le reverse proxy ; rien n'est exposé à l'extérieur.
 
-Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dockge `organizer` (`/opt/stacks/organizer/`), à côté de son `.env`, du `Caddyfile` et du dossier `secrets/`.
+Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dockge `organizer` (`/opt/stacks/organizer/`), à côté de son `.env` et du dossier `secrets/` (le Caddyfile est dans l'image `web`).
 
 ### Services
 
 | Service | Image | Ports internes | Volumes | Dépendances |
 | --- | --- | --- | --- | --- |
 | `api` | construite | 3000 | `audio` | `db`, `queue`, API Telegram, FCM |
-| `worker` | construite | — | `audio`, `models-emb` | `db`, `queue`, API Gemini |
-| `scheduler` | construite | — | `audio` (rotation) | `db`, `queue`, API Google Agenda |
-| `web` | `caddy:2-alpine` | 80 | `web-dist` | — |
+| `worker` | construite | — | `audio` (lecture seule) | `db`, `queue`, API Gemini |
+| `web` | `ghcr.io/djkix/organizer-web` (Caddy 2.10, coquille de la PWA incluse) | 8080 | — | `api` |
+| `sortie` | `ghcr.io/djkix/organizer-sortie` (Squid) | 3128 | — | Internet, liste fermée |
 | `db` | `pgvector/pgvector:pg17` | 5432 | `pgdata` | — |
 | `queue` | `valkey/valkey:8-alpine` | 6379 | `valkeydata` | — |
 
-Six services, contre neuf dans le plan initial : les conteneurs de transcription et de modèle local ont disparu, et avec eux 9 Go de modèles et les deux tiers de la RAM.
+Six services au lot 1 (api, worker, web, sortie, db, queue), plus le conteneur de migrations, contre neuf dans le plan initial : les conteneurs de transcription et de modèle local ont disparu, et avec eux 9 Go de modèles et les deux tiers de la RAM.
+
+Le `scheduler` rejoint la stack au lot 2, avec Google Agenda et la rotation de l'audio.
 
 ### Réseaux
 
-- `edge` : uniquement `api` et `web`, seul réseau joignable par le reverse proxy.
-- `core` : `api`, `worker`, `scheduler`, `db`, `queue`. Aucune sortie Internet.
-- `egress` : `api`, `worker` et `scheduler` uniquement, chacun avec une sortie HTTPS restreinte à une liste fermée de domaines. Aucun autre domaine, aucun autre conteneur.
+- `publication` : `web` seul, porte le seul port publié (8080, sur l'adresse de la VM), joint par le reverse proxy.
+- `edge` : `web` et `api`, interne.
+- `core` : `api`, `worker`, `db`, `queue`, migrations. Aucune sortie Internet.
+- `sortie` : `api` et `worker` vers le proxy sortant `sortie`, interne.
+- `egress` : le proxy sortant seul. Il n'ouvre à chaque conteneur que sa liste fermée de domaines, en HTTPS.
 
 | Conteneur | Domaines autorisés | Usage |
 | --- | --- | --- |
@@ -622,10 +626,9 @@ L'API est le seul point d'envoi de messages vers L : le scheduler déclenche une
 | --- | --- | --- | --- |
 | `pgdata` | Base complète | 2 à 5 Go à 1 an | Lot 2 |
 | `audio` | Enregistrements d'origine | 40 Go maximum, tenu par la rotation | Lot 2 |
-| `models-emb` | Modèle d'embeddings | 130 Mo | Aucune, retéléchargeable |
 | `valkeydata` | File de jobs | Moins de 1 Go | Aucune, reconstructible |
-| `web-dist` | Build du front | 50 Mo | Aucune |
-| `caddy-data` | État de Caddy | Quelques Mo | Aucune |
+
+La coquille de la PWA est dans l'image `web` : une mise à jour d'image la remplace.
 
 Des volumes Docker nommés, sans préparation sur l'hôte. Le plafond de 50 Go est tenu par la rotation de l'audio, pas par le système de fichiers.
 
@@ -633,8 +636,8 @@ Des volumes Docker nommés, sans préparation sur l'hôte. Le plafond de 50 Go e
 
 | Sous-domaine | Cible interne | Exposition |
 | --- | --- | --- |
-| `organizer.djkix.ovh` | `web:80` puis `api:3000` sur `/api` | Publique, HTTPS |
-| `organizer-bot.djkix.ovh` | `api:3000` sur `/telegram/webhook` | Publique, restreinte aux plages IP Telegram |
+| `organizer.djkix.ovh` | `web:8080` (Caddy), qui relaie `/api` vers `api:3000` | Publique, HTTPS |
+| `organizer-bot.djkix.ovh` | `web:8080`, qui ne relaie que `/telegram/webhook` | Publique, restreinte aux plages IP Telegram |
 
 Bot Telegram : `@organizer_lud_bot`. API Gemini : projet Google Cloud sur le compte Google personnel de Franck, palier payé en Prépaiement sans recharge automatique, plus un plafond de dépenses appliqué à 9 € par mois sur la Gemini API, alertes à 50, 80 et 100 %. Les identifiants de compte restent hors du dépôt.
 
@@ -776,7 +779,7 @@ Objectifs de reprise, à partir du lot 2 : RPO de 24 heures, RTO de 4 heures. Un
 | Disponibilité de `organizer.djkix.ovh` | 2 échecs consécutifs | Uptime Kuma vers Telegram admin |
 | Profondeur de la file | Plus de 50 jobs en attente | Telegram admin |
 | Jobs en échec | Plus de 3 par heure | Telegram admin |
-| Taille de la stack | Audio au-dessus de 40 Go malgré la rotation, ou base au-dessus de 8 Go | Telegram admin |
+| Taille de la stack | Audio au-dessus de 30 Go tant que la rotation n'est pas livrée (40 Go ensuite), ou base au-dessus de 8 Go | Telegram admin |
 | Latence de classification | Moyenne supérieure à 120 s sur 1 heure | Telegram admin |
 | Crédit Gemini épuisé | Première réponse HTTP 402 | Telegram admin |
 | Aucune capture reçue | 10 jours | Information, sans alerte |
@@ -824,7 +827,7 @@ Le système est dimensionné pour deux utilisateurs et une cinquantaine de captu
 | RAM libre | 2 Go | 3 Go |
 | Espace pour les volumes | 50 Go | 50 Go |
 
-Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo pour le worker et son modèle d'embeddings, 256 Mo pour le scheduler, 128 Mo pour la file, 64 Mo pour le front, soit environ 2,7 Go au total. À ce volume, deux utilisatrices et une cinquantaine de captures par jour, c'est suffisant. Déporter l'intelligence sur Gemini évite les 16 Go qu'exigeraient des modèles locaux. La stack tourne sur l'hôte Docker existant (décision 13), sans VM dédiée : les limites mémoire par service et les réseaux Docker l'isolent des autres services de l'hôte.
+Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo pour le worker et son modèle d'embeddings, 256 Mo pour le scheduler, 128 Mo pour la file, 64 Mo pour le front, 64 Mo pour le proxy sortant, soit environ 2,7 Go au total. À ce volume, deux utilisatrices et une cinquantaine de captures par jour, c'est suffisant. Déporter l'intelligence sur Gemini évite les 16 Go qu'exigeraient des modèles locaux. La stack tourne sur l'hôte Docker existant (décision 13), sans VM dédiée : les limites mémoire par service et les réseaux Docker l'isolent des autres services de l'hôte.
 
 ### Performance
 
@@ -897,6 +900,7 @@ Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses
 - Fils de pensées, rattachement vectoriel, vue Pensées avec filtres.
 - Question de désambiguïsation dans Telegram.
 - Sauvegarde vers le NAS et test de restauration complète.
+- Scheduler et rotation de l'audio ordinaire au-delà de 40 Go.
 
 ### Lot 3 — Confort
 
