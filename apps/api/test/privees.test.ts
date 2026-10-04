@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { request as httpRequest } from 'node:http';
 import { Module } from '@nestjs/common';
 import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
@@ -14,6 +15,7 @@ import { AUTH, PRIVEES } from '../src/jetons.js';
 import { PriveesController } from '../src/privees/privees.controller.js';
 import { CapturesPriveesService, FormatRefuse } from '../src/privees/privees.service.js';
 import { AudioIllisible, ServeurOccupe, type Reencodeur } from '../src/privees/reencodeur.js';
+import { TAILLE_MAX_AUDIO } from '../src/http.js';
 import { demarrerAppTest } from './aides-http.js';
 
 const prisma = creerPrisma();
@@ -261,21 +263,65 @@ describe('/api/captures/privees : bornes', () => {
     }
   });
 
-  it('sans cookie de session, 401 avant de lire le corps', async () => {
+  async function avecApp<T>(auth: AuthService, f: (url: string) => Promise<T>): Promise<T> {
     class M {}
     Module({ controllers: [PriveesController], providers: [
-      { provide: PRIVEES, useValue: service }, { provide: AUTH, useValue: new AuthService(prisma) }, SessionGuard,
+      { provide: PRIVEES, useValue: service }, { provide: AUTH, useValue: auth }, SessionGuard,
     ] })(M);
     const app = await demarrerAppTest(M);
     try {
-      const r = await fetch(`${app.url}/api/captures/privees`, {
-        method: 'POST', headers: { 'content-type': 'audio/webm' }, body: Buffer.alloc(1024),
-      });
-      expect(r.status).toBe(401);
-      expect((await r.json()).message).toBe('Connecte-toi pour continuer.');
-      expect(reencodeur.appels).toBe(0);
+      return await f(app.url);
     } finally {
       await app.fermer();
     }
+  }
+
+  /** Corps sans fin (chunked) : seule une réponse avant la fin de l'envoi peut conclure. */
+  const statutSansFinDeCorps = (url: string, cookie?: string): Promise<number> =>
+    new Promise((resoudre, rejeter) => {
+      const req = httpRequest(url + '/api/captures/privees', {
+        method: 'POST', headers: { 'content-type': 'audio/webm', 'transfer-encoding': 'chunked', ...(cookie ? { cookie } : {}) },
+      }, (res) => { res.resume(); resoudre(res.statusCode ?? 0); req.destroy(); });
+      req.on('error', rejeter);
+      req.write(Buffer.alloc(1024));
+      setTimeout(() => rejeter(new Error('aucune réponse avant la fin du corps')), 3000).unref();
+    });
+
+  const trop = () => Buffer.alloc(TAILLE_MAX_AUDIO + 1024);
+
+  it('sans cookie, 401 et non 413, même pour un corps trop gros', async () => {
+    await avecApp(new AuthService(prisma), async (url) => {
+      const r = await fetch(`${url}/api/captures/privees`, { method: 'POST', headers: { 'content-type': 'audio/webm' }, body: trop() }).catch(() => null);
+      // Réponse envoyée avant la fin du corps : le client peut voir 401 ou une coupure, jamais 413.
+      if (r) {
+        expect(r.status).toBe(401);
+        expect((await r.json()).message).toBe('Connecte-toi pour continuer.');
+      }
+      expect(await statutSansFinDeCorps(url)).toBe(401);
+      expect(reencodeur.appels).toBe(0);
+    });
+  });
+
+  it('avec un cookie forgé, 401 avant de lire le corps', async () => {
+    await avecApp(new AuthService(prisma), async (url) => {
+      expect(await statutSansFinDeCorps(url, `${NOM_COOKIE}=forge`)).toBe(401);
+      const r = await fetch(`${url}/api/captures/privees`, {
+        method: 'POST', headers: { cookie: `${NOM_COOKIE}=forge`, 'content-type': 'audio/webm' }, body: trop(),
+      }).catch(() => null);
+      if (r) expect(r.status).toBe(401);
+      expect(reencodeur.appels).toBe(0);
+    });
+  });
+
+  it('avec une session valide, un corps trop gros reste refusé (413)', async () => {
+    const auth = new AuthService(prisma);
+    await auth.definirMotDePasse('l', 'un mot de passe assez long');
+    const s = await auth.ouvrirSession('l', 'un mot de passe assez long');
+    await avecApp(auth, async (url) => {
+      const r = await fetch(`${url}/api/captures/privees`, {
+        method: 'POST', headers: { cookie: `${NOM_COOKIE}=${s!.jeton}`, 'content-type': 'audio/webm' }, body: trop(),
+      });
+      expect(r.status).toBe(413);
+    });
   });
 });

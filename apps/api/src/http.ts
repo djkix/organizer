@@ -2,7 +2,9 @@ import type { Server } from 'node:http';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DELAI_ENVOI_PRIVE_MAX_MS, lireVar, TAILLE_MAX_CAPTURE_PRIVEE } from '@organizer/shared';
 import { json, raw, type NextFunction, type Request, type Response } from 'express';
+import type { AuthService } from './auth/auth.service.js';
 import { lireCookie, NOM_COOKIE } from './auth/cookies.js';
+import { AUTH } from './jetons.js';
 import { LimiteurDebit } from './auth/limiteur.js';
 import { erreurDeCorps, FiltreSansContenu } from './erreurs.js';
 
@@ -48,12 +50,16 @@ export function configurerApp(app: NestExpressApplication): void {
   const audio = raw({ type: () => true, limit: TAILLE_MAX_AUDIO });
   app.use('/api/captures/privees', (req: Request, res: Response, suite: NextFunction) => {
     if (req.method !== 'POST' || req.path !== '/') return suite();
-    // Sans cookie de session, inutile de lire jusqu'à 30 Mio : refus avant le corps.
-    if (!lireCookie(req.headers.cookie, NOM_COOKIE)) {
+    // Session valide exigée avant de lire jusqu'à 30 Mio : même vérification que SessionGuard.
+    const jeton = lireCookie(req.headers.cookie, NOM_COOKIE);
+    const refuser = (): void => {
       res.status(401).json({ message: 'Connecte-toi pour continuer.' });
-      return;
-    }
-    audio(req, res, suite);
+    };
+    if (!jeton) return refuser();
+    app.get<AuthService>(AUTH, { strict: false }).utilisateurDeSession(jeton).then(
+      (u) => (u ? audio(req, res, suite) : refuser()),
+      suite,
+    );
   });
   app.use(json({ limit: '1mb' }));
   app.use(erreurDeCorps);
