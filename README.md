@@ -25,7 +25,7 @@ Livré sur la branche `lot1-b2-pwa` :
 
 - la PWA (`apps/web`) : connexion, À faire, cochage avec annulation, correction, À revoir, enregistreur et vue Privé, file hors ligne, installation Android avec raccourcis.
 
-Le déploiement est prêt (plan 1-C) : images, stack de production, CI. La mise en service attend la sortie du lot 0.
+Le déploiement est prêt (plan 1-C) : images, stack de production, CI. La mise en service est directe, sans attendre la sortie du lot 0 (décision 22) : prompt `tri/v1`, affiné à l'usage.
 
 ## Principes
 
@@ -286,7 +286,7 @@ Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.
 
 - [Exploitation](docs/exploitation.md) : stack, commandes, Nginx Proxy Manager, mise à jour, secrets, supervision.
 - [Cahier des charges](docs/cahier-des-charges.md) : la spécification complète.
-- [Décisions](docs/decisions.md) : les 21 décisions fermées.
+- [Décisions](docs/decisions.md) : les 22 décisions fermées.
 - [Guide d'annotation](docs/guide-annotation.md) : format du corpus du lot 0.
 - [Prompts](prompts/README.md) : versions, variables, schéma de sortie.
 - [Outil de relecture](tools/relecture/README.md) : relire les captures du banc d'essai.
