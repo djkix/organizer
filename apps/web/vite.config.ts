@@ -1,10 +1,37 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { manifeste } from './src/lib/pwa/manifeste';
+import { entetesPreview } from './scripts/entetes.mjs';
+
+// vite preview sert la construction avec les en-têtes de production : les e2e tournent sous la vraie CSP.
+// `preview.headers` ne suffit pas : le serveur de prévisualisation de SvelteKit répond avant lui.
+const entetesProduction: Plugin = {
+  name: 'organizer:entetes-production',
+  configurePreviewServer(serveur) {
+    const entetes = entetesPreview();
+    serveur.middlewares.use((_req, res, suite) => {
+      for (const [nom, valeur] of Object.entries(entetes)) res.setHeader(nom, valeur);
+      suite();
+    });
+  },
+};
+
+// L'annonceur de navigation de SvelteKit (accessibilité) porte un attribut style que la CSP bloque :
+// on le retire à la compilation, sa règle vit dans app.css (#svelte-announcer).
+const annonceurSansStyleEnLigne: Plugin = {
+  name: 'organizer:annonceur-sans-style',
+  enforce: 'pre',
+  transform(code, id) {
+    if (!id.endsWith('root.svelte') || !code.includes('id="svelte-announcer"')) return null;
+    return code.replace(/(id="svelte-announcer"[^>]*?)\s+style="[^"]*"/, '$1');
+  },
+};
 
 export default defineConfig({
   plugins: [
+    entetesProduction,
+    annonceurSansStyleEnLigne,
     sveltekit(),
     SvelteKitPWA({
       strategies: 'injectManifest',
