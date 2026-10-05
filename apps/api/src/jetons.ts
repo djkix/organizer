@@ -9,3 +9,5 @@ export const ITEMS = Symbol('ITEMS');
 export const PRIVEES = Symbol('PRIVEES');
 export const REENCODEUR = Symbol('REENCODEUR');
 export const EMPREINTES = Symbol('EMPREINTES');
+export const AGENDA = Symbol('AGENDA');
+export const QUEUE_AGENDA = Symbol('QUEUE_AGENDA');

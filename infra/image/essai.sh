@@ -39,6 +39,7 @@ NPM_IP=127.0.0.1
 IP_PUBLICATION=127.0.0.1
 DOMAINE_BOT=bot.essai
 DOMAINE_APP=organizer.essai
+GOOGLE_CLIENT_ID=essai.apps.googleusercontent.com
 EOF
 
 dc up -d || echec "démarrage de la stack"

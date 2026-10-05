@@ -26,7 +26,7 @@ export interface ClientValkey {
 
 const cle = (type: TypeDefi, defi: string): string => `organizer:defi:${type}:${defi}`;
 
-function borner<T>(attente: Promise<T>, ms: number): Promise<T> {
+export function borner<T>(attente: Promise<T>, ms: number): Promise<T> {
   let minuteur: NodeJS.Timeout | undefined;
   const delai = new Promise<never>((_ok, non) => { minuteur = setTimeout(() => non(new DelaiDepasse()), ms); });
   return Promise.race([attente, delai]).finally(() => clearTimeout(minuteur));

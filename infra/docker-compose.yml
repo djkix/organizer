@@ -67,6 +67,9 @@ services:
       # Empreinte (WebAuthn, décision 23) : identifiant de RP et origine exacte de la PWA.
       WEBAUTHN_RP_ID: ${DOMAINE_APP:?}
       WEBAUTHN_ORIGIN: https://${DOMAINE_APP:?}
+      # Google Agenda : l'API prépare l'adresse de consentement sans jamais joindre Google (identifiant public, pas un secret).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID vide, renseigner l'identifiant du client OAuth dans .env}
+      GOOGLE_REDIRECT_URI: https://${DOMAINE_APP:?}/api/agenda/retour
     secrets: [telegram_bot_token, telegram_webhook_secret]
     volumes:
       - audio:/data/audio
