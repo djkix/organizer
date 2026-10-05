@@ -51,12 +51,11 @@ describe('travailSynchro', () => {
   it('panne de base : erreur d\'origine, réessayable (pas Unrecoverable)', async () => {
     const { uid } = await compteConnecte(prisma, faux);
     const itemId = await actionDatee(prisma, uid);
-    const d = depsSynchro(prisma, faux);
     const panne = new Error('Can\'t reach database server');
-    vi.spyOn(d.prisma.action, 'findUnique').mockRejectedValue(panne);
-    vi.spyOn(d.prisma.action, 'findUniqueOrThrow').mockRejectedValue(panne);
+    // Faux prisma isolé : un spyOn sur le client partagé abîmait ses délégués pour les tests suivants.
+    const enPanne = { action: { findUnique: vi.fn().mockRejectedValue(panne), findUniqueOrThrow: vi.fn().mockRejectedValue(panne) } };
+    const d = { ...depsSynchro(prisma, faux), prisma: enPanne as never };
     const err = await travailSynchro(d)(itemId).catch((e: unknown) => e);
-    vi.restoreAllMocks();
     expect(err).toBe(panne);
     expect(err).not.toBeInstanceOf(UnrecoverableError);
   });
