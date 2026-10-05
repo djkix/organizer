@@ -31,7 +31,7 @@ export class IngestionService {
    */
   private async versAudio(f: { donnees: Buffer; extension: string }, mimeCapture: string | null): Promise<AudioPret> {
     if (!mimeCapture?.startsWith('video/')) return { ...f, mime: null };
-    return { donnees: await this.reencodeur.versOpus(f.donnees), extension: 'ogg', mime: 'audio/ogg' };
+    return { donnees: await this.reencodeur.versOpus(f.donnees, true), extension: 'ogg', mime: 'audio/ogg' };
   }
 
   /**
