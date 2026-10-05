@@ -40,7 +40,7 @@ export class MagasinDefisValkey implements MagasinDefis {
     await borner(this.valkey.set(cle(type, defi), valeur, 'PX', DUREE_DEFI_MS), this.delaiMs);
   }
 
-  prendre(type: TypeDefi, defi: string): Promise<string | null> {
+  async prendre(type: TypeDefi, defi: string): Promise<string | null> {
     return borner(this.valkey.getdel(cle(type, defi)), this.delaiMs);
   }
 }

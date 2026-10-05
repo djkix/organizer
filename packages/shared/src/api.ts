@@ -39,6 +39,9 @@ export interface CorpsEtiquette { etiquette: string | null }
 export interface ReponseErreur { message: string }
 export interface ReponseDepotPrive { id: string }
 
+/** Une clé d'accès (empreinte) d'un compte, telle que Réglages la liste. `identifiant` est public. */
+export interface ResumeEmpreinte { id: string; identifiant: string; creeLe: string; utiliseeLe: string | null }
+
 /**
  * En-têtes du dépôt d'une capture privée (corps : l'audio brut).
  * L'identifiant (UUID) rend le rejeu idempotent ; sans lui, un rejeu crée un doublon.
