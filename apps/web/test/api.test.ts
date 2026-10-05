@@ -119,4 +119,26 @@ describe('client API', () => {
       vi.useRealTimers();
     }
   });
+  it('empreinte : routes, méthodes, et un 401 de connexion ne renvoie pas vers la connexion', async () => {
+    let appelee = 0;
+    const { f, appels } = fauxFetch([
+      Response.json({ challenge: 'defi' }),
+      Response.json({ message: 'Empreinte non reconnue. Essaie ton mot de passe.' }, { status: 401 }),
+      Response.json([]),
+      vide(),
+    ]);
+    const api = creerClientApi({ fetch: f, surNonConnecte: () => { appelee++; } });
+    expect(await api.optionsConnexionEmpreinte()).toEqual({ challenge: 'defi' });
+    const e = await api.connecterParEmpreinte({
+      id: 'a', rawId: 'a', type: 'public-key', clientExtensionResults: {}, response: { clientDataJSON: 'e30', authenticatorData: 'AA', signature: 'AA' },
+    }).catch((x: unknown) => x);
+    expect((e as ErreurApi).message).toBe('Empreinte non reconnue. Essaie ton mot de passe.');
+    expect(await api.empreintes()).toEqual([]);
+    await api.retirerEmpreinte('a/b');
+    expect(appels.map((a) => `${a.init.method} ${a.url}`)).toEqual([
+      'POST /api/session/empreinte/options', 'POST /api/session/empreinte', 'GET /api/empreintes', 'DELETE /api/empreintes/a%2Fb',
+    ]);
+    expect(entetes(appels[1]!.init).get('content-type')).toBe('application/json');
+    expect(appelee).toBe(0);
+  });
 });

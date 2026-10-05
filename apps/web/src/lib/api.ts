@@ -1,7 +1,10 @@
 import type {
   CorpsConnexion, CorpsCorrection, CorpsEtiquette, JourPrive, ReponseErreur,
-  VueARevoir, VueAujourdhui, VueHorizons, VueSemaine,
+  ResumeEmpreinte, VueARevoir, VueAujourdhui, VueHorizons, VueSemaine,
 } from '@organizer/shared/api';
+import type {
+  AuthenticationResponseJSON, PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON, RegistrationResponseJSON,
+} from '@simplewebauthn/browser';
 import { MESSAGES } from './messages.js';
 
 export class ErreurApi extends Error {
@@ -22,6 +25,12 @@ export interface ClientApi {
   connecter(c: CorpsConnexion): Promise<void>;
   deconnecter(): Promise<void>;
   moi(): Promise<{ nom: string }>;
+  optionsConnexionEmpreinte(): Promise<PublicKeyCredentialRequestOptionsJSON>;
+  connecterParEmpreinte(r: AuthenticationResponseJSON): Promise<void>;
+  optionsInscriptionEmpreinte(): Promise<PublicKeyCredentialCreationOptionsJSON>;
+  inscrireEmpreinte(r: RegistrationResponseJSON): Promise<ResumeEmpreinte>;
+  empreintes(): Promise<ResumeEmpreinte[]>;
+  retirerEmpreinte(cleId: string): Promise<void>;
   aujourdhui(): Promise<VueAujourdhui>;
   semaine(): Promise<VueSemaine>;
   horizons(): Promise<VueHorizons>;
@@ -35,7 +44,7 @@ export interface ClientApi {
 
 export interface OptionsClient {
   fetch?: typeof fetch;
-  /** Appelé sur un 401, sauf pour connecter, deconnecter et moi. */
+  /** Appelé sur un 401, sauf pour connecter, deconnecter, moi et la connexion par empreinte. */
   surNonConnecte?: () => void;
 }
 
@@ -95,6 +104,12 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
     connecter: (c) => sansCorps(appeler('POST', '/api/session', c, false)),
     deconnecter: () => sansCorps(appeler('DELETE', '/api/session', undefined, false)),
     moi: () => json(appeler('GET', '/api/session/moi', undefined, false)),
+    optionsConnexionEmpreinte: () => json(appeler('POST', '/api/session/empreinte/options', undefined, false)),
+    connecterParEmpreinte: (r) => sansCorps(appeler('POST', '/api/session/empreinte', r, false)),
+    optionsInscriptionEmpreinte: () => json(appeler('POST', '/api/empreintes/options')),
+    inscrireEmpreinte: (r) => json(appeler('POST', '/api/empreintes', r)),
+    empreintes: () => json(appeler('GET', '/api/empreintes')),
+    retirerEmpreinte: (cleId) => sansCorps(appeler('DELETE', `/api/empreintes/${id(cleId)}`)),
     aujourdhui: () => json(appeler('GET', '/api/vues/aujourdhui')),
     semaine: () => json(appeler('GET', '/api/vues/semaine')),
     horizons: () => json(appeler('GET', '/api/vues/horizons')),

@@ -1,7 +1,7 @@
 import type { LigneAction } from '@organizer/shared/api';
 import { describe, expect, it } from 'vitest';
 import {
-  avantLe, chrono, duree, echeanceEnClair, heureLocale, jourEnClair, libelleBorne, libelleJour,
+  ajouteeLe, avantLe, chrono, duree, echeanceEnClair, heureLocale, jourEnClair, libelleBorne, libelleJour,
   libelleMois, metaLigne, moisVoisin, momentEnClair, titreDuJour,
 } from '../src/lib/format.js';
 
@@ -83,5 +83,8 @@ describe('durées et mois', () => {
     expect(libelleMois('2026-10')).toBe('Octobre 2026');
     expect(moisVoisin('2026-01', -1)).toBe('2025-12');
     expect(moisVoisin('2026-12', 1)).toBe('2027-01');
+  });
+  it('ajouteeLe : le jour civil local de l\'activation', () => {
+    expect(ajouteeLe('2026-10-05T22:30:00.000Z', 'Europe/Paris')).toBe('Ajoutée le mardi 6 octobre');
   });
 });
