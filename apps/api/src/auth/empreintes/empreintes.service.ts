@@ -13,6 +13,7 @@ export const DELAI_CEREMONIE_MS = 60_000;
 export const MAX_CLES_PAR_COMPTE = 10;
 /** ES256 (toutes les clés Android), puis RS256. */
 const ALGORITHMES = [-7, -257];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class TropDeCles extends Error {
   override name = 'TropDeCles';
@@ -42,7 +43,9 @@ export class EmpreintesService {
       return await verification();
     } catch (err) {
       if (err instanceof DelaiDepasse) throw err;
-      this.journal(`Empreinte refusée (${etape}) : ${(err as Error).message}`);
+      // Jamais le message de la bibliothèque : il reprend le défi et l'origine envoyés par le client.
+      const e = err as Error;
+      this.journal(`Empreinte refusée (${etape}) : ${/counter/i.test(e.message) ? 'compteur' : e.name}`);
       return null;
     }
   }
@@ -84,17 +87,23 @@ export class EmpreintesService {
       expectedOrigin: this.config.origine,
       expectedRPID: this.config.rpId,
       requireUserVerification: true,
+      supportedAlgorithmIDs: ALGORITHMES,
     }));
     if (v === null || !v.verified) return null;
     const { credential, credentialBackedUp } = v.registrationInfo;
     try {
-      const c = await this.prisma.cleAcces.create({
-        data: {
-          identifiant: credential.id, utilisateurId: u.id, clePublique: new Uint8Array(credential.publicKey), creeLe: this.maintenant(),
-          compteur: BigInt(credential.counter), transports: credential.transports ?? [], sauvegardee: credentialBackedUp,
-        },
+      // Plafond recompté ici, sous verrou du compte : des défis émis avant le plafond ne le dépassent pas.
+      const c = await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${u.id}))`;
+        if (await tx.cleAcces.count({ where: { utilisateurId: u.id } }) >= MAX_CLES_PAR_COMPTE) return null;
+        return tx.cleAcces.create({
+          data: {
+            identifiant: credential.id, utilisateurId: u.id, clePublique: new Uint8Array(credential.publicKey), creeLe: this.maintenant(),
+            compteur: BigInt(credential.counter), transports: credential.transports ?? [], sauvegardee: credentialBackedUp,
+          },
+        });
       });
-      return resume(c);
+      return c && resume(c);
     } catch (err) {
       // Même clé déjà gardée (identifiant unique) : refus, pas d'erreur interne.
       if ((err as { code?: string }).code === 'P2002') return null;
@@ -147,6 +156,7 @@ export class EmpreintesService {
 
   /** Faux si la clé n'existe pas ou appartient à un autre compte. */
   async retirer(utilisateurId: string, id: string): Promise<boolean> {
+    if (!UUID.test(id)) return false;
     const { count } = await this.prisma.cleAcces.deleteMany({ where: { id, utilisateurId } });
     return count > 0;
   }
