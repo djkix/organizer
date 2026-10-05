@@ -61,6 +61,18 @@
     </div>
   </section>
 
+  {#if ligne.echeanceType === 'datee'}
+    <section class="carte">
+      <button
+        class="interrupteur" role="switch" aria-checked={ligne.alarme} aria-disabled={envoi}
+        onclick={() => corriger(() => ({ alarme: !ligne.alarme }), ligne.alarme ? MESSAGES.alarmeRetiree : MESSAGES.alarmeActivee)}
+      >
+        <span>{MESSAGES.alarme}</span><span class="curseur" aria-hidden="true"></span>
+      </button>
+      <p class="discret">{MESSAGES.alarmeAide}</p>
+    </section>
+  {/if}
+
   {#if ligne.aAudio}
     <section class="carte lecteur">
       <h3 class="etiquette">Ce que tu as dit</h3>
@@ -96,4 +108,15 @@
     min-height: var(--touch-min); padding: 0 10px; border: 1px solid var(--muted); border-radius: 12px;
     background: var(--surface); color: var(--text);
   }
+  .interrupteur {
+    display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: var(--touch-min); padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left;
+  }
+  .curseur { position: relative; flex: none; width: 44px; height: 26px; border-radius: var(--radius-pill); background: var(--muted); }
+  .curseur::after {
+    content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+    border-radius: var(--radius-pill); background: var(--surface); transition: transform 0.15s;
+  }
+  .interrupteur[aria-checked='true'] .curseur { background: var(--accent); }
+  .interrupteur[aria-checked='true'] .curseur::after { transform: translateX(18px); }
 </style>

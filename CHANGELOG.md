@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- La PWA porte l'interrupteur « Alarme 10 minutes avant » sur un rendez-vous daté, et une section Google Agenda dans Réglages : connecter (écran de Google), état après le retour, refus ou accès décoché dits calmement, déconnecter sans rien effacer dans Google ; e2e sur API simulée (2026-10-05).
 - Après le classement, chaque rendez-vous daté part vers l'agenda ; sur une capture Telegram, le bot propose « Avec alarme » dans un message silencieux en réponse au vocal, une seule fois, seulement si l'agenda est connecté, la capture fraîche et le rendez-vous à venir ; l'appui réécrit le message (« Sans alarme » pour revenir) ; le webhook reçoit les `callback_query` (rejouer `telegram-webhook poser`) (2026-10-05).
 
 ### Modifié

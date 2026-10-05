@@ -66,6 +66,7 @@ export function serveurEmpreinte(etat: { connecte: boolean }): { table: Table; c
     },
     'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [], suggestions: [] }),
     'GET /api/empreintes': (r) => r.fulfill({ json: cles }),
+    'GET /api/agenda': (r) => r.fulfill({ json: { etat: 'deconnecte', erreur: null } }),
     'POST /api/empreintes/options': async (r) => {
       const o = await generateRegistrationOptions({
         rpName: 'Organizer', rpID: RP_ID, userName: 'test', userID: new TextEncoder().encode(COMPTE), attestationType: 'none',

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import type { ResumeEmpreinte } from '@organizer/shared/api';
+  import { attendreIssue, lireRetour, messageRetour, vueAgenda, type VueAgenda } from '$lib/agenda';
   import { api, garde } from '$lib/client';
   import Icone from '$lib/composants/Icone.svelte';
   import { CHEMINS, FUSEAU } from '$lib/config';
@@ -25,7 +26,54 @@
   const iciActive = $derived(ici !== null && (ici === CLE_INCONNUE || cles.some((c) => c.identifiant === ici)));
   const appareil = (c: ResumeEmpreinte): string => (c.identifiant === ici ? MESSAGES.cetAppareil : MESSAGES.autreAppareil);
 
+  let vueAg = $state<VueAgenda | null>(null);
+  let messageAgenda = $state<string | null>(null);
+  let occupeAgenda = $state(false);
+  const dormir = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+  async function chargerAgenda(): Promise<void> {
+    const retour = lireRetour(location.search);
+    messageAgenda = retour ? messageRetour(retour) : null;
+    try {
+      if (retour === 'retour') vueAg = vueAgenda({ etat: 'en_cours', erreur: null });
+      // L'adresse n'est nettoyée qu'après le premier rendu, une fois le routeur prêt.
+      await tick();
+      if (retour) history.replaceState(history.state, '', CHEMINS.reglages);
+      const r = retour === 'retour' ? await attendreIssue(api, dormir) : await api.agenda();
+      vueAg = vueAgenda(r);
+      if (r.etat === 'en_cours') messageAgenda = MESSAGES.agendaAttente;
+    } catch {
+      messageAgenda = MESSAGES.serveurIndisponible;
+    }
+  }
+
+  async function connecterAgenda(): Promise<void> {
+    occupeAgenda = true;
+    messageAgenda = null;
+    try {
+      const { url } = await api.connecterAgenda();
+      location.assign(url);
+    } catch (e) {
+      messageAgenda = e instanceof Error ? e.message : MESSAGES.serveurIndisponible;
+      occupeAgenda = false;
+    }
+  }
+
+  async function deconnecterAgenda(): Promise<void> {
+    occupeAgenda = true;
+    messageAgenda = null;
+    try {
+      await api.deconnecterAgenda();
+      vueAg = vueAgenda(await attendreIssue(api, dormir));
+      messageAgenda = MESSAGES.agendaGarde;
+    } catch {
+      messageAgenda = MESSAGES.serveurIndisponible;
+    }
+    occupeAgenda = false;
+  }
+
   onMount(async () => {
+    void chargerAgenda();
     disponible = ceremoniesNavigateur.disponible();
     ici = memo.lire();
     try {
@@ -102,6 +150,17 @@
     <button class="bouton activer" onclick={activer} disabled={occupe}>{MESSAGES.activerEmpreinte}</button>
   {/if}
   <p class="discret message" aria-live="polite">{messageEmpreinte ?? ''}</p>
+  <h2 class="groupe">Google Agenda</h2>
+  <div class="carte agenda">
+    <p>{vueAg?.ligne ?? ''}</p>
+    <p class="discret">{MESSAGES.agendaSansPensees}</p>
+  </div>
+  {#if vueAg?.bouton === 'connecter'}
+    <button class="bouton activer" onclick={connecterAgenda} disabled={occupeAgenda}>{MESSAGES.connecterAgenda}</button>
+  {:else if vueAg?.bouton === 'deconnecter'}
+    <button class="lien activer" onclick={deconnecterAgenda} disabled={occupeAgenda}>{MESSAGES.deconnecterAgenda}</button>
+  {/if}
+  <p class="discret message" aria-live="polite">{messageAgenda ?? ''}</p>
   <section class="carte note">
     <h2>{MESSAGES.sortDeLaMaisonTitre}</h2>
     <p>{MESSAGES.sortDeLaMaison1} {MESSAGES.sortDeLaMaison2}</p>
@@ -122,6 +181,7 @@
   .cle { display: grid; gap: 2px; }
   .activer { margin: 0 16px 10px; }
   .message { padding: 0 22px 10px; }
+  .agenda { display: grid; gap: 4px; }
   .note { background: var(--accent-soft); font-size: var(--font-meta); line-height: 1.55; display: grid; gap: 6px; }
   .note h2 { font-size: var(--font-meta); font-weight: 600; }
 </style>

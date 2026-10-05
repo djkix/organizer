@@ -1,5 +1,5 @@
 import type {
-  CorpsConnexion, CorpsCorrection, CorpsEtiquette, JourPrive, ReponseErreur,
+  CorpsConnexion, CorpsCorrection, CorpsEtiquette, JourPrive, ReponseAgenda, ReponseConnexionAgenda, ReponseErreur,
   ResumeEmpreinte, VueARevoir, VueAujourdhui, VueHorizons, VueSemaine,
 } from '@organizer/shared/api';
 import type {
@@ -40,6 +40,9 @@ export interface ClientApi {
   corriger(itemId: string, c: CorpsCorrection): Promise<void>;
   privees(mois: string): Promise<JourPrive[]>;
   etiqueter(captureId: string, etiquette: string | null): Promise<void>;
+  agenda(): Promise<ReponseAgenda>;
+  connecterAgenda(): Promise<ReponseConnexionAgenda>;
+  deconnecterAgenda(): Promise<void>;
 }
 
 export interface OptionsClient {
@@ -114,6 +117,9 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
     semaine: () => json(appeler('GET', '/api/vues/semaine')),
     horizons: () => json(appeler('GET', '/api/vues/horizons')),
     aRevoir: () => json(appeler('GET', '/api/vues/a-revoir')),
+    agenda: () => json(appeler('GET', '/api/agenda')),
+    connecterAgenda: () => json(appeler('POST', '/api/agenda/connexion')),
+    deconnecterAgenda: () => sansCorps(appeler('DELETE', '/api/agenda')),
     cocher: (itemId) => sansCorps(appeler('POST', `/api/items/${id(itemId)}/fait`)),
     decocher: (itemId) => sansCorps(appeler('DELETE', `/api/items/${id(itemId)}/fait`)),
     corriger: (itemId, c) => sansCorps(appeler('PATCH', `/api/items/${id(itemId)}`, c)),
