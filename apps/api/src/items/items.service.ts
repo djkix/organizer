@@ -1,6 +1,7 @@
 import { resolve, sep } from 'node:path';
 import { Prisma, type PrismaClient } from '@organizer/db';
-import type { CorpsCorrection } from '@organizer/shared';
+import { DELAI_SYNCHRO_COCHAGE_MS, type CorpsCorrection } from '@organizer/shared';
+import { SANS_AGENDA, type SignalAgenda } from '../agenda/signal.js';
 
 export type CorrectionItem = CorpsCorrection;
 
@@ -11,6 +12,8 @@ export class ItemIntrouvable extends Error {
 export class CorrectionInvalide extends Error {
   override name = 'CorrectionInvalide';
 }
+
+export const MESSAGE_ALARME_SANS_HEURE = "L'alarme demande un jour et une heure.";
 
 const TYPES_DATES = ['datee', 'jour', 'relative'];
 
@@ -37,16 +40,19 @@ export class ItemsService {
     private readonly prisma: PrismaClient,
     private readonly typesEcheance: string[],
     private readonly maintenant: () => Date = () => new Date(),
+    private readonly agenda: SignalAgenda = SANS_AGENDA,
   ) {}
 
   async cocher(itemId: string): Promise<void> {
     await this.exigerAction(itemId);
     await this.prisma.action.updateMany({ where: { itemId, faitLe: null }, data: { faitLe: this.maintenant() } });
+    await this.agenda.signaler(itemId, DELAI_SYNCHRO_COCHAGE_MS);
   }
 
   async decocher(itemId: string): Promise<void> {
     await this.exigerAction(itemId);
     await this.prisma.action.update({ where: { itemId }, data: { faitLe: null } });
+    await this.agenda.signaler(itemId);
   }
 
   async corriger(itemId: string, c: CorrectionItem): Promise<void> {
@@ -58,6 +64,8 @@ export class ItemsService {
         await tx.item.update({ where: { id: itemId }, data: { nature: c.nature } });
         await tx.correction.create({ data: { itemId, champ: 'nature', ancienneValeur: it.nature, nouvelleValeur: c.nature } });
         if (c.nature === 'action' && !it.action) await tx.action.create({ data: { itemId } });
+        // Hors action, plus d'événement : l'alarme ne survit pas au changement de nature.
+        if (c.nature !== 'action' && it.action?.alarme) await tx.action.update({ where: { itemId }, data: { alarme: false, alarmeExpr: null } });
         if (c.nature === 'pensee' && !it.pensee) await tx.pensee.create({ data: { itemId } });
       }
       if (c.echeance) {
@@ -65,7 +73,8 @@ export class ItemsService {
         if (!this.typesEcheance.includes(c.echeance.type)) throw new CorrectionInvalide("Type d'échéance inconnu.");
         const nouvelle = colonnes(c.echeance);
         const a = await tx.action.findUnique({ where: { itemId } });
-        await tx.action.upsert({ where: { itemId }, create: { itemId, ...nouvelle }, update: { ...nouvelle, echeanceExpr: null } });
+        const sansHeure = nouvelle.echeanceType !== 'datee' ? { alarme: false, alarmeExpr: null } : {};
+        await tx.action.upsert({ where: { itemId }, create: { itemId, ...nouvelle }, update: { ...nouvelle, echeanceExpr: null, ...sansHeure } });
         await tx.correction.create({
           data: {
             itemId, champ: 'echeance',
@@ -79,7 +88,22 @@ export class ItemsService {
           },
         });
       }
+      if (c.alarme !== undefined) {
+        const a = nature === 'action' ? await tx.action.findUnique({ where: { itemId } }) : null;
+        if (!a) throw new CorrectionInvalide('Seule une action a une alarme.');
+        if (c.alarme && (a.echeanceType !== 'datee' || !a.echeanceDate)) throw new CorrectionInvalide(MESSAGE_ALARME_SANS_HEURE);
+        if (a.alarme !== c.alarme) {
+          await tx.action.update({ where: { itemId }, data: { alarme: c.alarme } });
+          // Historisée : les bascules serviront à trouver les formulations qui demandent l'alarme.
+          await tx.correction.create({ data: { itemId, champ: 'alarme', ancienneValeur: a.alarme, nouvelleValeur: c.alarme } });
+        }
+      }
     });
+    await this.agenda.signaler(itemId);
+  }
+
+  definirAlarme(itemId: string, alarme: boolean): Promise<void> {
+    return this.corriger(itemId, { alarme });
   }
 
   async cheminAudio(captureId: string, racine: string): Promise<{ chemin: string; mime: string } | null> {
