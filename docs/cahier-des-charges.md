@@ -509,10 +509,18 @@ L utilise Google Agenda : l'application y écrit directement, via l'API Google C
 | Contenu écrit | Uniquement les échéances `datee` du flux Actions, titre court, sans description |
 | Pensées | Jamais écrites dans l'agenda, sous aucune forme |
 | Rappels | **Aucun par défaut** : l'événement est créé sans notification. 10 minutes avant si L a activé l'alarme sur l'item |
-| Synchronisation | À la création, à la modification, à la suppression ; l'identifiant d'événement est stocké avec l'action |
+| Événement | Titre : texte de l'action, 60 caractères au plus. Durée 30 minutes. Fuseau `Europe/Paris`. Ni description, ni lieu, ni invité |
+| Autorisation, côté serveur | Seul le scheduler parle à Google : échange du code, jeton de rafraîchissement chiffré au repos (AES-256-GCM, clé en secret Docker), révocation à la déconnexion. L'API reçoit le retour OAuth (état et PKCE) sans joindre Google |
+| Synchronisation | À la création, à la modification, à la suppression ; l'identifiant d'événement est stocké avec l'action. Identifiant déterministe tiré de l'item : une écriture rejouée ne crée jamais de doublon. Après un cochage, l'écriture attend 15 s (le temps d'annuler). Un balayage toutes les 10 minutes rattrape tout écart |
 | Sens de lecture | Écriture seule au lot 2. La lecture des créneaux occupés de L est envisagée au lot 3 |
 
 Cocher une action dans l'application supprime l'événement correspondant. Supprimer l'événement dans Google Agenda ne coche rien : l'agenda est une sortie, pas une source. Le flux iCalendar reste documenté comme repli si l'autorisation OAuth pose problème.
+
+Un événement supprimé par L dans Google n'est pas recréé tant que l'action ne change pas ; si elle change (date, heure, texte, alarme), un nouvel événement est créé. Un agenda Organizer supprimé par L n'est pas recréé de lui-même : Réglages propose de le recréer. La déconnexion depuis Réglages révoque l'autorisation et laisse l'agenda et ses événements dans Google.
+
+Le bouton « avec alarme » du bot part dans un message silencieux, juste après le classement, une seule fois par rendez-vous, seulement si la capture a moins de 15 minutes, le rendez-vous est à venir et l'agenda est connecté. Ignoré, il n'est jamais relancé. Quand l'alarme est comprise à la voix, le bot le confirme avec un bouton « Sans alarme ».
+
+Le client OAuth vit dans un projet Google Cloud dédié, sans facturation.
 
 ## Stack technique
 
@@ -597,6 +605,7 @@ Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dock
 | --- | --- | --- | --- | --- |
 | `api` | `ghcr.io/djkix/organizer-api` (Node 22, ffmpeg) | 3000 | `audio` | `db`, `queue`, API Telegram, FCM |
 | `worker` | `ghcr.io/djkix/organizer-worker` (Node 22) | — | `audio` (lecture seule) | `db`, `queue`, API Gemini |
+| `scheduler` | `ghcr.io/djkix/organizer-scheduler` (Node 22) | — | — | `db`, `queue`, API Google Agenda et OAuth |
 | `web` | `ghcr.io/djkix/organizer-web` (Caddy 2.11, coquille de la PWA incluse) | 8080 | — | `api` |
 | `sortie` | `ghcr.io/djkix/organizer-sortie` (Squid) | 3128 | — | Internet, liste fermée |
 | `db` | `pgvector/pgvector:0.8.0-pg17` | 5432 | `pgdata` | — |
@@ -604,14 +613,14 @@ Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dock
 
 Six services au lot 1 (api, worker, web, sortie, db, queue), plus le conteneur de migrations, contre neuf dans le plan initial : les conteneurs de transcription et de modèle local ont disparu, et avec eux 9 Go de modèles et les deux tiers de la RAM.
 
-Le `scheduler` rejoint la stack au lot 2, avec Google Agenda et la rotation de l'audio.
+Le `scheduler` rejoint la stack au lot 2-A, avec Google Agenda ; la rotation de l'audio le rejoint ensuite.
 
 ### Réseaux
 
 - `publication` : `web` seul, porte le seul port publié (7070, sur l'adresse de la VM), joint par le reverse proxy.
 - `edge` : `web` et `api`, interne.
-- `core` : `api`, `worker`, `db`, `queue`, migrations. Aucune sortie Internet.
-- `sortie` : `api` et `worker` vers le proxy sortant `sortie`, interne.
+- `core` : `api`, `worker`, `scheduler`, `db`, `queue`, migrations. Aucune sortie Internet.
+- `sortie` : `api`, `worker` et `scheduler` vers le proxy sortant `sortie`, interne.
 - `egress` : le proxy sortant seul. Il n'ouvre à chaque conteneur que sa liste fermée de domaines, en HTTPS.
 
 | Conteneur | Domaines autorisés | Usage |
@@ -647,7 +656,7 @@ Certificats Let's Encrypt gérés par le Nginx Proxy Manager. HSTS activé, HTTP
 
 ### Principes de configuration
 
-1. Aucun secret dans le fichier Compose : un fichier `.env` hors dépôt, plus les secrets Docker pour les clés VAPID, le jeton du bot et la clé d'API Gemini.
+1. Aucun secret dans le fichier Compose : un fichier `.env` hors dépôt, plus les secrets Docker pour les clés VAPID, le jeton du bot, la clé d'API Gemini, le secret du client OAuth Google et la clé de chiffrement des jetons de l'agenda.
 2. Images épinglées par version majeure et mineure, jamais `latest`.
 3. `restart: unless-stopped` sur tous les services applicatifs.
 4. Sondes de santé sur `api`, `db` et `queue`, avec dépendance conditionnée à l'état sain.
@@ -913,6 +922,8 @@ Critère de sortie : L se reconnecte par l'empreinte sur son téléphone, et le 
 - Fils de pensées, rattachement vectoriel, vue Pensées avec filtres.
 - Question de désambiguïsation dans Telegram.
 - Sauvegarde vers le NAS et test de restauration complète.
+
+Le lot 2 est livré en sous-lots. **Lot 2-A** (version 1.2.0) : scheduler, écriture des rendez-vous dans Google Agenda sans rappel par défaut, alarme activable item par item (à la voix, par le bouton du bot, par l'interrupteur de l'item). La rotation de l'audio, le widget, les notifications push et le reste du lot suivent.
 
 ### Lot 3 — Confort
 
