@@ -13,12 +13,12 @@ import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
 import { TelechargeurTelegram } from './ingestion/telechargeur.js';
-import { AUTH, BOT, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, REDIS, VUES } from './jetons.js';
+import { AUTH, BOT, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, REDIS, REENCODEUR, VUES } from './jetons.js';
 import { ItemsController } from './items/items.controller.js';
 import { ItemsService } from './items/items.service.js';
 import { PriveesController } from './privees/privees.controller.js';
 import { CapturesPriveesService } from './privees/privees.service.js';
-import { ReencodeurBorne, ReencodeurFfmpeg } from './privees/reencodeur.js';
+import { ReencodeurBorne, ReencodeurFfmpeg, type Reencodeur } from './privees/reencodeur.js';
 import { SanteController } from './sante.controller.js';
 import { creerBot } from './telegram/bot.js';
 import { demarrerTelegram, dormir } from './telegram/demarrage.js';
@@ -102,11 +102,11 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     { provide: REDIS, inject: [CONFIG], useFactory: (c: ConfigApi) => new Redis(c.redisUrl, { maxRetriesPerRequest: null }) },
     {
       provide: INGESTION,
-      inject: [CONFIG, PRISMA, REDIS],
-      useFactory: (c: ConfigApi, prisma: PrismaClient, redis: Redis) => {
+      inject: [CONFIG, PRISMA, REDIS, REENCODEUR],
+      useFactory: (c: ConfigApi, prisma: PrismaClient, redis: Redis, reencodeur: Reencodeur) => {
         const file = new FileClassementBullmq(new Queue<JobClassement>(FILE_CLASSEMENT, { connection: redis }));
         const telechargeur = new TelechargeurTelegram(c.telegramToken, creerFetchSortant(), { apiRoot: c.telegramApiRoot });
-        return new IngestionService(prisma, new StockageAudio(c.audioRacine), telechargeur, file);
+        return new IngestionService(prisma, new StockageAudio(c.audioRacine), telechargeur, file, undefined, reencodeur);
       },
     },
     {
@@ -118,7 +118,9 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
     { provide: VUES, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new VuesService(prisma) },
     { provide: ITEMS, inject: [CONFIG, PRISMA], useFactory: (c: ConfigApi, prisma: PrismaClient) => new ItemsService(prisma, c.typesEcheance) },
-    { provide: PRIVEES, inject: [CONFIG, PRISMA], useFactory: (c: ConfigApi, prisma: PrismaClient) => new CapturesPriveesService(prisma, new StockageAudio(c.audioRacine), new ReencodeurBorne(new ReencodeurFfmpeg())) },
+    // Un seul réencodeur borné pour l'API : PWA privée et bulles vidéo Telegram se partagent le plafond de ffmpeg.
+    { provide: REENCODEUR, useFactory: (): Reencodeur => new ReencodeurBorne(new ReencodeurFfmpeg()) },
+    { provide: PRIVEES, inject: [CONFIG, PRISMA, REENCODEUR], useFactory: (c: ConfigApi, prisma: PrismaClient, reencodeur: Reencodeur) => new CapturesPriveesService(prisma, new StockageAudio(c.audioRacine), reencodeur) },
     SessionGuard,
     Cycle,
   ],

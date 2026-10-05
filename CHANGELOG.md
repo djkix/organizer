@@ -6,6 +6,9 @@ Le projet n'a pas encore de version publiée.
 
 ## [Non publié]
 
+### Corrigé
+- Une bulle vidéo Telegram n'envoie plus que son son à Gemini, jamais l'image (2026-10-05).
+
 ### Modifié
 - La stack de dev vit dans `/opt/stacks/organizer-dev`, pilotable par Dockge comme la production (2026-10-04).
 

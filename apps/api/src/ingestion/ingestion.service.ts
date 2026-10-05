@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '@organizer/db';
 import type { CaptureEntrante } from './extraire.js';
 import type { StockageAudio } from './stockage.js';
+import type { Reencodeur } from '../privees/reencodeur.js';
 import { FichierTropGros } from './telechargeur.js';
 
 export interface Telechargeur {
@@ -11,6 +12,9 @@ export interface FileClassement {
   enfiler(captureId: string): Promise<void>;
 }
 
+/** Le son seul d'un média Telegram. Une vidéo (bulle ronde) est réduite à sa piste audio : l'image n'est jamais rangée. */
+export interface AudioPret { donnees: Buffer; extension: string; mime: string | null }
+
 export class IngestionService {
   constructor(
     private readonly prisma: PrismaClient,
@@ -18,7 +22,17 @@ export class IngestionService {
     private readonly telechargeur: Telechargeur,
     private readonly file: FileClassement,
     private readonly journal: (message: string) => void = (m) => console.error(m),
+    private readonly reencodeur: Reencodeur,
   ) {}
+
+  /**
+   * Gemini ne doit jamais recevoir d'image : une vidéo est réencodée en audio Ogg/Opus (ffmpeg borné) avant tout rangement.
+   * Si ffmpeg échoue, l'erreur remonte : rien n'est écrit, la capture reste reprenable.
+   */
+  private async versAudio(f: { donnees: Buffer; extension: string }, mimeCapture: string | null): Promise<AudioPret> {
+    if (!mimeCapture?.startsWith('video/')) return { ...f, mime: null };
+    return { donnees: await this.reencodeur.versOpus(f.donnees), extension: 'ogg', mime: 'audio/ogg' };
+  }
 
   /**
    * Étape 1, avant l'accusé de réception : la capture existe en base. Idempotent.
@@ -58,9 +72,9 @@ export class IngestionService {
     const c = await this.prisma.capture.findUniqueOrThrow({ where: { id } });
     if (!c.prive) throw new Error(`Capture ${id} ordinaire : pas de rangement privé`);
     if (c.audioPath || !c.sourceFichier) return;
-    const f = await this.telechargeur.telecharger(c.sourceFichier);
+    const f = await this.versAudio(await this.telechargeur.telecharger(c.sourceFichier), c.audioMime);
     const audioPath = await this.stockage.ecrire(c.id, c.emisLe, f.donnees, f.extension, 'prive');
-    await this.prisma.capture.update({ where: { id }, data: { audioPath } });
+    await this.prisma.capture.update({ where: { id }, data: { audioPath, ...(f.mime ? { audioMime: f.mime } : {}) } });
   }
 
   /** Étape 2, après l'accusé : audio rangé, job enfilé. Rejouable. */
@@ -68,10 +82,15 @@ export class IngestionService {
     const c = await this.prisma.capture.findUniqueOrThrow({ where: { id } });
     if (c.prive) throw new Error(`Capture ${id} privée : jamais enfilée`);
     if (c.etat !== 'recue') return;
+    // Jamais de job dont le fichier rangé serait une vidéo (reliquat d'avant ce correctif) : visible dans À revoir.
+    if (c.audioPath && c.audioMime?.startsWith('video/')) {
+      await this.prisma.capture.updateMany({ where: { id, etat: 'recue' }, data: { etat: 'a_revoir', erreur: 'media_video' } });
+      return;
+    }
     if (c.sourceFichier && !c.audioPath) {
-      let f: { donnees: Buffer; extension: string };
+      let f: AudioPret;
       try {
-        f = await this.telechargeur.telecharger(c.sourceFichier);
+        f = await this.versAudio(await this.telechargeur.telecharger(c.sourceFichier), c.audioMime);
       } catch (e) {
         if (!(e instanceof FichierTropGros)) throw e;
         // Telegram ne livrera jamais ce fichier : visible dans À revoir, plus jamais retenté.
@@ -79,7 +98,7 @@ export class IngestionService {
         return;
       }
       const audioPath = await this.stockage.ecrire(c.id, c.emisLe, f.donnees, f.extension, 'ordinaire');
-      await this.prisma.capture.update({ where: { id }, data: { audioPath } });
+      await this.prisma.capture.update({ where: { id }, data: { audioPath, ...(f.mime ? { audioMime: f.mime } : {}) } });
     }
     await this.file.enfiler(id);
     // updateMany : le worker a pu classer la capture entre-temps.

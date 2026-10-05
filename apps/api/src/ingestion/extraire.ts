@@ -9,7 +9,7 @@ export interface CaptureEntrante {
 }
 
 export function extraireCapture(m: Message): CaptureEntrante | null {
-  // Une vidéo ronde envoyée par erreur est traitée comme un vocal : Gemini en lit la piste son.
+  // Une vidéo ronde envoyée par erreur est traitée comme un vocal : l'API en extrait le son seul (jamais l'image).
   const media = m.voice ?? m.audio ?? (m.video_note ? { ...m.video_note, mime_type: 'video/mp4' } : undefined);
   // Une légende tient lieu de texte ; les commandes ne se détectent que sur le texte du message.
   const texte = m.text ?? m.caption ?? null;

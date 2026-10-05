@@ -2,7 +2,7 @@ import type { PrismaClient } from '@organizer/db';
 import { FILE_CLASSEMENT, OPTIONS_JOB_CLASSEMENT, type JobClassement } from '@organizer/shared';
 import { UnrecoverableError, Worker, type ConnectionOptions, type Queue } from 'bullmq';
 import { FournisseurIndisponible } from './classement/provider.js';
-import { CapturePriveeRefusee, traiterCapture, type DepsTraitement } from './classement/traiter.js';
+import { CapturePriveeRefusee, MediaVideoRefuse, traiterCapture, type DepsTraitement } from './classement/traiter.js';
 
 export interface DepsWorker extends DepsTraitement {
   connexion: ConnectionOptions;
@@ -30,6 +30,7 @@ export function demarrerWorker(d: DepsWorker): Worker<JobClassement> {
         return issue;
       } catch (e) {
         if (e instanceof CapturePriveeRefusee) throw new UnrecoverableError('capture privée refusée');
+        if (e instanceof MediaVideoRefuse) throw new UnrecoverableError('média vidéo refusé');
         if (e instanceof FournisseurIndisponible) {
           // Indisponibilité, pas un échec : la file s'arrête et garde l'ordre.
           if (!indisponibiliteSignalee) {
