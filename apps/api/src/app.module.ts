@@ -7,13 +7,16 @@ import { Redis } from 'ioredis';
 import { demarrerAlertes } from './alertes.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
+import { EmpreintesController } from './auth/empreintes/empreintes.controller.js';
+import { MagasinDefisValkey } from './auth/empreintes/defis.js';
+import { EmpreintesService } from './auth/empreintes/empreintes.service.js';
 import { SessionGuard } from './auth/session.guard.js';
 import { lireConfigApi, type ConfigApi } from './config.js';
 import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
 import { TelechargeurTelegram } from './ingestion/telechargeur.js';
-import { AUTH, BOT, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, REDIS, REENCODEUR, VUES } from './jetons.js';
+import { AUTH, BOT, EMPREINTES, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, REDIS, REENCODEUR, VUES } from './jetons.js';
 import { ItemsController } from './items/items.controller.js';
 import { ItemsService } from './items/items.service.js';
 import { PriveesController } from './privees/privees.controller.js';
@@ -95,7 +98,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
 }
 
 @Module({
-  controllers: [TelegramController, AuthController, VuesController, ItemsController, PriveesController, SanteController],
+  controllers: [TelegramController, AuthController, EmpreintesController, VuesController, ItemsController, PriveesController, SanteController],
   providers: [
     { provide: CONFIG, useFactory: lireConfigApi },
     { provide: PRISMA, useFactory: () => creerPrisma() },
@@ -116,6 +119,11 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
         creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion }, { client: optionsClientTelegram(c.telegramApiRoot) }),
     },
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
+    {
+      provide: EMPREINTES,
+      inject: [CONFIG, PRISMA, REDIS],
+      useFactory: (c: ConfigApi, prisma: PrismaClient, redis: Redis) => new EmpreintesService(prisma, new MagasinDefisValkey(redis), c.webauthn),
+    },
     { provide: VUES, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new VuesService(prisma) },
     { provide: ITEMS, inject: [CONFIG, PRISMA], useFactory: (c: ConfigApi, prisma: PrismaClient) => new ItemsService(prisma, c.typesEcheance) },
     // Un seul réencodeur borné pour l'API : PWA privée et bulles vidéo Telegram se partagent le plafond de ffmpeg.
