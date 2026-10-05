@@ -33,7 +33,7 @@
 
   async function lireAttente(): Promise<void> {
     try {
-      attente = plusRecentesDAbord(await filePrivee.lister());
+      attente = plusRecentesDAbord((await filePrivee.lister()).filter((c) => c.mode !== 'ordinaire'));
     } catch {
       attente = [];
     }

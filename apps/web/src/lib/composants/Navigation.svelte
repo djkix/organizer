@@ -2,6 +2,7 @@
   import { page } from '$app/state';
   import { CHEMINS } from '$lib/config';
   import BoutonPrive from './BoutonPrive.svelte';
+  import BoutonsEnregistrer from './BoutonsEnregistrer.svelte';
   import Icone from './Icone.svelte';
 
   const ONGLETS = [
@@ -14,7 +15,7 @@
     href === CHEMINS.accueil ? page.url.pathname === href : page.url.pathname.startsWith(href);
 </script>
 
-<BoutonPrive />
+{#if page.url.pathname === CHEMINS.accueil}<BoutonsEnregistrer />{:else}<BoutonPrive />{/if}
 <nav aria-label="Navigation">
   {#each ONGLETS as o (o.href)}
     <a href={o.href} aria-current={actif(o.href) ? 'page' : undefined}><Icone nom={o.icone} />{o.libelle}</a>

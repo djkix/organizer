@@ -1,5 +1,5 @@
 import { registerSW } from 'virtual:pwa-register';
-import { creerVideur, garderPuisEnvoyer, ouvrirFilePrivee, type Enregistrement } from './file.js';
+import { creerVideur, garderPuisEnvoyer, ouvrirFilePrivee, type Enregistrement, type ModeCapture } from './file.js';
 import { enregistrerSW } from '../pwa/enregistrement.js';
 import { demanderPersistance, demanderSynchro, installerRelances, synchroSiRestantes } from './relances.js';
 
@@ -19,8 +19,8 @@ export function demarrerPrive(): () => void {
 }
 
 /** id : fixé une fois pour cet enregistrement, repris par chaque essai (file ou envoi direct). */
-export async function garderEtEnvoyer(e: Enregistrement, id: string): Promise<void> {
-  await garderPuisEnvoyer(filePrivee, videur, e, id);
+export async function garderEtEnvoyer(e: Enregistrement, mode: ModeCapture, id: string): Promise<void> {
+  await garderPuisEnvoyer(filePrivee, videur, e, mode, id);
   void demanderPersistance();
   void demanderSynchro();
 }

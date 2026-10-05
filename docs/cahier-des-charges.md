@@ -64,6 +64,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 21 | Lots 0 et 1 | **Menés en parallèle**, décidé par Franck le 3 octobre 2026. Thèmes, types d'échéance et prompt sont des données et de la configuration, branchées en fin de lot 1 |
 | 22 | Mise en service | **Directe, sans attendre la sortie du lot 0**, décidé par Franck le 4 octobre 2026. L'application démarre en production avec le prompt actuel (`tri/v1`) ; le classement est affiné à l'usage, sur les captures réelles et les corrections. Le corpus du lot 0 continue de servir de jeu de test, sans bloquer la mise en service. Motif : le banc d'essai classe déjà les vraies captures de L avec le même prompt, et chaque élément garde la version du prompt et le modèle, donc une capture se reclasse après un changement de prompt |
 | 23 | Empreinte digitale | **Avancée du lot 3 à un lot 1-D**, livrée juste après la mise en service, décidée par Franck le 4 octobre 2026. WebAuthn (clé d'accès, Credential Manager Android) remplace seulement la saisie du mot de passe à la reconnexion ; le mot de passe reste toujours possible, et aucune invite biométrique ne précède jamais un enregistrement. Précisions de Franck le 5 octobre 2026 : le mot de passe n'est pas redemandé avant « Activer l'empreinte » (la session suffit), et la synchronisation des clés d'accès Google sur les autres appareils Android de L est acceptée |
+| 24 | Capture ordinaire dans la PWA | **Avancée du lot 3 au lot 2-B**, décidée par Franck le 5 octobre 2026. Un bouton « Enregistrer » ordinaire (envoyé à Gemini, classé) à côté du bouton « Privé », un appui pour démarrer, un appui pour arrêter. Telegram reste un point d'entrée. Le mode reste décidé par le point d'entrée : deux boutons, deux écrans, deux routes d'API, jamais de bascule après coup |
 
 ## Périmètre fonctionnel
 
@@ -185,7 +186,7 @@ Android rend toutefois la PWA nettement plus capable que sur iOS : notifications
 | Surface | Fonctions |
 | --- | --- |
 | Bot Telegram | Capture vocale et texte, accusé de réception, question de désambiguïsation unique, bouton « avec alarme », cochage par bouton inline |
-| PWA installée | Listes cochables, fils de pensées, recherche, correction d'un classement, réglages, capture vocale de secours, réception du partage Android |
+| PWA installée | Listes cochables, fils de pensées, recherche, correction d'un classement, réglages, deux boutons d'enregistrement (ordinaire « Enregistrer » et « Privé », décision 24), réception du partage Android |
 | Home Assistant | Widget des urgences sur l'écran d'accueil, alarme sonore des rendez-vous |
 
 ### Le widget d'écran d'accueil
@@ -226,8 +227,8 @@ Toute capture est acceptée, sans exception, sans question préalable et sans ch
 | CAP-03 | Accuser réception en moins de 2 s, sans attendre le traitement | Vitale |
 | CAP-04 | Conserver l'audio d'origine en plus de la transcription, jusqu'à sa rotation | Vitale |
 | CAP-05 | Horodater la capture à l'émission, pas à la réception | Haute |
-| CAP-06 | Offrir un bouton d'enregistrement privé distinct dans la PWA | Vitale |
-| CAP-07 | Exposer ce bouton en raccourci Android sur l'écran d'accueil | Haute |
+| CAP-06 | Offrir un bouton d'enregistrement privé distinct dans la PWA, à côté d'un bouton « Enregistrer » ordinaire (décision 24) | Vitale |
+| CAP-07 | Exposer ces deux boutons en raccourcis Android sur l'écran d'accueil | Haute |
 | CAP-08 | Signaler visuellement le mode privé avant, pendant et après l'enregistrement | Vitale |
 | CAP-09 | Ne jamais envoyer une capture privée hors du serveur, quel que soit le chemin de code | Vitale |
 | CAP-10 | Mettre en file locale une capture PWA faite hors ligne | Haute |
@@ -923,11 +924,12 @@ Critère de sortie : L se reconnecte par l'empreinte sur son téléphone, et le 
 - Question de désambiguïsation dans Telegram.
 - Sauvegarde vers le NAS et test de restauration complète.
 
+- **Lot 2-B** (décision 24) : bouton « Enregistrer » ordinaire dans la PWA à côté du bouton privé (`POST /api/captures`, canal `pwa`, même classement que Telegram), raccourci Android, file hors ligne typée : une capture privée en file ne part jamais vers la route ordinaire.
+
 Le lot 2 est livré en sous-lots. **Lot 2-A** (version 1.2.0) : scheduler, écriture des rendez-vous dans Google Agenda sans rappel par défaut, alarme activable item par item (à la voix, par le bouton du bot, par l'interrupteur de l'item). La rotation de l'audio, le widget, les notifications push et le reste du lot suivent.
 
 ### Lot 3 — Confort
 
-- Capture vocale ordinaire depuis la PWA, en plus du bouton privé.
 - Recherche sémantique globale.
 - Apprentissage par exemples issus des corrections.
 - Lecture des créneaux occupés de l'agenda de L, pour proposer un moment.

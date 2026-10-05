@@ -48,19 +48,22 @@ export function configurerApp(app: NestExpressApplication): void {
     res.status(429).json({ message: 'Trop de requêtes. Réessaie dans une minute.' });
   });
   const audio = raw({ type: () => true, limit: TAILLE_MAX_AUDIO });
-  app.use('/api/captures/privees', (req: Request, res: Response, suite: NextFunction) => {
-    if (req.method !== 'POST' || req.path !== '/') return suite();
-    // Session valide exigée avant de lire jusqu'à 30 Mio : même vérification que SessionGuard.
-    const jeton = lireCookie(req.headers.cookie, NOM_COOKIE);
-    const refuser = (): void => {
-      res.status(401).json({ message: 'Connecte-toi pour continuer.' });
-    };
-    if (!jeton) return refuser();
-    app.get<AuthService>(AUTH, { strict: false }).utilisateurDeSession(jeton).then(
-      (u) => (u ? audio(req, res, suite) : refuser()),
-      suite,
-    );
-  });
+  // Deux dépôts d'audio, deux routes : le mode est dans l'adresse (règle n° 6), jamais dans le corps.
+  for (const route of ['/api/captures/privees', '/api/captures']) {
+    app.use(route, (req: Request, res: Response, suite: NextFunction) => {
+      if (req.method !== 'POST' || req.path !== '/') return suite();
+      // Session valide exigée avant de lire jusqu'à 30 Mio : même vérification que SessionGuard.
+      const jeton = lireCookie(req.headers.cookie, NOM_COOKIE);
+      const refuser = (): void => {
+        res.status(401).json({ message: 'Connecte-toi pour continuer.' });
+      };
+      if (!jeton) return refuser();
+      app.get<AuthService>(AUTH, { strict: false }).utilisateurDeSession(jeton).then(
+        (u) => (u ? audio(req, res, suite) : refuser()),
+        suite,
+      );
+    });
+  }
   app.use(json({ limit: '1mb' }));
   app.use(erreurDeCorps);
   app.useGlobalFilters(new FiltreSansContenu(app.getHttpAdapter()));

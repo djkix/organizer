@@ -2,4 +2,4 @@
   import Enregistreur from '$lib/composants/Enregistreur.svelte';
 </script>
 
-<Enregistreur mode="prive" />
+<Enregistreur mode="ordinaire" />

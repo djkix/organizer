@@ -45,6 +45,15 @@ export const MESSAGES = {
   envoyerMaintenant: 'Envoyer maintenant',
   envoiRate: "Pas parti. Il reste ici, réessaie dans un moment.",
   reessayer: 'Réessayer',
+  // Enregistrement ordinaire
+  enregistrementOrdinaire: 'Enregistrement',
+  envoyeAuTri: 'Envoyé au tri.',
+  rangeToutSeul: 'Ce sera rangé tout seul.',
+  enregistrer: 'Enregistrer',
+  rangeToutSeulSous: 'Rangé tout seul',
+  priveBouton: 'Privé',
+  resteSurServeur: 'Reste sur le serveur',
+  recu: 'Reçu.',
   // Vue Privé
   priveSous: 'Par date et par heure',
   priveEnTete: 'Ces enregistrements ne sortent jamais de la maison.',
