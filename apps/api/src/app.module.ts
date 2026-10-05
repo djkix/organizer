@@ -8,6 +8,7 @@ import { demarrerAlertes } from './alertes.js';
 import { AgendaController } from './agenda/agenda.controller.js';
 import { AgendaService } from './agenda/agenda.service.js';
 import { MagasinEtatsValkey } from './agenda/etats.js';
+import { SignalAgendaFile } from './agenda/signal.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
 import { EmpreintesController } from './auth/empreintes/empreintes.controller.js';
@@ -130,7 +131,12 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
       useFactory: (c: ConfigApi, prisma: PrismaClient, redis: Redis) => new EmpreintesService(prisma, new MagasinDefisValkey(redis), c.webauthn),
     },
     { provide: VUES, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new VuesService(prisma) },
-    { provide: ITEMS, inject: [CONFIG, PRISMA], useFactory: (c: ConfigApi, prisma: PrismaClient) => new ItemsService(prisma, c.typesEcheance) },
+    {
+      provide: ITEMS,
+      inject: [CONFIG, PRISMA, QUEUE_AGENDA],
+      useFactory: (c: ConfigApi, prisma: PrismaClient, file: Queue<JobAgenda>) =>
+        new ItemsService(prisma, c.typesEcheance, undefined, new SignalAgendaFile(file)),
+    },
     // Un seul réencodeur borné pour l'API : PWA privée et bulles vidéo Telegram se partagent le plafond de ffmpeg.
     { provide: REENCODEUR, useFactory: (): Reencodeur => new ReencodeurBorne(new ReencodeurFfmpeg()) },
     { provide: PRIVEES, inject: [CONFIG, PRISMA, REENCODEUR], useFactory: (c: ConfigApi, prisma: PrismaClient, reencodeur: Reencodeur) => new CapturesPriveesService(prisma, new StockageAudio(c.audioRacine), reencodeur) },
