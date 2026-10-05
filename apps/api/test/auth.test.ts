@@ -47,6 +47,13 @@ describe('AuthService', () => {
     expect(await auth.utilisateurDeSession(s!.jeton)).toBeNull();
   });
 
+  it('ouvrirSessionPour : même session de 90 jours, sans mot de passe à vérifier', async () => {
+    const u = await prisma.utilisateur.findUniqueOrThrow({ where: { nom: 'l' } });
+    const s = await auth.ouvrirSessionPour(u.id);
+    expect(s.expireLe.toISOString()).toBe('2027-01-04T08:00:00.000Z');
+    expect(await auth.utilisateurDeSession(s.jeton)).toMatchObject({ nom: 'l' });
+  });
+
   it('ne stocke que l\'empreinte du jeton', async () => {
     const s = await auth.ouvrirSession('l', 'un mot de passe assez long');
     const enBase = await prisma.session.findFirstOrThrow();

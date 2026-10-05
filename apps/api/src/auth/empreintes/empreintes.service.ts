@@ -1,8 +1,9 @@
 import type { PrismaClient } from '@organizer/db';
 import type { ResumeEmpreinte } from '@organizer/shared/api';
 import {
-  generateRegistrationOptions, verifyRegistrationResponse,
-  type PublicKeyCredentialCreationOptionsJSON, type RegistrationResponseJSON,
+  generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse,
+  type AuthenticationResponseJSON, type PublicKeyCredentialCreationOptionsJSON, type PublicKeyCredentialRequestOptionsJSON,
+  type RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import type { ConfigWebauthn } from './config.js';
 import { DelaiDepasse, type MagasinDefis } from './defis.js';
@@ -99,6 +100,44 @@ export class EmpreintesService {
       if ((err as { code?: string }).code === 'P2002') return null;
       throw err;
     }
+  }
+
+  async optionsConnexion(): Promise<PublicKeyCredentialRequestOptionsJSON> {
+    // Aucune clé listée : le téléphone propose les siennes (clés découvrables), sans nom à saisir.
+    const options = await generateAuthenticationOptions({
+      rpID: this.config.rpId, userVerification: 'required', timeout: DELAI_CEREMONIE_MS,
+    });
+    // Défi sans compte : rangé sous son propre type, il ne sert jamais à activer une empreinte (et inversement).
+    await this.defi(() => this.defis.poser('connexion', options.challenge, 'connexion'));
+    return options;
+  }
+
+  /** Compte authentifié par l'empreinte, ou null : clé inconnue, compte différent, défi, origine, signature ou compteur. */
+  async verifierConnexion(reponse: AuthenticationResponseJSON): Promise<string | null> {
+    const cle = await this.prisma.cleAcces.findUnique({ where: { identifiant: reponse.id } });
+    if (!cle) return null;
+    // Clé découvrable : le téléphone renvoie le compte, qui doit être celui de la clé.
+    const handle = reponse.response.userHandle;
+    if (!handle || Buffer.from(handle, 'base64url').toString('utf8') !== cle.utilisateurId) return null;
+    const v = await this.verifier('connexion', () => verifyAuthenticationResponse({
+      response: reponse,
+      expectedChallenge: async (defi) => (await this.defi(() => this.defis.prendre('connexion', defi))) === 'connexion',
+      expectedOrigin: this.config.origine,
+      expectedRPID: this.config.rpId,
+      requireUserVerification: true,
+      credential: {
+        id: cle.identifiant, publicKey: new Uint8Array(cle.clePublique), counter: Number(cle.compteur), transports: cle.transports,
+      },
+    }));
+    if (v === null || !v.verified) return null;
+    await this.prisma.cleAcces.update({
+      where: { id: cle.id },
+      data: {
+        compteur: BigInt(v.authenticationInfo.newCounter), utiliseeLe: this.maintenant(),
+        sauvegardee: v.authenticationInfo.credentialBackedUp,
+      },
+    });
+    return cle.utilisateurId;
   }
 
   async lister(utilisateurId: string): Promise<ResumeEmpreinte[]> {

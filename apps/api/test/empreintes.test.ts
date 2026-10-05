@@ -116,3 +116,88 @@ describe('lister et retirer', () => {
     expect(await service.lister(u.id)).toEqual([]);
   });
 });
+
+async function inscrit(t = telephone()) {
+  const r = t.inscrire(await service.optionsInscription(u));
+  await service.inscrire(u, r);
+  return t;
+}
+
+describe('se reconnecter par l\'empreinte', () => {
+  it('options : RP configuré, empreinte exigée, aucune clé listée (le téléphone propose les siennes)', async () => {
+    const o = await service.optionsConnexion();
+    expect(o.rpId).toBe('organizer.djkix.ovh');
+    expect(o.userVerification).toBe('required');
+    expect(o.timeout).toBe(60_000);
+    expect(o.allowCredentials ?? []).toEqual([]);
+  });
+
+  it('une empreinte valide désigne le compte et date la clé', async () => {
+    const t = await inscrit();
+    horloge += 3600_000;
+    expect(await service.verifierConnexion(t.authentifier(await service.optionsConnexion()))).toBe(u.id);
+    const cle = await prisma.cleAcces.findFirstOrThrow();
+    expect(cle.utiliseeLe?.toISOString()).toBe('2026-10-06T09:00:00.000Z');
+  });
+
+  it('une réponse rejouée est refusée : un défi ne sert qu\'une fois', async () => {
+    const t = await inscrit();
+    const r = t.authentifier(await service.optionsConnexion());
+    expect(await service.verifierConnexion(r)).toBe(u.id);
+    expect(await service.verifierConnexion(r)).toBeNull();
+  });
+
+  it('un compteur toujours nul (clés Android) passe ; un compteur qui recule est refusé', async () => {
+    const nul = await inscrit();
+    expect(await service.verifierConnexion(nul.authentifier(await service.optionsConnexion()))).toBe(u.id);
+    expect(await service.verifierConnexion(nul.authentifier(await service.optionsConnexion()))).toBe(u.id);
+
+    await viderBase(prisma);
+    u = await prisma.utilisateur.create({ data: { nom: 'l' }, select: { id: true, nom: true } });
+    const croissant = await inscrit(telephone(true));
+    expect(await service.verifierConnexion(croissant.authentifier(await service.optionsConnexion()))).toBe(u.id);
+    expect(await service.verifierConnexion(croissant.authentifier(await service.optionsConnexion()))).toBe(u.id);
+    expect((await prisma.cleAcces.findFirstOrThrow()).compteur).toBe(2n);
+    expect(await service.verifierConnexion(croissant.authentifier(await service.optionsConnexion(), { compteur: 1 }))).toBeNull();
+    expect(journal.at(-1)).toMatch(/counter/);
+  });
+
+  it.each([
+    [{ origine: 'https://organizer.djkix.ovh.exemple.net' }],
+    [{ origine: 'http://organizer.djkix.ovh' }],
+    [{ rpId: 'exemple.net' }],
+    [{ type: 'webauthn.create' }],
+    [{ sansUv: true }],
+  ])('refuse une réponse faussée (%o)', async (f) => {
+    const t = await inscrit();
+    expect(await service.verifierConnexion(t.authentifier(await service.optionsConnexion(), f))).toBeNull();
+    expect((await prisma.cleAcces.findFirstOrThrow()).utiliseeLe).toBeNull();
+  });
+
+  it('le compte renvoyé par le téléphone doit être celui de la clé, et il est exigé', async () => {
+    const t = await inscrit();
+    const autre = Buffer.from('00000000-0000-4000-8000-000000000000', 'utf8').toString('base64url');
+    expect(await service.verifierConnexion(t.authentifier(await service.optionsConnexion(), { userHandle: autre }))).toBeNull();
+    expect(await service.verifierConnexion(t.authentifier(await service.optionsConnexion(), { userHandle: null }))).toBeNull();
+  });
+
+  it('une clé retirée du serveur ne connecte plus', async () => {
+    const t = await inscrit();
+    await prisma.cleAcces.deleteMany();
+    expect(await service.verifierConnexion(t.authentifier(await service.optionsConnexion()))).toBeNull();
+  });
+
+  it('un défi expiré, ou un défi d\'activation, ne sert pas à se connecter', async () => {
+    const t = await inscrit();
+    const o = await service.optionsConnexion();
+    horloge += 120_001;
+    expect(await service.verifierConnexion(t.authentifier(o))).toBeNull();
+    const activation = await service.optionsInscription(u);
+    expect(await service.verifierConnexion(t.authentifier({ challenge: activation.challenge }))).toBeNull();
+  });
+
+  it('un défi de connexion ne sert pas à activer une empreinte', async () => {
+    const o = await service.optionsConnexion();
+    expect(await service.inscrire(u, telephone().inscrire({ ...(await service.optionsInscription(u)), challenge: o.challenge }))).toBeNull();
+  });
+});

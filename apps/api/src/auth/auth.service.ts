@@ -40,9 +40,14 @@ export class AuthService {
     const u = await this.prisma.utilisateur.findUnique({ where: { nom } });
     const ok = await verify(u?.motDePasseHash ?? (await factice()), motDePasse);
     if (!u?.motDePasseHash || !ok) return null;
+    return this.ouvrirSessionPour(u.id);
+  }
+
+  /** Session de 90 jours d'un compte déjà authentifié, par mot de passe ou par empreinte. */
+  async ouvrirSessionPour(utilisateurId: string): Promise<{ jeton: string; expireLe: Date }> {
     const jeton = randomBytes(32).toString('base64url');
     const expireLe = new Date(this.maintenant().getTime() + DUREE_SESSION_MS);
-    await this.prisma.session.create({ data: { jetonHash: empreinte(jeton), utilisateurId: u.id, expireLe } });
+    await this.prisma.session.create({ data: { jetonHash: empreinte(jeton), utilisateurId, expireLe } });
     return { jeton, expireLe };
   }
 

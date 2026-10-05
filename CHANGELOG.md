@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- La reconnexion par empreinte dans l'API : défi à usage unique, origine et RP exacts, empreinte exigée, compte de la clé vérifié, compteur qui recule refusé ; la même session que le mot de passe (2026-10-05).
 - L'activation d'une empreinte par WebAuthn (`@simplewebauthn/server` 14) : clé découvrable, empreinte exigée, sans attestation, défi lié au compte, dix clés au plus ; liste et retrait de ses clés (2026-10-05).
 - Les défis de l'empreinte dans Valkey : usage unique, deux minutes, échec en 3 s si Valkey ne répond pas (2026-10-05).
 - La configuration de l'empreinte : identifiant de RP et origine exacte, obligatoires en production, vérifiés au démarrage ; la stack les tire de `DOMAINE_APP`, nouvelle variable obligatoire du `.env` (2026-10-05).
