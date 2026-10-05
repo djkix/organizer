@@ -1,7 +1,7 @@
 import { PORTEE_AGENDA } from '@organizer/shared';
 import { z } from 'zod';
 import type { ConfigGoogle } from '../configuration.js';
-import { ClientRefuse, ErreurGoogle, OctroiInvalide, raisonDe } from './erreurs.js';
+import { ClientRefuse, ErreurGoogle, GoogleIndisponible, OctroiInvalide, RequeteInvalide, raisonDe } from './erreurs.js';
 
 export { PORTEE_AGENDA };
 const DELAI_MS = 15_000;
@@ -33,6 +33,8 @@ export class ClientOAuth {
       const raison = await raisonDe(r);
       if (raison === 'invalid_grant') throw new OctroiInvalide(r.status, raison);
       if (raison === 'invalid_client' || raison === 'unauthorized_client') throw new ClientRefuse(r.status, raison);
+      if (r.status === 429) throw new GoogleIndisponible(429, raison);
+      if (r.status >= 400 && r.status < 500) throw new RequeteInvalide(r.status, raison);
       throw new ErreurGoogle(r.status, raison);
     }
     const j = reponseJeton.parse(await r.json());

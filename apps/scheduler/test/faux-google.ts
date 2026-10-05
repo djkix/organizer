@@ -3,8 +3,10 @@ import type { AddressInfo } from 'node:net';
 
 export const PORTEE = 'https://www.googleapis.com/auth/calendar.app.created';
 export const SECRET_ESSAI = 'secret-essai';
+export const CLIENT_ID_ESSAI = 'id.apps.googleusercontent.com';
+export const REDIRECT_ESSAI = 'https://organizer.essai/api/agenda/retour';
 
-export interface RequeteVue { methode: string; chemin: string; autorisation: string | undefined; corps: string }
+export interface RequeteVue { methode: string; chemin: string; autorisation: string | undefined; corps: string; recherche: string }
 interface EvenementStocke { id: string; status: 'confirmed' | 'cancelled'; corps: Record<string, unknown> }
 interface AgendaStocke { summary: string; timeZone: string; evenements: Map<string, EvenementStocke> }
 
@@ -31,6 +33,7 @@ export class FauxGoogle {
   readonly codes = new Map<string, { portee: string; verificateur?: string; sansRafraichissement?: boolean }>();
   readonly rafraichissements = new Set<string>();
   readonly acces = new Set<string>();
+  private readonly accesDe = new Map<string, string>();
   readonly revoques: string[] = [];
   readonly agendas = new Map<string, AgendaStocke>();
   private forces: Array<{ motif: RegExp; statut: number; corps: unknown }> = [];
@@ -75,9 +78,10 @@ export class FauxGoogle {
 
   private async traiter(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const corps = await lire(req);
-    const chemin = new URL(req.url ?? '/', 'http://x').pathname;
+    const url = new URL(req.url ?? '/', 'http://x');
+    const chemin = url.pathname;
     const methode = req.method ?? 'GET';
-    this.requetes.push({ methode, chemin, autorisation: req.headers.authorization, corps });
+    this.requetes.push({ methode, chemin, autorisation: req.headers.authorization, corps, recherche: url.search });
     const i = this.forces.findIndex((f) => f.motif.test(`${methode} ${chemin}`));
     if (i >= 0) {
       const [f] = this.forces.splice(i, 1);
@@ -88,11 +92,12 @@ export class FauxGoogle {
       const jeton = new URLSearchParams(corps).get('token') ?? '';
       this.revoques.push(jeton);
       this.rafraichissements.delete(jeton);
+      for (const [a, r] of this.accesDe) if (r === jeton) { this.acces.delete(a); this.accesDe.delete(a); }
       return envoyer(res, 200, {});
     }
     const m = /^\/calendar\/v3\/calendars(?:\/([^/]+))?(\/events)?(?:\/([^/]+))?$/.exec(chemin);
     if (!m) return envoyer(res, 404, erreur(404, 'notFound'));
-    if (!this.acces.has((req.headers.authorization ?? '').replace(/^Bearer /, ''))) return envoyer(res, 401, erreur(401, 'authError'));
+    if (!this.acces.has((req.headers.authorization ?? '').startsWith('Bearer ') ? (req.headers.authorization ?? '').slice(7) : '')) return envoyer(res, 401, erreur(401, 'authError'));
     const agendaId = m[1] ? decodeURIComponent(m[1]) : undefined;
     const evenementId = m[3] ? decodeURIComponent(m[3]) : undefined;
     if (!agendaId) {
@@ -109,6 +114,7 @@ export class FauxGoogle {
       if (methode !== 'POST') return envoyer(res, 404, erreur(404, 'notFound'));
       const c = JSON.parse(corps) as Record<string, unknown>;
       const id = String(c.id);
+      if (!/^[0-9a-v]{5,1024}$/.test(id)) return envoyer(res, 400, erreur(400, 'invalid'));
       if (a.evenements.has(id)) return envoyer(res, 409, erreur(409, 'duplicate'));
       a.evenements.set(id, { id, status: 'confirmed', corps: c });
       return envoyer(res, 200, { id, status: 'confirmed' });
@@ -129,17 +135,18 @@ export class FauxGoogle {
   }
 
   private jeton(p: URLSearchParams, res: ServerResponse): void {
-    if (p.get('client_secret') !== SECRET_ESSAI) return envoyer(res, 401, { error: 'invalid_client', error_description: 'secret' });
+    if (p.get('client_secret') !== SECRET_ESSAI || p.get('client_id') !== CLIENT_ID_ESSAI) return envoyer(res, 401, { error: 'invalid_client', error_description: 'secret' });
     if (p.get('grant_type') === 'authorization_code') {
       const code = p.get('code') ?? '';
       const c = this.codes.get(code);
+      if (p.get('redirect_uri') !== REDIRECT_ESSAI) return envoyer(res, 400, { error: 'redirect_uri_mismatch' });
       if (!c || (c.verificateur !== undefined && c.verificateur !== p.get('code_verifier'))) {
         return envoyer(res, 400, { error: 'invalid_grant', error_description: 'Bad Request' });
       }
       this.codes.delete(code);
       const n = ++this.n;
       this.acces.add(`acces-${n}`);
-      if (!c.sansRafraichissement) this.rafraichissements.add(`rafr-${n}`);
+      if (!c.sansRafraichissement) { this.rafraichissements.add(`rafr-${n}`); this.accesDe.set(`acces-${n}`, `rafr-${n}`); }
       return envoyer(res, 200, {
         access_token: `acces-${n}`, expires_in: 3599, scope: c.portee, token_type: 'Bearer',
         ...(c.sansRafraichissement ? {} : { refresh_token: `rafr-${n}` }),
@@ -149,6 +156,7 @@ export class FauxGoogle {
       if (!this.rafraichissements.has(p.get('refresh_token') ?? '')) return envoyer(res, 400, { error: 'invalid_grant', error_description: 'Token has been expired or revoked.' });
       const n = ++this.n;
       this.acces.add(`acces-${n}`);
+      this.accesDe.set(`acces-${n}`, p.get('refresh_token') ?? '');
       return envoyer(res, 200, { access_token: `acces-${n}`, expires_in: 3599, scope: PORTEE, token_type: 'Bearer' });
     }
     return envoyer(res, 400, { error: 'unsupported_grant_type' });
