@@ -20,6 +20,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Le plan du lot 1-D : reconnexion par empreinte digitale (WebAuthn) dans la PWA, décision 23 à poser en première tâche, publication en 1.1.0 (2026-10-05).
 
 ### Modifié
+- La Permissions-Policy autorise explicitement l'empreinte (WebAuthn) à la seule origine de la PWA ; la CSP est inchangée (2026-10-05).
 - L'empreinte digitale (WebAuthn) est avancée du lot 3 à un lot 1-D, livré juste après la mise en service (décision 23, 2026-10-05) ; cahier, CLAUDE.md et README alignés.
 
 ## [1.0.1] - 2026-10-05

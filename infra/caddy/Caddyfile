@@ -21,7 +21,7 @@
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
-		Permissions-Policy "microphone=(self), camera=(), geolocation=()"
+		Permissions-Policy "microphone=(self), camera=(), geolocation=(), publickey-credentials-create=(self), publickey-credentials-get=(self)"
 		-Server
 	}
 

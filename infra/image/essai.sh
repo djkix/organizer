@@ -65,6 +65,7 @@ IMMUABLE="$(grep -o '/_app/immutable/[^"]*\.js' "$TRAVAIL/index.html" | head -1)
 entete "$IMMUABLE" cache-control | grep -q immutable || echec "_app/immutable doit être immutable"
 entete /manifest.webmanifest content-type | grep -q '^application/manifest+json' || echec "type du manifeste"
 entete / permissions-policy | grep -qF 'microphone=(self)' || echec "Permissions-Policy"
+entete / permissions-policy | grep -qF 'publickey-credentials-get=(self)' || echec "Permissions-Policy : empreinte"
 [ "$(entete / referrer-policy)" = "no-referrer" ] || echec "Referrer-Policy"
 [ "$(entete / x-content-type-options)" = "nosniff" ] || echec "nosniff"
 
