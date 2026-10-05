@@ -52,6 +52,7 @@
     messageAgenda = null;
     try {
       const { url } = await api.connecterAgenda();
+      if (!url.startsWith('https://accounts.google.com/')) throw new Error(MESSAGES.agendaEchec);
       location.assign(url);
     } catch (e) {
       messageAgenda = e instanceof Error ? e.message : MESSAGES.serveurIndisponible;

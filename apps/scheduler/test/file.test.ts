@@ -4,10 +4,10 @@ import { viderBase } from '@organizer/db/test';
 import { type JobAgenda } from '@organizer/shared';
 import { Queue, type Worker } from 'bullmq';
 import { Redis } from 'ioredis';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { alerteurAgenda, demarrerFileAgenda, MESSAGES_ADMIN, Signaleur } from '../src/file.js';
 import { actionDatee, CLE, compteConnecte, depsSynchro } from './aides.js';
-import { FauxGoogle } from './faux-google.js';
+import { FauxGoogle, PORTEE } from './faux-google.js';
 
 const prisma = creerPrisma();
 const connexion = new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: null });
@@ -121,6 +121,22 @@ describe('demarrerFileAgenda', () => {
     await file.add('echanger', { type: 'echanger', utilisateurId: u.id, code: 'c', verificateur: 'v' }, { attempts: 3 });
     await attendre(async () => (await prisma.agendaGoogle.findUniqueOrThrow({ where: { utilisateurId: u.id } })).etat === 'echec');
     expect(alertes).toContain(MESSAGES_ADMIN.client);
+  });
+
+  it('échange refusé (API non activée) : message journalisé sans contenu, une seule alerte admin', async () => {
+    const u = await prisma.utilisateur.create({ data: { nom: 'l' } });
+    await prisma.agendaGoogle.create({ data: { utilisateurId: u.id, etat: 'en_cours' } });
+    faux.codes.set('code-api', { portee: PORTEE });
+    faux.forcer(/^POST \/calendar\/v3\/calendars$/, 403, { error: { errors: [{ reason: 'accessNotConfigured', message: 'texte-secret' }] } });
+    const journal = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    lancer();
+    await file.add('echanger', { type: 'echanger', utilisateurId: u.id, code: 'code-api', verificateur: 'v' }, { attempts: 3 });
+    await attendre(async () => alertes.length > 0);
+    const lignes = journal.mock.calls.map((c) => String(c[0])).join('\n');
+    journal.mockRestore();
+    expect(lignes).toContain('GoogleRefuse 403 (accessNotConfigured)');
+    expect(lignes).not.toContain('texte-secret');
+    expect(alertes).toEqual([MESSAGES_ADMIN.connexion('l')]);
   });
 
   it('client refusé pendant une synchro : alerte client, pas de reprise', async () => {

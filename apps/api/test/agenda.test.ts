@@ -49,6 +49,14 @@ describe('AgendaService', () => {
     expect(file.ajouts).toHaveLength(1);
   });
 
+  it('file en panne ou muette après l\'upsert : état « echec » (échange), retour calme', async () => {
+    const { state } = await demarrer();
+    const muette = { add: () => new Promise(() => undefined) } as never;
+    const s = new AgendaService(prisma, etats, muette, CONFIG, 50);
+    expect(await s.retour({ state, code: 'c' }, uid)).toBe('expire');
+    expect(await s.etat(uid)).toEqual({ etat: 'echec', erreur: 'echange' });
+  });
+
   it('retour sur une autre session, sans session, ou état inconnu : expiré, rien d\'enfilé', async () => {
     const autre = (await prisma.utilisateur.create({ data: { nom: 'f' } })).id;
     const a = await demarrer();

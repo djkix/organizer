@@ -28,6 +28,12 @@ describe('contenuEvenement', () => {
     expect(contenuEvenement(action({ echeanceDate: new Date('2027-03-28T08:00:00Z') }))!.start.dateTime).toBe('2027-03-28T10:00:00+02:00');
   });
 
+  it('passage à l\'heure d\'été : 01:45+01:00, fin à 03:15+02:00', () => {
+    const c = contenuEvenement(action({ echeanceDate: new Date('2027-03-28T00:45:00Z') }))!;
+    expect(c.start.dateTime).toBe('2027-03-28T01:45:00+01:00');
+    expect(c.end.dateTime).toBe('2027-03-28T03:15:00+02:00');
+  });
+
   it('02:45 la nuit du passage à l\'heure d\'hiver : 30 minutes réelles, fin à 02:15 en heure d\'hiver', () => {
     const c = contenuEvenement(action({ echeanceDate: new Date('2026-10-25T00:45:00Z') }))!;
     expect(c.start.dateTime).toBe('2026-10-25T02:45:00+02:00');

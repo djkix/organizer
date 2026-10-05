@@ -14,7 +14,9 @@ const majuscule = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** « Dentiste : mercredi 14 octobre, 10:00. », et la phrase de l'alarme quand elle est posée. */
 export function texteRendezVous(texte: string, date: Date, fuseau: string, alarme: boolean): string {
-  const base = `${majuscule(titreCourt(texte, 40))} : ${dateHeureEnClair(date, fuseau)}.`;
+  // Moins de 12 mots, alarme comprise : titre de 24 caractères et 3 mots au plus.
+  const titre = titreCourt(texte, 24).split(/\s+/).slice(0, 3).join(' ');
+  const base = `${majuscule(titre)}, ${dateHeureEnClair(date, fuseau)}.`;
   return alarme ? `${base} Alarme ${MINUTES_ALARME} minutes avant.` : base;
 }
 
@@ -46,12 +48,14 @@ export async function proposerAlarmes(captureId: string, d: DepsPropositions): P
     const a = it.action;
     if (it.nature !== 'action' || !a || a.echeanceType !== 'datee' || !a.echeanceDate || a.faitLe || a.alarmeProposeeLe) continue;
     if (a.echeanceDate.getTime() <= maintenant.getTime()) continue;
+    // Marqué AVANT l'envoi : au plus une proposition, même si l'envoi échoue ou si le job est rejoué.
+    const { count } = await d.prisma.action.updateMany({ where: { itemId: it.id, alarmeProposeeLe: null }, data: { alarmeProposeeLe: maintenant } });
+    if (count === 0) continue;
     await d.bot.api.sendMessage(Number(c.utilisateur.telegramChatId), texteRendezVous(it.texte, a.echeanceDate, c.utilisateur.fuseau, a.alarme), {
       disable_notification: true,
       reply_markup: clavierAlarme(it.id, a.alarme),
       ...(messageId ? { reply_parameters: { message_id: Number(messageId), allow_sending_without_reply: true } } : {}),
     });
-    await d.prisma.action.update({ where: { itemId: it.id }, data: { alarmeProposeeLe: maintenant } });
     n++;
   }
   return n;
@@ -68,7 +72,7 @@ export class Alarmes {
   async definir(utilisateurId: string, itemId: string, alarme: boolean): Promise<{ texte: string; alarme: boolean } | null> {
     const it = await this.prisma.item.findUnique({ where: { id: itemId }, include: { action: true, capture: { include: { utilisateur: true } } } });
     const a = it?.action;
-    if (!it || it.capture.utilisateurId !== utilisateurId || it.nature !== 'action' || !a) return null;
+    if (!it || it.capture.utilisateurId !== utilisateurId || it.nature !== 'action' || !a || it.capture.prive) return null;
     if (a.echeanceType !== 'datee' || !a.echeanceDate || a.faitLe || a.echeanceDate.getTime() <= this.maintenant().getTime()) return null;
     await this.items.definirAlarme(itemId, alarme);
     return { texte: texteRendezVous(it.texte, a.echeanceDate, it.capture.utilisateur.fuseau, alarme), alarme };

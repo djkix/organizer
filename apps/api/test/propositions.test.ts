@@ -7,7 +7,7 @@ import { ItemsService } from '../src/items/items.service.js';
 import type { IngestionService } from '../src/ingestion/ingestion.service.js';
 import { creerBot } from '../src/telegram/bot.js';
 import { LiaisonService } from '../src/telegram/liaison.service.js';
-import { Alarmes, proposerAlarmes } from '../src/telegram/propositions.js';
+import { Alarmes, proposerAlarmes, texteRendezVous } from '../src/telegram/propositions.js';
 
 const prisma = creerPrisma();
 afterAll(() => prisma.$disconnect());
@@ -26,14 +26,14 @@ function intercepter(bot: Bot) {
   return envois;
 }
 
-async function rendezVous(o: { recuLe?: string; agenda?: boolean; canal?: 'telegram' | 'pwa'; date?: string; type?: string; alarme?: boolean } = {}) {
+async function rendezVous(o: { recuLe?: string; agenda?: boolean; canal?: 'telegram' | 'pwa'; date?: string; type?: string; alarme?: boolean; prive?: boolean } = {}) {
   const u = await prisma.utilisateur.upsert({ where: { nom: 'l' }, create: { nom: 'l', telegramChatId: 7n }, update: {} });
   if (o.agenda ?? true) {
     await prisma.agendaGoogle.upsert({ where: { utilisateurId: u.id }, create: { utilisateurId: u.id, etat: 'connecte', calendrierId: 'a' }, update: {} });
   }
   const c = await prisma.capture.create({
     data: {
-      utilisateurId: u.id, canal: o.canal ?? 'telegram', prive: false, etat: 'classee', sourceRef: `tg:7:${Math.floor(Math.random() * 1e6)}`,
+      utilisateurId: u.id, canal: o.canal ?? 'telegram', prive: o.prive ?? false, etat: o.prive ? 'privee' : 'classee', sourceRef: `tg:7:${Math.floor(Math.random() * 1e6)}`,
       emisLe: MAINTENANT, recuLe: new Date(o.recuLe ?? '2026-10-10T07:55:00Z'), texteEcrit: 'x',
     },
   });
@@ -54,7 +54,7 @@ describe('proposerAlarmes', () => {
     expect(await proposerAlarmes(r.captureId, { prisma, bot, maintenant: () => MAINTENANT })).toBe(1);
     expect(envois).toHaveLength(1);
     expect(envois[0]!.payload).toMatchObject({
-      chat_id: 7, text: 'Dentiste : mercredi 14 octobre, 10:00.', disable_notification: true,
+      chat_id: 7, text: 'Dentiste, mercredi 14 octobre, 10:00.', disable_notification: true,
       reply_parameters: { message_id: Number(r.sourceRef.split(':')[2]), allow_sending_without_reply: true },
       reply_markup: { inline_keyboard: [[{ text: 'Avec alarme', callback_data: `alarme:1:${r.itemId}` }]] },
     });
@@ -68,7 +68,7 @@ describe('proposerAlarmes', () => {
     const envois = intercepter(bot);
     await proposerAlarmes(r.captureId, { prisma, bot, maintenant: () => MAINTENANT });
     expect(envois[0]!.payload).toMatchObject({
-      text: 'Dentiste : mercredi 14 octobre, 10:00. Alarme 10 minutes avant.',
+      text: 'Dentiste, mercredi 14 octobre, 10:00. Alarme 10 minutes avant.',
       reply_markup: { inline_keyboard: [[{ text: 'Sans alarme', callback_data: `alarme:0:${r.itemId}` }]] },
     });
   });
@@ -88,12 +88,39 @@ describe('proposerAlarmes', () => {
   });
 });
 
+describe('proposerAlarmes : garanties', () => {
+  it('deux exécutions simultanées : un seul message (marque posée avant l\'envoi)', async () => {
+    const r = await rendezVous();
+    const bot = new Bot('0:test', { botInfo });
+    const envois = intercepter(bot);
+    const d = { prisma, bot, maintenant: () => MAINTENANT };
+    await Promise.all([proposerAlarmes(r.captureId, d), proposerAlarmes(r.captureId, d)]);
+    expect(envois.filter((e) => e.method === 'sendMessage')).toHaveLength(1);
+  });
+
+  it('un titre long reste sous 12 mots, avec ou sans phrase d\'alarme', async () => {
+    const t = 'appeler le notaire pour la signature du compromis de vente de la maison';
+    for (const alarme of [false, true]) {
+      expect(texteRendezVous(t, new Date('2026-10-14T08:00:00Z'), 'Europe/Paris', alarme).split(/\s+/).length).toBeLessThan(12);
+    }
+  });
+});
+
+describe('Alarmes.definir', () => {
+  it('refuse une capture privée', async () => {
+    const r = await rendezVous({ prive: true });
+    const items = new ItemsService(prisma, TYPES, () => MAINTENANT);
+    expect(await new Alarmes(prisma, items, () => MAINTENANT).definir(r.uid, r.itemId, true)).toBeNull();
+    expect((await prisma.action.findUniqueOrThrow({ where: { itemId: r.itemId } })).alarme).toBe(false);
+  });
+});
+
 describe('bouton du bot', () => {
   const appui = (id: number, data: string) => ({
     update_id: id,
     callback_query: {
       id: `cb${id}`, from: { id: 7, is_bot: false, first_name: 'x' }, chat_instance: 'ci', data,
-      message: { message_id: 99, date: 0, chat: { id: 7, type: 'private', first_name: 'x' }, text: 'Dentiste : mercredi 14 octobre, 10:00.' },
+      message: { message_id: 99, date: 0, chat: { id: 7, type: 'private', first_name: 'x' }, text: 'Dentiste, mercredi 14 octobre, 10:00.' },
     },
   }) as never;
 
@@ -113,7 +140,7 @@ describe('bouton du bot', () => {
     expect((await prisma.action.findUniqueOrThrow({ where: { itemId: r.itemId } })).alarme).toBe(true);
     const edit = envois.find((e) => e.method === 'editMessageText')!;
     expect(edit.payload).toMatchObject({
-      text: 'Dentiste : mercredi 14 octobre, 10:00. Alarme 10 minutes avant.',
+      text: 'Dentiste, mercredi 14 octobre, 10:00. Alarme 10 minutes avant.',
       reply_markup: { inline_keyboard: [[{ text: 'Sans alarme', callback_data: `alarme:0:${r.itemId}` }]] },
     });
     expect(envois.filter((e) => e.method === 'answerCallbackQuery').map((e) => e.payload.text)).toEqual(['Alarme activée.', 'Alarme activée.']);
@@ -128,5 +155,22 @@ describe('bouton du bot', () => {
     await prisma.action.update({ where: { itemId: r.itemId }, data: { faitLe: MAINTENANT } });
     await bot.handleUpdate(appui(3, `alarme:1:${r.itemId}`));
     expect(envois.filter((e) => e.method === 'answerCallbackQuery').at(-1)!.payload.text).toBe('Ce rendez-vous a changé.');
+  });
+
+  it('erreur interne : le callback est quand même acquitté, rien n\'est relancé', async () => {
+    const r = await rendezVous();
+    const bot = creerBot('0:test', {
+      liaison: new LiaisonService(prisma), ingestion: {} as IngestionService,
+      alarmes: { definir: async () => { throw new Error('panne'); } },
+    }, { botInfo });
+    const envois = intercepter(bot);
+    await expect(bot.handleUpdate(appui(4, `alarme:1:${r.itemId}`))).resolves.toBeUndefined();
+    expect(envois.filter((e) => e.method === 'answerCallbackQuery')).toHaveLength(1);
+  });
+
+  it('donnée inconnue : acquittée sans autre envoi', async () => {
+    const { bot, envois } = monter();
+    await bot.handleUpdate(appui(5, 'ancien:bouton'));
+    expect(envois.map((e) => e.method)).toEqual(['answerCallbackQuery']);
   });
 });

@@ -29,23 +29,34 @@ export function creerBot(token: string, d: DepsBot, options?: BotConfig<Context>
 
   // Bouton « Avec alarme » / « Sans alarme » : la réponse tient dans le message lui-même, rien d'autre n'est envoyé.
   bot.callbackQuery(MOTIF_ALARME, async (ctx) => {
-    const [, valeur, itemId] = ctx.match as RegExpMatchArray;
-    const u = ctx.chat ? await d.liaison.utilisateurDuChat(ctx.chat.id) : null;
-    const r = u && d.alarmes ? await d.alarmes.definir(u.id, itemId!, valeur === '1') : null;
-    if (!r) {
-      await ctx.answerCallbackQuery({ text: 'Ce rendez-vous a changé.' });
-      return;
-    }
+    // Jamais relancé : une erreur ferait relivrer la mise à jour, et max_connections 1 bloquerait les vocaux suivants.
+    let reponse: { text: string } | undefined;
     try {
-      await ctx.editMessageText(r.texte, { reply_markup: clavierAlarme(itemId!, r.alarme) });
-    } catch (e) {
-      // Appui relivré : le message porte déjà ce texte.
-      if (!(e as Error).message.includes('message is not modified')) {
-        await ctx.answerCallbackQuery({ text: 'Ce rendez-vous a changé.' });
-        throw e;
+      const [, valeur, itemId] = ctx.match as RegExpMatchArray;
+      const u = ctx.chat ? await d.liaison.utilisateurDuChat(ctx.chat.id) : null;
+      const r = u && d.alarmes ? await d.alarmes.definir(u.id, itemId!, valeur === '1') : null;
+      if (!r) {
+        reponse = { text: 'Ce rendez-vous a changé.' };
+      } else {
+        try {
+          await ctx.editMessageText(r.texte, { reply_markup: clavierAlarme(itemId!, r.alarme) });
+        } catch (e) {
+          // Appui relivré : le message porte déjà ce texte.
+          if (!(e as Error).message.includes('message is not modified')) throw e;
+        }
+        reponse = { text: r.alarme ? 'Alarme activée.' : 'Alarme retirée.' };
       }
+    } catch (e) {
+      console.error(`Telegram : bouton d'alarme en échec (${(e as Error).name})`);
+      reponse = { text: 'Ce rendez-vous a changé.' };
+    } finally {
+      await ctx.answerCallbackQuery(reponse).catch((e: unknown) => console.error(`Telegram : réponse au bouton impossible (${(e as Error).name})`));
     }
-    await ctx.answerCallbackQuery({ text: r.alarme ? 'Alarme activée.' : 'Alarme retirée.' });
+  });
+
+  // Donnée inconnue (ancien bouton) : on répond pour arrêter le sablier, sans rien faire d'autre.
+  bot.on('callback_query', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
   });
 
   bot.on('message', async (ctx) => {
