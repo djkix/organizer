@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- Les défis de l'empreinte dans Valkey : usage unique, deux minutes, échec en 3 s si Valkey ne répond pas (2026-10-05).
 - La configuration de l'empreinte : identifiant de RP et origine exacte, obligatoires en production, vérifiés au démarrage ; la stack les tire de `DOMAINE_APP`, nouvelle variable obligatoire du `.env` (2026-10-05).
 - La table des clés d'accès WebAuthn (identifiant, clé publique, compteur, transports), effacée avec le compte (2026-10-05).
 - Le plan du lot 1-D : reconnexion par empreinte digitale (WebAuthn) dans la PWA, décision 23 à poser en première tâche, publication en 1.1.0 (2026-10-05).
@@ -24,6 +25,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [1.0.0] - 2026-10-04
 
 ### Ajouté
+- Les défis de l'empreinte dans Valkey : usage unique, deux minutes, échec en 3 s si Valkey ne répond pas (2026-10-05).
 - Le dossier de revue du lot 1-C (déploiement), pour un relecteur externe, avec l'état final de la CI et les choix de mise en service de Franck (2026-10-04).
 - La documentation d'exploitation : stack, commandes, Nginx Proxy Manager, mise à jour, retour arrière, changement des secrets, supervision et sauvegarde manuelle (2026-10-04).
 - Les images api, worker, web (Caddy, coquille et CSP du build) et sortie (Squid, liste fermée de domaines), et la CI GitHub Actions : tests avec base et file, e2e, construction et analyse des images (2026-10-04).
@@ -76,6 +78,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - L'ordre des vues est stable à égalité, le libellé d'un horizon vient de la première expression connue, et À revoir exclut les items privés (2026-10-03).
 
 ### Ajouté
+- Les défis de l'empreinte dans Valkey : usage unique, deux minutes, échec en 3 s si Valkey ne répond pas (2026-10-05).
 - Le plan du lot 1-C : déploiement sur le homelab et mise en service (2026-10-05).
 - Le dossier de revue du lot 1-B2, à transmettre à un relecteur externe (2026-10-04).
 - L'installation de la PWA sur Android : manifeste aux couleurs des tokens, icônes, raccourcis « Enregistrement privé » et « Aujourd'hui », service worker hors ligne avec synchronisation en arrière-plan, budget du bundle vérifié (2026-10-04).
