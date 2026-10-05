@@ -93,6 +93,40 @@ describe('echangerCode : échecs après la consommation du code (R6)', () => {
   });
 });
 
+describe('echangerCode : course et doublon', () => {
+  it('déconnexion demandée pendant l\'échange : pas écrasée, jeton révoqué, agenda neuf retiré', async () => {
+    const uid = await enCours();
+    faux.codes.set('code-course', { portee: PORTEE });
+    const base = deps();
+    const calendrier = Object.assign(Object.create(base.calendrier) as typeof base.calendrier, {
+      creerAgenda: async (j: string, n: string, f: string) => {
+        await prisma.agendaGoogle.update({ where: { utilisateurId: uid }, data: { etat: 'deconnexion' } });
+        return base.calendrier.creerAgenda(j, n, f);
+      },
+    });
+    const avant = faux.agendas.size;
+    expect(await echangerCode({ utilisateurId: uid, code: 'code-course', verificateur: 'v' }, { ...base, calendrier })).toBe('ignore');
+    expect(await ligne(uid)).toMatchObject({ etat: 'deconnexion', jetonChiffre: null });
+    expect(faux.revoques).toHaveLength(1);
+    expect(faux.agendas.size).toBe(avant);
+    expect(balayages).toEqual([]);
+  });
+
+  it('écriture en base en panne après la création de l\'agenda : l\'agenda neuf est retiré', async () => {
+    const uid = await enCours();
+    faux.codes.set('code-bd', { portee: PORTEE });
+    const base = deps();
+    const prismaEnPanne = { agendaGoogle: {
+      findUnique: (a: never) => prisma.agendaGoogle.findUnique(a),
+      updateMany: async () => { throw new Error('base'); },
+    } };
+    const avant = faux.agendas.size;
+    await expect(echangerCode({ utilisateurId: uid, code: 'code-bd', verificateur: 'v' }, { ...base, prisma: prismaEnPanne as never })).rejects.toBeInstanceOf(UnrecoverableError);
+    expect(faux.agendas.size).toBe(avant);
+    expect(faux.revoques).toHaveLength(1);
+  });
+});
+
 describe('echangerCode : données du job', () => {
   it.each([
     [{ utilisateurId: 'pas-un-uuid', code: 'c', verificateur: 'v' }],

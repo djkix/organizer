@@ -68,8 +68,14 @@ async function balayerCompte(d: DepsBalayage, g: Compte, maintenant: Date, lot: 
     try {
       await d.jetons.rafraichir(g.utilisateurId);
     } catch (e) {
-      if (e instanceof AutorisationRetiree) await d.surRevocation?.(g.utilisateurId);
-      else console.error(`Agenda : entretien du jeton de ${g.utilisateurId} reporté (${(e as Error).name})`);
+      if (e instanceof AutorisationRetiree) {
+        try {
+          await d.surRevocation?.(g.utilisateurId);
+        } catch (e2) {
+          // Un compte en panne ne doit pas arrêter le balayage des autres.
+          console.error(`Agenda : suite de la révocation reportée (${(e2 as Error).name})`);
+        }
+      } else console.error(`Agenda : entretien du jeton reporté (${(e as Error).name})`);
     }
   }
   return n;

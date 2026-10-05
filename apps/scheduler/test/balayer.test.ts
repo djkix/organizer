@@ -56,6 +56,14 @@ describe('balayer', () => {
     expect(revoques).toEqual([uid]);
   });
 
+  it('surRevocation en panne : le balayage ne s\'arrête pas', async () => {
+    const { uid } = await compteConnecte(prisma, faux);
+    await prisma.agendaGoogle.update({ where: { utilisateurId: uid }, data: { rafraichiLe: new Date('2026-10-01T00:00:00Z') } });
+    faux.rafraichissements.clear();
+    const d = depsSynchro(prisma, faux);
+    await expect(balayer({ prisma, jetons: d.jetons, enfiler: async () => {}, surRevocation: async () => { throw new Error('file'); }, maintenant: () => MAINTENANT })).resolves.toBeGreaterThanOrEqual(0);
+  });
+
   it('parcourt par lots : toutes les actions divergentes, sans doublon, même au-delà d\'un lot', async () => {
     const { uid } = await compteConnecte(prisma, faux);
     const ids: string[] = [];

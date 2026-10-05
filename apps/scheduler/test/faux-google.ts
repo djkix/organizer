@@ -109,6 +109,7 @@ export class FauxGoogle {
     }
     const a = this.agendas.get(agendaId);
     if (!a) return envoyer(res, 404, erreur(404, 'notFound'));
+    if (!m[2] && methode === 'DELETE') { this.agendas.delete(agendaId); return envoyer(res, 204); }
     if (!m[2]) return methode === 'GET' ? envoyer(res, 200, { id: agendaId, summary: a.summary }) : envoyer(res, 404, erreur(404, 'notFound'));
     if (!evenementId) {
       if (methode !== 'POST') return envoyer(res, 404, erreur(404, 'notFound'));
