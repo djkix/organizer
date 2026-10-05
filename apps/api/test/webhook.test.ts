@@ -20,7 +20,7 @@ describe('webhook Telegram', () => {
     await poserWebhook(a, { url: URL_BOT, secret: 'abc_DEF-123' });
     expect(appels).toEqual([{
       method: 'setWebhook',
-      payload: { url: URL_BOT, secret_token: 'abc_DEF-123', max_connections: 1, allowed_updates: ['message'], drop_pending_updates: false },
+      payload: { url: URL_BOT, secret_token: 'abc_DEF-123', max_connections: 1, allowed_updates: ['message', 'callback_query'], drop_pending_updates: false },
     }]);
   });
 
