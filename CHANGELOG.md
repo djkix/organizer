@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Le plan du lot 2-A : Google Agenda par un service `scheduler` seul à joindre Google (OAuth porté par L, portée `calendar.app.created`, jeton chiffré), rendez-vous datés sans rappel par défaut, alarme item par item (voix, bouton du bot, interrupteur de la PWA), publication en 1.2.0 (2026-10-05).
+
 ## [1.1.0] - 2026-10-05
 
 ### Corrigé
