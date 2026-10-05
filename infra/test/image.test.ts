@@ -46,8 +46,8 @@ describe('Dockerfile', () => {
     expect(d).not.toMatch(/:latest\b/);
   });
 
-  it('quatre cibles, aucune en root', () => {
-    for (const nom of ['api', 'worker', 'web']) expect(cible(nom), nom).toMatch(/^USER 1000:1000$/m);
+  it('cinq cibles, aucune en root', () => {
+    for (const nom of ['api', 'worker', 'scheduler', 'web']) expect(cible(nom), nom).toMatch(/^USER 1000:1000$/m);
     expect(cible('sortie')).toMatch(/^USER squid$/m);
   });
 
@@ -57,8 +57,8 @@ describe('Dockerfile', () => {
     expect(d).toMatch(/PROMPTS_DIR=\/app\/prompts/);
   });
 
-  it('api et worker finaux sans npm, npx ni corepack (CVE de tar dans npm)', () => {
-    for (const nom of ['api', 'worker']) {
+  it('api, worker et scheduler finaux sans npm, npx ni corepack (CVE de tar dans npm)', () => {
+    for (const nom of ['api', 'worker', 'scheduler']) {
       const c = cible(nom);
       expect(c, nom).toMatch(/^RUN rm -rf \/usr\/local\/lib\/node_modules\/npm \/usr\/local\/lib\/node_modules\/corepack \/usr\/local\/bin\/npm \/usr\/local\/bin\/npx \/usr\/local\/bin\/corepack$/m);
       expect(c, nom).not.toMatch(/^(CMD|ENTRYPOINT).*\b(npm|npx|pnpm|corepack)\b/m);
@@ -79,6 +79,7 @@ describe('Dockerfile', () => {
   it('dépendances de production installées avec le même verrou', () => {
     expect(d).toContain('pnpm install --frozen-lockfile --prod --filter @organizer/api...');
     expect(d).toContain('pnpm install --frozen-lockfile --prod --filter @organizer/worker...');
+    expect(d).toContain('pnpm install --frozen-lockfile --prod --filter @organizer/scheduler...');
   });
 });
 
@@ -144,6 +145,8 @@ describe('squid.conf', () => {
     expect(s).toContain('acl depuis_worker src 10.201.2.11/32');
     expect(s).toContain('acl vers_api dstdomain -n api.telegram.org');
     expect(s).toContain('acl vers_worker dstdomain -n generativelanguage.googleapis.com');
+    expect(s).toContain('acl depuis_scheduler src 10.201.2.12/32');
+    expect(s).toContain('acl vers_scheduler dstdomain -n www.googleapis.com oauth2.googleapis.com');
     expect(s).toContain('acl ip_brute dstdom_regex -n ^[]0-9.:[]+$');
     const regles = s.split('\n').filter((l) => l.startsWith('http_access'));
     expect(regles).toEqual([
@@ -152,6 +155,7 @@ describe('squid.conf', () => {
       'http_access deny ip_brute',
       'http_access allow depuis_api vers_api',
       'http_access allow depuis_worker vers_worker',
+      'http_access allow depuis_scheduler vers_scheduler',
       'http_access deny all',
     ]);
   });
@@ -174,6 +178,10 @@ describe('docker-compose.yml', () => {
 
 describe('ci.yml', () => {
   const y = lire('.github/workflows/ci.yml');
+  it('les cinq images sont construites, analysées et publiées', () => {
+    const boucles = [...y.matchAll(/for cible in ([a-z ]+); do/g)].map((m) => m[1]);
+    expect(boucles).toEqual(['api worker scheduler web sortie', 'api worker scheduler web sortie', 'api worker scheduler web sortie']);
+  });
   it('actions tierces épinglées par SHA, délais et concurrence', () => {
     for (const m of y.matchAll(/^\s*- uses: (\S+)/gm)) expect(m[1], m[1]).toMatch(/@[0-9a-f]{40}$/);
     expect(y).toMatch(/^concurrency:/m);

@@ -23,6 +23,8 @@ mkdir -p "$TRAVAIL/secrets"
 printf '0:faux' > "$TRAVAIL/secrets/telegram_bot_token"
 printf 'secret-essai' > "$TRAVAIL/secrets/telegram_webhook_secret"
 printf 'cle-essai' > "$TRAVAIL/secrets/gemini_api_key"
+printf 'secret-essai' > "$TRAVAIL/secrets/google_client_secret"
+head -c 32 /dev/urandom | base64 | tr -d '\n' > "$TRAVAIL/secrets/agenda_cle"
 chmod 644 "$TRAVAIL"/secrets/*
 sed 's/10\.201\./10.211./g' "$RACINE/infra/docker-compose.yml" > "$TRAVAIL/compose.yaml"
 sed 's/10\.201\./10.211./g' "$RACINE/infra/sortie/squid.conf" > "$TRAVAIL/squid.conf"
@@ -48,6 +50,14 @@ until curl -fsS "$URL/api/sante" 2>/dev/null | grep -q '"ok":true'; do
   i=$((i + 1)); [ "$i" -lt 60 ] || echec "la stack ne répond pas sur /api/sante"; sleep 3
 done
 [ "$(dc ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | grep '^migrate ')" = "migrate exited 0" ] || echec "migrations"
+
+# Scheduler : démarré, non root, racine en lecture seule
+i=0
+until dc logs --no-color scheduler 2>/dev/null | grep -q 'Scheduler démarré'; do
+  i=$((i + 1)); [ "$i" -lt 20 ] || echec "le scheduler ne démarre pas"; sleep 3
+done
+[ "$(dc exec -T scheduler id -u)" = 1000 ] || echec "scheduler en root"
+dc exec -T scheduler sh -c 'touch /essai' 2>/dev/null && echec "scheduler : racine inscriptible"
 
 # Volume audio : inscriptible par l'API (uid 1000), lisible par le worker
 dc exec -T api sh -c 'touch /data/audio/.essai && rm /data/audio/.essai' || echec "volume audio non inscriptible"
@@ -75,6 +85,9 @@ entete / permissions-policy | grep -qF 'publickey-credentials-get=(self)' || ech
 [ "$(statut "$URL/api/session/moi")" = 401 ] || echec "/api/session/moi sans session"
 curl -sS -X POST "$URL/api/session/empreinte/options" | grep -qF '"rpId":"organizer.essai"' || echec "options d'empreinte : identifiant de RP"
 
+# Retour OAuth sans état : toujours vers Réglages, jamais une erreur
+[ "$(curl -sS -o /dev/null -w '%{redirect_url}' "$URL/api/agenda/retour?state=x&code=y")" = "$URL/reglages?agenda=expire" ] || echec "retour OAuth"
+
 # Webhook : seulement sur le domaine du bot, secret vérifié
 [ "$(statut -X POST "$URL/telegram/webhook")" = 404 ] || echec "webhook ouvert sur le domaine principal"
 CODE="$(statut -X POST -H 'Host: bot.essai' -H 'X-Telegram-Bot-Api-Secret-Token: faux' -H 'content-type: application/json' -d '{"update_id":1}' "$URL/telegram/webhook")"
@@ -85,6 +98,14 @@ dc exec -T api node apps/api/dist/cli.mjs essai-sortie https://api.telegram.org 
 dc exec -T api node apps/api/dist/cli.mjs essai-sortie https://example.com | grep -q '^refusé' || echec "api : example.com devrait être refusé"
 dc exec -T worker node apps/worker/dist/sonde.mjs sortie https://generativelanguage.googleapis.com | grep -q '^joignable' || echec "worker : Gemini devrait être joignable"
 dc exec -T worker node apps/worker/dist/sonde.mjs sortie https://api.telegram.org | grep -q '^refusé' || echec "worker : Telegram devrait être refusé"
+dc exec -T scheduler node apps/scheduler/dist/sonde.mjs sortie https://www.googleapis.com | grep -q '^joignable' || echec "scheduler : Google Agenda devrait être joignable"
+dc exec -T scheduler node apps/scheduler/dist/sonde.mjs sortie https://oauth2.googleapis.com | grep -q '^joignable' || echec "scheduler : OAuth Google devrait être joignable"
+dc exec -T scheduler node apps/scheduler/dist/sonde.mjs sortie https://generativelanguage.googleapis.com | grep -q '^refusé' || echec "scheduler : Gemini devrait être refusé"
+dc exec -T scheduler node apps/scheduler/dist/sonde.mjs sortie https://example.com | grep -q '^refusé' || echec "scheduler : example.com devrait être refusé"
+dc exec -T worker node apps/worker/dist/sonde.mjs sortie https://www.googleapis.com | grep -q '^refusé' || echec "worker : Google Agenda devrait être refusé"
+dc exec -T api node apps/api/dist/cli.mjs essai-sortie https://oauth2.googleapis.com | grep -q '^refusé' || echec "api : OAuth Google devrait être refusé"
+dc exec -T scheduler node -e "fetch('https://www.googleapis.com',{signal:AbortSignal.timeout(5000)}).then(()=>process.exit(1),()=>process.exit(0))" \
+  || echec "scheduler : sortie directe possible sans le proxy"
 dc exec -T api node -e "fetch('https://example.com',{signal:AbortSignal.timeout(5000)}).then(()=>process.exit(1),()=>process.exit(0))" \
   || echec "api : sortie directe possible sans le proxy"
 dc exec -T api ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libopus || echec "ffmpeg sans libopus"
