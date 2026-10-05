@@ -77,6 +77,12 @@ describe('stack de production', () => {
     expect(env.TELEGRAM_WEBHOOK_URL).toBe('https://${DOMAINE_BOT:?}/telegram/webhook');
   });
 
+  it('API : empreinte liée au domaine de la PWA, origine en https', () => {
+    const env = service('api').environment!;
+    expect(env.WEBAUTHN_RP_ID).toBe('${DOMAINE_APP:?}');
+    expect(env.WEBAUTHN_ORIGIN).toBe('https://${DOMAINE_APP:?}');
+  });
+
   it('API et worker : production, chemins absolus, sortie par le proxy', () => {
     for (const n of ['api', 'worker']) {
       const env = service(n).environment!;

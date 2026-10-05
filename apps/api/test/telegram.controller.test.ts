@@ -13,6 +13,7 @@ function config(mode: 'polling' | 'webhook'): ConfigApi {
   return {
     port: 0, redisUrl: 'redis://inutilise', telegramToken: '0:test', telegramMode: mode,
     webhookSecret: mode === 'webhook' ? SECRET : undefined, audioRacine: '/inutilise', typesEcheance: [],
+    webauthn: { rpId: 'localhost', origine: 'http://localhost:5173', nomRp: 'Organizer' },
   };
 }
 

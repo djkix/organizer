@@ -64,6 +64,9 @@ services:
       TELEGRAM_WEBHOOK_URL: https://${DOMAINE_BOT:?}/telegram/webhook
       # X-Forwarded-For cru de Caddy (réseau edge) et du Nginx Proxy Manager, seulement.
       TRUSTED_PROXY: 10.201.1.0/24, ${NPM_IP:?NPM_IP vide, renseigner l'adresse du Nginx Proxy Manager dans .env}
+      # Empreinte (WebAuthn, décision 23) : identifiant de RP et origine exacte de la PWA.
+      WEBAUTHN_RP_ID: ${DOMAINE_APP:?}
+      WEBAUTHN_ORIGIN: https://${DOMAINE_APP:?}
     secrets: [telegram_bot_token, telegram_webhook_secret]
     volumes:
       - audio:/data/audio

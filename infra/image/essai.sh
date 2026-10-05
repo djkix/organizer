@@ -38,6 +38,7 @@ POSTGRES_PASSWORD=essai
 NPM_IP=127.0.0.1
 IP_PUBLICATION=127.0.0.1
 DOMAINE_BOT=bot.essai
+DOMAINE_APP=organizer.essai
 EOF
 
 dc up -d || echec "démarrage de la stack"
