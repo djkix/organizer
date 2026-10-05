@@ -2,11 +2,12 @@ import { Bot, type BotConfig, type Context, Keyboard } from 'grammy';
 import { extraireCapture } from '../ingestion/extraire.js';
 import type { IngestionService } from '../ingestion/ingestion.service.js';
 import type { LiaisonService } from './liaison.service.js';
+import { clavierAlarme, MOTIF_ALARME, type Alarmes } from './propositions.js';
 
 export const LIBELLE_PRIVEE = 'Prochaine capture privée';
 const clavier = (): Keyboard => new Keyboard().text(LIBELLE_PRIVEE).resized().persistent();
 
-export interface DepsBot { liaison: LiaisonService; ingestion: IngestionService }
+export interface DepsBot { liaison: LiaisonService; ingestion: IngestionService; alarmes?: Pick<Alarmes, 'definir'> }
 
 export function creerBot(token: string, d: DepsBot, options?: BotConfig<Context>): Bot {
   const bot = new Bot(token, options);
@@ -24,6 +25,27 @@ export function creerBot(token: string, d: DepsBot, options?: BotConfig<Context>
       return;
     }
     await ctx.reply('Code invalide ou expiré.');
+  });
+
+  // Bouton « Avec alarme » / « Sans alarme » : la réponse tient dans le message lui-même, rien d'autre n'est envoyé.
+  bot.callbackQuery(MOTIF_ALARME, async (ctx) => {
+    const [, valeur, itemId] = ctx.match as RegExpMatchArray;
+    const u = ctx.chat ? await d.liaison.utilisateurDuChat(ctx.chat.id) : null;
+    const r = u && d.alarmes ? await d.alarmes.definir(u.id, itemId!, valeur === '1') : null;
+    if (!r) {
+      await ctx.answerCallbackQuery({ text: 'Ce rendez-vous a changé.' });
+      return;
+    }
+    try {
+      await ctx.editMessageText(r.texte, { reply_markup: clavierAlarme(itemId!, r.alarme) });
+    } catch (e) {
+      // Appui relivré : le message porte déjà ce texte.
+      if (!(e as Error).message.includes('message is not modified')) {
+        await ctx.answerCallbackQuery({ text: 'Ce rendez-vous a changé.' });
+        throw e;
+      }
+    }
+    await ctx.answerCallbackQuery({ text: r.alarme ? 'Alarme activée.' : 'Alarme retirée.' });
   });
 
   bot.on('message', async (ctx) => {

@@ -1,10 +1,11 @@
 import { creerPrisma } from '@organizer/db';
 import {
-  cheminConfigure, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, lireVar, OPTIONS_JOB_ALERTE,
-  type JobAlerte, type JobClassement,
+  cheminConfigure, exigerVar, FILE_AGENDA, FILE_ALERTES, FILE_CLASSEMENT, FILE_PROPOSITIONS, lireVar, OPTIONS_JOB_ALERTE,
+  type JobAgenda, type JobAlerte, type JobClassement, type JobProposition,
 } from '@organizer/shared';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
+import { apresClassement } from './agenda.js';
 import { PalierNonPaye } from './classement/provider.js';
 import { lireConfigWorker } from './configuration.js';
 import { verifierPalierAuDemarrage } from './demarrage.js';
@@ -27,12 +28,15 @@ try {
 }
 
 const file = new Queue<JobClassement>(FILE_CLASSEMENT, { connection: connexion });
+const fileAgenda = new Queue<JobAgenda>(FILE_AGENDA, { connection: connexion });
+const filePropositions = new Queue<JobProposition>(FILE_PROPOSITIONS, { connection: connexion });
 const worker = demarrerWorker({
   prisma, provider, prompt,
   audioRacine: cheminConfigure('AUDIO_STORAGE_PATH', exigerVar('AUDIO_STORAGE_PATH')),
   connexion,
   concurrence: Number(lireVar('WORKER_CONCURRENCY') ?? '2'),
   alerter,
+  apresClassement: (captureId) => apresClassement(prisma, { agenda: fileAgenda, propositions: filePropositions }, captureId),
 });
 
 const lancerReprise = (): void => {
@@ -47,7 +51,7 @@ console.log(`Worker démarré. Prompt ${prompt.version}, concurrence ${worker.op
 async function arreter(): Promise<void> {
   clearInterval(minuterie);
   await worker.close();
-  await Promise.all([file.close(), alertes.close(), prisma.$disconnect()]);
+  await Promise.all([file.close(), alertes.close(), fileAgenda.close(), filePropositions.close(), prisma.$disconnect()]);
   connexion.disconnect();
   process.exit(0);
 }

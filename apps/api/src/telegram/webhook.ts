@@ -8,13 +8,14 @@ const SECRET = /^[A-Za-z0-9_-]{1,256}$/;
  * max_connections 1 : une mise à jour à la fois, donc « prochaine capture privée » est en pratique
  * enregistré avant le vocal suivant ; la garantie pour l'utilisatrice reste le message de confirmation
  * (dernier chemin d'une pensée voulue privée vers Gemini).
+ * callback_query : le bouton « Avec alarme » (lot 2-A). Après une mise à jour qui change cette liste, rejouer `telegram-webhook poser`.
  * drop_pending_updates false : les messages arrivés pendant la bascule sont livrés, jamais jetés.
  */
 export async function poserWebhook(api: Api, o: { url: string; secret: string }): Promise<void> {
   if (!ADRESSE.test(o.url)) throw new Error('TELEGRAM_WEBHOOK_URL doit être https://<domaine>/telegram/webhook');
   if (!SECRET.test(o.secret)) throw new Error('TELEGRAM_WEBHOOK_SECRET : 1 à 256 caractères parmi A-Z, a-z, 0-9, _ et -');
   await api.setWebhook(o.url, {
-    secret_token: o.secret, max_connections: 1, allowed_updates: ['message'], drop_pending_updates: false,
+    secret_token: o.secret, max_connections: 1, allowed_updates: ['message', 'callback_query'], drop_pending_updates: false,
   });
 }
 

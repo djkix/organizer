@@ -31,6 +31,7 @@ import { creerBot } from './telegram/bot.js';
 import { demarrerTelegram, dormir } from './telegram/demarrage.js';
 import { optionsClientTelegram } from './telegram/client.js';
 import { LiaisonService } from './telegram/liaison.service.js';
+import { Alarmes, demarrerPropositions } from './telegram/propositions.js';
 import { TelegramController } from './telegram/telegram.controller.js';
 import { VuesController } from './vues/vues.controller.js';
 import { VuesService } from './vues/vues.service.js';
@@ -43,6 +44,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
   private veille?: NodeJS.Timeout;
   private files: Queue[] = [];
   private alertes?: Worker;
+  private propositions?: Worker;
   private readonly arret = new AbortController();
 
   constructor(
@@ -65,6 +67,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
       if (this.config.telegramMode === 'polling') process.exit(1);
     });
     this.alertes = demarrerAlertes(this.redis, this.prisma, this.bot);
+    this.propositions = demarrerPropositions(this.redis, this.prisma, this.bot);
     this.minuterie = setInterval(() => {
       this.ingestion.reprendre().catch((err: unknown) => {
         console.error(`Reprise des captures en échec (${(err as Error).name})`);
@@ -97,6 +100,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     await Promise.all(this.files.map((f) => f.close()));
     if (this.config.telegramMode === 'polling' && this.bot.isRunning()) await this.bot.stop();
     await this.alertes?.close();
+    await this.propositions?.close();
     await this.prisma.$disconnect();
     await this.fileAgenda.close();
     this.redis.disconnect();
@@ -120,9 +124,9 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     },
     {
       provide: BOT,
-      inject: [CONFIG, PRISMA, INGESTION],
-      useFactory: (c: ConfigApi, prisma: PrismaClient, ingestion: IngestionService) =>
-        creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion }, { client: optionsClientTelegram(c.telegramApiRoot) }),
+      inject: [CONFIG, PRISMA, INGESTION, ITEMS],
+      useFactory: (c: ConfigApi, prisma: PrismaClient, ingestion: IngestionService, items: ItemsService) =>
+        creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion, alarmes: new Alarmes(prisma, items) }, { client: optionsClientTelegram(c.telegramApiRoot) }),
     },
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
     {

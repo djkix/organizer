@@ -10,6 +10,7 @@ export interface DepsWorker extends DepsTraitement {
   alerter(message: string): Promise<void>;
   nomFile?: string;
   pauseCreditMs?: number;
+  apresClassement?: (captureId: string) => Promise<void>;
 }
 
 /** Alerte administrateur selon le refus de Gemini. Alerte réservée à l'administrateur ; L n'est jamais sollicitée. */
@@ -27,6 +28,14 @@ export function demarrerWorker(d: DepsWorker): Worker<JobClassement> {
       try {
         const issue = await traiterCapture(job.data.captureId, d);
         indisponibiliteSignalee = false;
+        if (issue !== 'a_revoir' && d.apresClassement) {
+          try {
+            await d.apresClassement(job.data.captureId);
+          } catch (e) {
+            // Le classement est fait ; l'agenda sera rattrapé par le balayage du scheduler.
+            console.error(`Suite du classement de ${job.data.captureId} reportée (${(e as Error).name})`);
+          }
+        }
         return issue;
       } catch (e) {
         if (e instanceof CapturePriveeRefusee) throw new UnrecoverableError('capture privée refusée');
