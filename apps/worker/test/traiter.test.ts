@@ -6,7 +6,7 @@ import { viderBase } from '@organizer/db/test';
 import { chargerPrompt } from '@organizer/shared';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { SortieNonConforme } from '../src/classement/provider.js';
-import { CapturePriveeRefusee, traiterCapture, type DepsTraitement } from '../src/classement/traiter.js';
+import { CapturePriveeRefusee, MediaVideoRefuse, traiterCapture, type DepsTraitement } from '../src/classement/traiter.js';
 import { creerCaptureTexte, FauxProvider, resultatExemple } from './aides.js';
 
 const prisma = creerPrisma();
@@ -56,6 +56,16 @@ describe('traiterCapture', () => {
     await traiterCapture(id, deps(p));
     expect(p.appels[0]!.audio?.donnees.toString()).toBe('OggS-faux');
     expect(p.appels[0]!.texte).toBeUndefined();
+  });
+
+  it('refuse une capture dont le média est une vidéo, sans appeler le fournisseur', async () => {
+    const { id } = await creerCaptureTexte(prisma);
+    mkdirSync(join(audioRacine, 'ordinaire'), { recursive: true });
+    writeFileSync(join(audioRacine, 'ordinaire', `${id}.mp4`), 'VIDEO-FAUSSE');
+    await prisma.capture.update({ where: { id }, data: { audioPath: `ordinaire/${id}.mp4`, audioMime: 'video/mp4' } });
+    const p = new FauxProvider();
+    await expect(traiterCapture(id, deps(p))).rejects.toBeInstanceOf(MediaVideoRefuse);
+    expect(p.appels).toHaveLength(0);
   });
 
   it('refuse une capture privée sans appeler le fournisseur', async () => {

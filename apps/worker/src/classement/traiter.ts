@@ -18,6 +18,10 @@ export class CapturePriveeRefusee extends Error {
   override name = 'CapturePriveeRefusee';
 }
 
+export class MediaVideoRefuse extends Error {
+  override name = 'MediaVideoRefuse';
+}
+
 const dateOuNull = (s: string | null): Date | null => (s ? new Date(s) : null);
 
 export async function traiterCapture(id: string, d: DepsTraitement): Promise<Issue> {
@@ -25,6 +29,9 @@ export async function traiterCapture(id: string, d: DepsTraitement): Promise<Iss
   // Première vérification, avant toute lecture d'audio : règle n° 6.
   if (c.prive) throw new CapturePriveeRefusee(`Capture ${id} privée : jamais envoyée`);
   if (c.etat === 'classee' || c.etat === 'a_revoir') return 'deja_traitee';
+
+  // Défense en profondeur : Gemini ne reçoit jamais d'image. L'API ne range que du son ; une vidéo stockée est refusée.
+  if (c.audioMime?.startsWith('video/')) throw new MediaVideoRefuse(`Capture ${id} : média vidéo, jamais envoyé`);
 
   const audio = c.audioPath
     ? { mime: c.audioMime ?? 'audio/ogg', donnees: await readFile(join(d.audioRacine, c.audioPath)) }

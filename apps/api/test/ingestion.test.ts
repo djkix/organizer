@@ -1,4 +1,5 @@
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { creerPrisma } from '@organizer/db';
@@ -8,6 +9,7 @@ import type { CaptureEntrante } from '../src/ingestion/extraire.js';
 import { IngestionService, type FileClassement, type Telechargeur } from '../src/ingestion/ingestion.service.js';
 import { StockageAudio } from '../src/ingestion/stockage.js';
 import { FichierTropGros } from '../src/ingestion/telechargeur.js';
+import { ReencodeurBorne, ReencodeurFfmpeg, type Reencodeur } from '../src/privees/reencodeur.js';
 
 const prisma = creerPrisma();
 afterAll(() => prisma.$disconnect());
@@ -31,6 +33,8 @@ let racine: string;
 let file: FausseFile;
 let tele: FauxTelechargeur;
 let service: IngestionService;
+/** Faux réencodeur : jamais de vrai ffmpeg dans les tests d'orchestration. */
+const reenc: Reencodeur = { versOpus: async () => Buffer.from('OggS-extrait') };
 let utilisateurId: string;
 
 beforeEach(async () => {
@@ -38,7 +42,7 @@ beforeEach(async () => {
   racine = mkdtempSync(join(tmpdir(), 'audio-'));
   file = new FausseFile();
   tele = new FauxTelechargeur();
-  service = new IngestionService(prisma, new StockageAudio(racine), tele, file, () => {});
+  service = new IngestionService(prisma, new StockageAudio(racine), tele, file, () => {}, reenc);
   utilisateurId = (await prisma.utilisateur.create({ data: { nom: 'test' } })).id;
 });
 
@@ -157,7 +161,7 @@ describe('audio trop gros pour Telegram', () => {
   it('passe en à revoir, sans enfilage ni boucle de reprise', async () => {
     const s = new IngestionService(prisma, new StockageAudio(racine), {
       telecharger: async () => { throw new FichierTropGros('25000000 octets'); },
-    }, file, () => {});
+    }, file, () => {}, reenc);
     const { id } = await s.recevoir(utilisateurId, {
       sourceRef: 'tg:7:99', emisLe: new Date('2026-10-06T06:00:00Z'), dureeS: 2400, fichier: { id: 'F', mime: 'audio/ogg' }, texte: null,
     });
@@ -165,5 +169,84 @@ describe('audio trop gros pour Telegram', () => {
     expect(await prisma.capture.findUniqueOrThrow({ where: { id } })).toMatchObject({ etat: 'a_revoir', erreur: 'audio_trop_gros' });
     expect(file.ids).toEqual([]);
     expect(await s.reprendre(new Date(Date.now() + 10 * 60_000))).toBe(0);
+  });
+});
+
+/** Une seconde de vidéo avec piste son, fabriquée par ffmpeg : aucune vraie image. */
+const mp4 = (): Buffer => execFileSync('ffmpeg', [
+  '-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=size=64x64:rate=5:duration=1',
+  '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:v', 'mpeg4', '-c:a', 'aac', '-shortest',
+  '-movflags', 'frag_keyframe+empty_moov', '-f', 'mp4', 'pipe:1',
+]);
+
+const bulle = (ref: string): CaptureEntrante => ({
+  sourceRef: ref, emisLe: new Date('2026-10-06T06:12:00Z'), dureeS: 5, fichier: { id: 'V', mime: 'video/mp4' }, texte: null,
+});
+
+const fichiersRanges = (): string[] => readdirSync(racine, { recursive: true }).map(String).filter((f) => /\.\w+$/.test(f));
+
+describe('bulle vidéo Telegram : seul le son est gardé', () => {
+  const video = { telecharger: async () => ({ donnees: Buffer.from('VIDEO-BRUTE'), extension: 'mp4' }) };
+
+  it('capture ordinaire : audio extrait range, mime audio, vidéo jamais écrite, job enfilé', async () => {
+    const recus: Buffer[] = [];
+    const s = new IngestionService(prisma, new StockageAudio(racine), video, file, () => {}, {
+      versOpus: async (d) => { recus.push(d); return Buffer.from('OggS-extrait'); },
+    });
+    const { id } = await s.recevoir(utilisateurId, bulle('tg:7:200'));
+    await s.finaliser(id);
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id } });
+    expect(recus.map(String)).toEqual(['VIDEO-BRUTE']);
+    expect(c).toMatchObject({ etat: 'en_file', audioMime: 'audio/ogg' });
+    expect(c.audioPath).toMatch(/\.ogg$/);
+    expect(readFileSync(join(racine, c.audioPath!)).toString()).toBe('OggS-extrait');
+    expect(fichiersRanges()).toEqual([c.audioPath]);
+    expect(file.ids).toEqual([id]);
+  });
+
+  it('capture privée : seul le son est range dans prive/, jamais enfilée', async () => {
+    const s = new IngestionService(prisma, new StockageAudio(racine), video, file, () => {}, reenc);
+    await s.armerPrivee(utilisateurId);
+    const { id } = await s.recevoir(utilisateurId, bulle('tg:7:201'));
+    await s.finaliserPrivee(id);
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id } });
+    expect(c).toMatchObject({ audioMime: 'audio/ogg' });
+    expect(c.audioPath).toMatch(/^prive\/.*\.ogg$/);
+    expect(fichiersRanges()).toEqual([c.audioPath]);
+    expect(file.ids).toEqual([]);
+  });
+
+  it('échec de ffmpeg : rien range, rien enfilé, capture reprenable, jamais de vidéo en repli', async () => {
+    const s = new IngestionService(prisma, new StockageAudio(racine), video, file, () => {}, {
+      versOpus: async () => { throw new Error('ffmpeg'); },
+    });
+    const { id } = await s.recevoir(utilisateurId, bulle('tg:7:202'));
+    await expect(s.finaliser(id)).rejects.toThrow('ffmpeg');
+    expect(await prisma.capture.findUniqueOrThrow({ where: { id } })).toMatchObject({ etat: 'recue', audioPath: null, audioMime: 'video/mp4' });
+    expect(fichiersRanges()).toEqual([]);
+    expect(file.ids).toEqual([]);
+    // La reprise rejoue l'extraction, sans perte.
+    await new IngestionService(prisma, new StockageAudio(racine), video, file, () => {}, reenc).finaliser(id);
+    expect(await prisma.capture.findUniqueOrThrow({ where: { id } })).toMatchObject({ etat: 'en_file', audioMime: 'audio/ogg' });
+  });
+
+  it('reliquat : une vidéo déjà rangee n\'est jamais enfilée, elle passe en à revoir', async () => {
+    const { id } = await service.recevoir(utilisateurId, bulle('tg:7:203'));
+    await prisma.capture.update({ where: { id }, data: { audioPath: 'ordinaire/2026/10/x.mp4' } });
+    await service.finaliser(id);
+    expect(await prisma.capture.findUniqueOrThrow({ where: { id } })).toMatchObject({ etat: 'a_revoir', erreur: 'media_video' });
+    expect(file.ids).toEqual([]);
+  });
+
+  it('avec un vrai ffmpeg : le fichier range est de l\'Ogg sans piste vidéo', async () => {
+    const s = new IngestionService(prisma, new StockageAudio(racine), { telecharger: async () => ({ donnees: mp4(), extension: 'mp4' }) },
+      file, () => {}, new ReencodeurBorne(new ReencodeurFfmpeg()));
+    const { id } = await s.recevoir(utilisateurId, bulle('tg:7:204'));
+    await s.finaliser(id);
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id } });
+    const range = readFileSync(join(racine, c.audioPath!));
+    expect(range.subarray(0, 4).toString()).toBe('OggS');
+    // Demander la piste vidéo échoue : il n'y en a plus.
+    expect(() => execFileSync('ffmpeg', ['-v', 'error', '-i', join(racine, c.audioPath!), '-map', '0:v:0', '-f', 'null', '-'], { stdio: 'ignore' })).toThrow();
   });
 });
