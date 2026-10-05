@@ -9,6 +9,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - L'activation de l'empreinte : plafond de dix clés recompté sous verrou à l'enregistrement, journal sans le message de la bibliothèque (défi et origine du client), algorithmes imposés à la vérification, retrait d'un identifiant mal formé sans erreur (2026-10-05).
 
 ### Ajouté
+- L'essai de fumée vérifie l'identifiant de RP de l'empreinte ; l'exploitation documente l'empreinte : domaine, téléphone perdu, mise à jour vers la 1.1.0 (`DOMAINE_APP=organizer.djkix.ovh` à ajouter au `.env`) et dépannage (2026-10-05).
 - L'empreinte dans la PWA : « Activer l'empreinte », liste et retrait dans Réglages ; « Me connecter avec l'empreinte » sur l'écran de connexion, seulement si ce téléphone a une clé ; mot de passe toujours là ; bibliothèque chargée au toucher du bouton ; messages selon le contexte (connexion ou activation), 503 dit calmement ; e2e par l'authentificateur virtuel de Chromium (2026-10-05).
 - Le client et la logique d'empreinte de la PWA (`@simplewebauthn/browser` 14) : invites injectées, messages calmes, clé de ce téléphone retenue sans rien de personnel (2026-10-05).
 - La commande `retirer-empreintes <nom>` : retire toutes les empreintes d'un compte et ferme ses sessions, pour un téléphone perdu (2026-10-05).
