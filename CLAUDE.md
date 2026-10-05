@@ -25,7 +25,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 Les fichiers de ce dépôt font foi. Il n'existe aucune version ailleurs qui les
 dépasse : le document de cadrage initial est archivé et n'est plus mis à jour.
 
-- @docs/decisions.md — 22 décisions fermées. Ne pas les rouvrir sans demander.
+- @docs/decisions.md — 23 décisions fermées. Ne pas les rouvrir sans demander.
 - @docs/cahier-des-charges.md — spécification complète.
 
 Quand une décision change : mettre à jour `docs/decisions.md`, répercuter dans
@@ -117,3 +117,7 @@ pas l'application : il sera retiré quand le lot 1 sera livré. `compose.yaml` e
 par `genere.py`.
 
 Lot 1-C : déploiement prêt (images, stack, CI, `docs/exploitation.md`) ; la mise en service suit la procédure du plan `docs/superpowers/plans/2026-10-05-lot1-c-deploiement.md`, sans attendre la sortie du lot 0 (décision 22).
+
+Lot 1-D (décision 23, 4 octobre 2026) : reconnexion par empreinte digitale (WebAuthn), avancée du lot 3,
+livrée juste après la mise en service. Le mot de passe reste toujours possible ; aucune invite biométrique
+ne précède un enregistrement. Plan : `docs/superpowers/plans/2026-10-05-lot1-d-empreinte.md`.
