@@ -41,6 +41,7 @@ model Utilisateur {
   motDePasseHash  String?   @map("mot_de_passe_hash")
   prochainePrivee Boolean   @default(false) @map("prochaine_privee")
   sessions        Session[]
+  clesAcces       CleAcces[]
 
   @@map("utilisateur")
 }
@@ -167,4 +168,23 @@ model Session {
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
 
   @@map("session")
+}
+
+/// Clé d'accès WebAuthn (empreinte) d'un compte. La clé privée ne quitte jamais le téléphone.
+model CleAcces {
+  id            String      @id @default(uuid()) @db.Uuid
+  /// Identifiant WebAuthn de la clé (base64url), public.
+  identifiant   String      @unique
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  /// Clé publique au format COSE.
+  clePublique   Bytes       @map("cle_publique")
+  compteur      BigInt      @default(0)
+  transports    String[]
+  sauvegardee   Boolean     @default(false)
+  creeLe        DateTime    @default(now()) @map("cree_le")
+  utiliseeLe    DateTime?   @map("utilisee_le")
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@index([utilisateurId])
+  @@map("cle_acces")
 }
