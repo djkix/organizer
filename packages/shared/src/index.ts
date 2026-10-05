@@ -1,3 +1,4 @@
+export * from './agenda.js';
 export * from './api.js';
 export * from './chemins.js';
 export * from './config.js';

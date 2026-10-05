@@ -14,6 +14,7 @@ const dateOuNul = z.string().max(40).nullable().optional();
 export const schemaCorrection = z.object({
   nature: z.enum(NATURES).optional(),
   echeance: z.object({ type: z.string().max(40), date: dateOuNul, debut: dateOuNul, fin: dateOuNul }).optional(),
+  alarme: z.boolean().optional(),
 }).refine((c) => c.nature !== undefined || c.echeance !== undefined);
 
 async function traduire<T>(appel: () => Promise<T>): Promise<T> {

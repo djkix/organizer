@@ -57,3 +57,9 @@ export function instantLocal(jour: string, heure: string, fuseau: string): Date 
   const justes = [mur - avant, mur - apres].filter((t) => isoLocal(new Date(t), fuseau).slice(0, 16) === voulu);
   return new Date(justes.length > 0 ? Math.min(...justes) : mur - avant);
 }
+
+/** « mercredi 14 octobre, 10:00 » : jour, date et heure murale dans le fuseau. */
+export function dateHeureEnClair(date: Date, fuseau: string): string {
+  const jour = new Intl.DateTimeFormat('fr-FR', { timeZone: fuseau, weekday: 'long', day: 'numeric', month: 'long' }).format(date);
+  return `${jour}, ${isoLocal(date, fuseau).slice(11, 16)}`;
+}
