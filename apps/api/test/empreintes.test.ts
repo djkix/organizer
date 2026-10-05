@@ -2,7 +2,7 @@ import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { DelaiDepasse, type MagasinDefis } from '../src/auth/empreintes/defis.js';
-import { EmpreintesService, MAX_CLES_PAR_COMPTE, TropDeCles } from '../src/auth/empreintes/empreintes.service.js';
+import { EmpreintesService, MAX_CLES_PAR_COMPTE, retirerEmpreintes, TropDeCles } from '../src/auth/empreintes/empreintes.service.js';
 import { AuthentificateurLogiciel, CONFIG_ESSAI, MagasinDefisMemoire } from './aides-webauthn.js';
 
 const prisma = creerPrisma();
@@ -238,5 +238,22 @@ describe('se reconnecter par l\'empreinte', () => {
   it('un défi de connexion ne sert pas à activer une empreinte', async () => {
     const o = await service.optionsConnexion();
     expect(await service.inscrire(u, telephone().inscrire({ ...(await service.optionsInscription(u)), challenge: o.challenge }))).toBeNull();
+  });
+});
+
+describe('retirerEmpreintes (CLI, téléphone perdu)', () => {
+  it('retire toutes les clés du compte et ferme ses sessions, sans toucher à l\'autre compte', async () => {
+    const autre = await prisma.utilisateur.create({ data: { nom: 'f' } });
+    const cle = (identifiant: string, utilisateurId: string) => ({ identifiant, utilisateurId, clePublique: new Uint8Array([1]) });
+    await prisma.cleAcces.createMany({ data: [cle('a', u.id), cle('b', u.id), cle('c', autre.id)] });
+    const expireLe = new Date('2027-01-01T00:00:00Z');
+    await prisma.session.createMany({ data: [{ jetonHash: 'x', utilisateurId: u.id, expireLe }, { jetonHash: 'y', utilisateurId: autre.id, expireLe }] });
+    expect(await retirerEmpreintes(prisma, 'l')).toBe(2);
+    expect(await prisma.cleAcces.findMany({ select: { identifiant: true } })).toEqual([{ identifiant: 'c' }]);
+    expect(await prisma.session.findMany({ select: { jetonHash: true } })).toEqual([{ jetonHash: 'y' }]);
+  });
+
+  it('compte inconnu : erreur claire', async () => {
+    await expect(retirerEmpreintes(prisma, 'inconnu')).rejects.toThrow('Compte introuvable.');
   });
 });
