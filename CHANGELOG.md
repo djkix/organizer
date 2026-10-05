@@ -6,6 +6,8 @@ Le projet n'a pas encore de version publiée.
 
 ## [Non publié]
 
+## [1.0.1] - 2026-10-05
+
 ### Corrigé
 - Une bulle vidéo Telegram n'envoie plus que son son à Gemini, jamais l'image, même quand l'index du MP4 est en fin de fichier (2026-10-05).
 
