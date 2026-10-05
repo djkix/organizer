@@ -9,6 +9,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - L'activation de l'empreinte : plafond de dix clés recompté sous verrou à l'enregistrement, journal sans le message de la bibliothèque (défi et origine du client), algorithmes imposés à la vérification, retrait d'un identifiant mal formé sans erreur (2026-10-05).
 
 ### Ajouté
+- Les routes de l'empreinte : options et reconnexion sous `/api/session/empreinte`, activation, liste et retrait sous `/api/empreintes`, 10 essais par minute et par IP, 503 court si Valkey ne répond pas (2026-10-05).
 - La reconnexion par empreinte dans l'API : défi à usage unique, origine et RP exacts, empreinte exigée, compte de la clé vérifié, compteur qui recule refusé ; la même session que le mot de passe (2026-10-05).
 - L'activation d'une empreinte par WebAuthn (`@simplewebauthn/server` 14) : clé découvrable, empreinte exigée, sans attestation, défi lié au compte, dix clés au plus ; liste et retrait de ses clés (2026-10-05).
 - Les défis de l'empreinte dans Valkey : usage unique, deux minutes, échec en 3 s si Valkey ne répond pas (2026-10-05).

@@ -8,3 +8,4 @@ export const VUES = Symbol('VUES');
 export const ITEMS = Symbol('ITEMS');
 export const PRIVEES = Symbol('PRIVEES');
 export const REENCODEUR = Symbol('REENCODEUR');
+export const EMPREINTES = Symbol('EMPREINTES');
