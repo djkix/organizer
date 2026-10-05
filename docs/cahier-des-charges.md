@@ -636,7 +636,7 @@ L'API est le seul point d'envoi de messages vers L : le scheduler déclenche une
 | Volume | Contenu | Taille | Sauvegarde |
 | --- | --- | --- | --- |
 | `pgdata` | Base complète | 2 à 5 Go à 1 an | Lot 2 |
-| `audio` | Enregistrements d'origine | 40 Go maximum ; rotation reportée au lot 2, alerte administrateur à 30 Go d'ici là | Lot 2 |
+| `audio` | Enregistrements d'origine | 40 Go maximum ; rotation reportée au lot 2, alerte administrateur à 30 Go d'ici là | Sous-lot ultérieur du lot 2 |
 | `valkeydata` | File de jobs | Moins de 1 Go | Aucune, reconstructible |
 
 La coquille de la PWA est dans l'image `web` : une mise à jour d'image la remplace.
@@ -916,7 +916,7 @@ Critère de sortie : L se reconnecte par l'empreinte sur son téléphone, et le 
 
 ### Lot 2 — Rappels et fils
 
-- Scheduler, écriture des rendez-vous dans Google Agenda sans rappel par défaut, et rotation de l'audio ordinaire au-delà de 40 Go.
+- Scheduler et écriture des rendez-vous dans Google Agenda sans rappel par défaut (lot 2-A) ; rotation de l'audio ordinaire au-delà de 40 Go (sous-lot ultérieur du lot 2).
 - Alarme activable item par item, à la capture ou dans l'application.
 - **Widget Home Assistant**, remonté du lot 3 : sans lui, plus rien ne rappelle quoi que ce soit.
 - Fils de pensées, rattachement vectoriel, vue Pensées avec filtres.
