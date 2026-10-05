@@ -21,11 +21,12 @@ COPY packages/db/package.json packages/db/
 COPY packages/db/prisma packages/db/prisma
 
 FROM outils AS construction
-# Version de la PWA, figée au build (affichée aux administrateurs dans Réglages).
-ARG ORGANIZER_VERSION=dev
-ENV ORGANIZER_VERSION=${ORGANIZER_VERSION}
 RUN pnpm install --frozen-lockfile
 COPY . .
+# Version de la PWA, figée au build (affichée aux administrateurs dans Réglages).
+# Après l'installation : une nouvelle version ne casse pas le cache des dépendances.
+ARG ORGANIZER_VERSION=dev
+ENV ORGANIZER_VERSION=${ORGANIZER_VERSION}
 RUN pnpm --filter @organizer/api --filter @organizer/worker --filter @organizer/scheduler build \
  && pnpm --filter @organizer/web build \
  && node apps/web/scripts/entetes.mjs caddy apps/web/build/index.html > /csp.caddy

@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Corrigé
+- Une nouvelle version ne vide plus le cache des dépendances lors de la construction des images (2026-10-05).
+
 ### Ajouté
 - Décision 24 et lot 2-B : l'accueil de la PWA porte deux boutons côte à côte, « Enregistrer » (rangé tout seul, écran `/enregistrer`, mention « Envoyé au tri », « Reçu. » au retour) et « Privé » (reste sur le serveur, écran inchangé) ; `POST /api/captures` crée une capture ordinaire de canal `pwa` (même contrôle et même réencodage borné que la route privée, idempotente par `X-Capture-Id`) puis la finalise et l'enfile comme un vocal Telegram ; un identifiant de capture privée y est refusé ; chaque entrée de la file hors ligne porte son mode fixé à la création et l'adresse d'envoi en est dérivée (une entrée sans mode reste privée) ; raccourci Android « Enregistrer » ; tests unitaires, API et e2e de l'invariant de confidentialité (2026-10-05).
 - Réglages affiche à l'administrateur, en haut à droite et en discret, la version de la PWA (figée au build par `ORGANIZER_VERSION`, argument de build Docker passé par la CI) et, si elle diffère, celle du serveur (`GET /api/session/moi`, réservée à l'administrateur) ; rien pour L ; l'API reçoit `ORGANIZER_VERSION` de la stack (2026-10-05).

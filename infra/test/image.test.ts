@@ -182,7 +182,7 @@ describe('ci.yml', () => {
   it('la version de la PWA est passée en argument de build : l\'étiquette en publication, « essai » sinon', () => {
     expect(y).toContain('--build-arg ORGANIZER_VERSION="$VERSION"');
     expect(y).toContain('--build-arg ORGANIZER_VERSION=essai');
-    expect(lire('infra/image/Dockerfile')).toMatch(/AS construction\n[^\n]*\nARG ORGANIZER_VERSION=dev\nENV ORGANIZER_VERSION=\$\{ORGANIZER_VERSION\}/);
+    expect(lire('infra/image/Dockerfile')).toMatch(/AS construction\nRUN pnpm install --frozen-lockfile\nCOPY \. \.\n(#[^\n]*\n)*ARG ORGANIZER_VERSION=dev\nENV ORGANIZER_VERSION=\$\{ORGANIZER_VERSION\}/);
     expect(lire('infra/docker-compose.yml')).toContain('ORGANIZER_VERSION: ${ORGANIZER_VERSION:?}');
   });
   it('les cinq images sont construites, analysées et publiées', () => {
