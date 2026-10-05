@@ -36,12 +36,12 @@ async function attendre(condition: () => Promise<boolean>, ms = 8000): Promise<v
   throw new Error('délai dépassé');
 }
 
-function lancer(): void {
+function lancer(pauseMs = 300): void {
   const alerter = async (m: string): Promise<void> => { alertes.push(m); };
   const signaleur = new Signaleur(alerter);
   const base = { ...depsSynchro(prisma, faux, undefined, alerteurAgenda(signaleur, prisma)) };
   worker = demarrerFileAgenda({
-    ...base, cle: CLE, connexion, nomFile, pauseMs: 300, alerter, signaleur,
+    ...base, cle: CLE, connexion, nomFile, pauseMs, alerter, signaleur,
     enfilerSynchro: async (itemId) => { await file.add('synchroniser', { type: 'synchroniser', itemId }); },
     enfilerBalayage: async (utilisateurId) => { await file.add('balayer', { type: 'balayer', utilisateurId }); },
   });
@@ -88,6 +88,17 @@ describe('demarrerFileAgenda', () => {
     expect(alertes).toEqual([MESSAGES_ADMIN.pause(429, 'rateLimitExceeded')]);
   });
 
+  it('la pause dure au moins pauseMs avant le job suivant', async () => {
+    const { uid } = await compteConnecte(prisma, faux);
+    const a = await actionDatee(prisma, uid, { texte: 'un' });
+    faux.forcer(/^POST \/calendar\//, 429, { error: { code: 429, errors: [{ reason: 'rateLimitExceeded' }] } });
+    lancer(2500);
+    const debut = Date.now();
+    await synchro(a, { attempts: 5 });
+    await attendre(async () => (await evenementId(a)) !== null, 12_000);
+    expect(Date.now() - debut).toBeGreaterThanOrEqual(2400);
+  });
+
   it('autorisation retirée : une alerte, job terminé sans reprise', async () => {
     const { uid } = await compteConnecte(prisma, faux);
     const a = await actionDatee(prisma, uid, { texte: 'un' });
@@ -110,6 +121,17 @@ describe('demarrerFileAgenda', () => {
     await file.add('echanger', { type: 'echanger', utilisateurId: u.id, code: 'c', verificateur: 'v' }, { attempts: 3 });
     await attendre(async () => (await prisma.agendaGoogle.findUniqueOrThrow({ where: { utilisateurId: u.id } })).etat === 'echec');
     expect(alertes).toContain(MESSAGES_ADMIN.client);
+  });
+
+  it('client refusé pendant une synchro : alerte client, pas de reprise', async () => {
+    const { uid } = await compteConnecte(prisma, faux);
+    const a = await actionDatee(prisma, uid);
+    faux.forcer(/^POST \/token$/, 401, { error: 'invalid_client' });
+    lancer();
+    const j = await synchro(a, { attempts: 5 });
+    await attendre(async () => (await j.getState()) === 'failed');
+    expect(alertes).toContain(MESSAGES_ADMIN.client);
+    expect((await file.getJob(j.id!))!.attemptsMade).toBe(1);
   });
 
   it('trois échecs définitifs dans l\'heure : une alerte de volume', async () => {

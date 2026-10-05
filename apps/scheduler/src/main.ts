@@ -43,9 +43,14 @@ let arret = false;
 async function arreter(): Promise<void> {
   if (arret) return;
   arret = true;
-  await worker.close();
-  await Promise.all([file.close(), alertes.close(), prisma.$disconnect()]);
-  connexion.disconnect();
+  const fermer = async (f: () => unknown): Promise<void> => {
+    try { await f(); } catch (e) { console.error(`Arrêt : fermeture impossible (${(e as Error).name})`); }
+  };
+  await fermer(() => worker.close());
+  await fermer(() => file.close());
+  await fermer(() => alertes.close());
+  await fermer(() => prisma.$disconnect());
+  await fermer(() => connexion.disconnect());
   process.exit(0);
 }
 process.on('SIGTERM', () => void arreter());
