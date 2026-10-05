@@ -26,6 +26,9 @@ export function libelleJour(jour: string, aujourdhui: string): string {
 
 export const heureLocale = (iso: string, fuseau: string): string => isoLocal(new Date(iso), fuseau).slice(11, 16);
 
+/** « Ajoutée le mardi 6 octobre » : jour civil local de l'activation d'une empreinte. */
+export const ajouteeLe = (iso: string, fuseau: string): string => `Ajoutée le ${jourEnClair(jourLocal(new Date(iso), fuseau))}`;
+
 export function avantLe(iso: string, fuseau: string): string {
   const [, m, j] = parties(jourLocal(new Date(iso), fuseau));
   return `avant le ${quantieme(j)} ${MOIS[m - 1]}`;

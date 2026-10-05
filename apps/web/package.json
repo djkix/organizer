@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@organizer/shared": "workspace:*",
+    "@simplewebauthn/browser": "^14.0.0",
     "idb": "^8.0.3"
   },
   "devDependencies": {
