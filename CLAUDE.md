@@ -121,3 +121,6 @@ Lot 1-C : déploiement prêt (images, stack, CI, `docs/exploitation.md`) ; la mi
 Lot 1-D (décision 23, 4 octobre 2026) : reconnexion par empreinte digitale (WebAuthn), avancée du lot 3,
 livrée juste après la mise en service. Le mot de passe reste toujours possible ; aucune invite biométrique
 ne précède un enregistrement. Plan : `docs/superpowers/plans/2026-10-05-lot1-d-empreinte.md`.
+
+Lot 2-A : Google Agenda et alarme item par item, par un service `apps/scheduler` (seul à joindre Google), en version 1.2.0.
+Plan : `docs/superpowers/plans/2026-10-05-lot2-a-agenda.md`.
