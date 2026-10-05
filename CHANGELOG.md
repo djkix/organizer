@@ -2,9 +2,11 @@
 
 Toutes les modifications notables de ce projet sont consignées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
-Le projet n'a pas encore de version publiée.
 
 ## [Non publié]
+
+### Ajouté
+- Le plan du lot 1-D : reconnexion par empreinte digitale (WebAuthn) dans la PWA, décision 23 à poser en première tâche, publication en 1.1.0 (2026-10-05).
 
 ## [1.0.1] - 2026-10-05
 
