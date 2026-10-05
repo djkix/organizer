@@ -172,8 +172,8 @@ describe('synchroniserAction : corrections de revue', () => {
     const { uid } = await compteConnecte(prisma, faux);
     const itemId = await actionDatee(prisma, uid, { nature: 'pensee' });
     await prisma.action.update({ where: { itemId }, data: { evenementId: hex(itemId), evenementCalendrierId: null, evenementEmpreinte: 'x' } });
-    await synchroniserAction(itemId, depsSynchro(prisma, faux));
-    expect(await action(itemId)).toMatchObject({ evenementId: null, evenementEmpreinte: null });
+    expect(await synchroniserAction(itemId, depsSynchro(prisma, faux))).toBe('supprime');
+    expect(await action(itemId)).toMatchObject({ evenementId: null, evenementEmpreinte: null, evenementGeneration: 1 });
     expect(appelsAgenda()).toHaveLength(0);
   });
 });

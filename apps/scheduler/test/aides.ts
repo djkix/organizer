@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@organizer/db';
-import { Jetons } from '../src/agenda/jetons.js';
+import { Jetons, type Alerteur } from '../src/agenda/jetons.js';
 import type { DepsSynchro } from '../src/agenda/synchroniser.js';
 import { chiffrer } from '../src/chiffre.js';
 import type { ConfigGoogle } from '../src/configuration.js';
@@ -50,7 +50,7 @@ export async function actionDatee(
   return it.id;
 }
 
-export function depsSynchro(prisma: PrismaClient, faux: FauxGoogle, maintenant: () => Date = () => MAINTENANT): DepsSynchro & { jetons: Jetons; oauth: ClientOAuth } {
+export function depsSynchro(prisma: PrismaClient, faux: FauxGoogle, maintenant: () => Date = () => MAINTENANT, alerter?: Alerteur): DepsSynchro & { jetons: Jetons; oauth: ClientOAuth } {
   const oauth = new ClientOAuth(CONFIG_GOOGLE(faux), fetch);
-  return { prisma, oauth, calendrier: new ClientCalendrier(`${faux.url}/calendar/v3`, fetch), jetons: new Jetons(prisma, oauth, CLE, maintenant), maintenant };
+  return { prisma, oauth, calendrier: new ClientCalendrier(`${faux.url}/calendar/v3`, fetch), jetons: new Jetons(prisma, oauth, CLE, maintenant, alerter), maintenant, alerter };
 }

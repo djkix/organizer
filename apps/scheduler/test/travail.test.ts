@@ -28,22 +28,50 @@ afterAll(async () => { await faux.arreter(); await prisma.$disconnect(); });
 beforeEach(async () => { await viderBase(prisma); });
 
 describe('travailSynchro', () => {
-  it('autorisation retirée : échec final et alerte une seule fois', async () => {
+  it('autorisation retirée : issue revoque sans erreur, alerte une seule fois ; ensuite sans_agenda', async () => {
     const { uid } = await compteConnecte(prisma, faux);
     const itemId = await actionDatee(prisma, uid);
     faux.rafraichissements.clear();
     const alerter = vi.fn(async () => {});
-    const t = travailSynchro(depsSynchro(prisma, faux), { alerter });
-    await expect(t(itemId)).rejects.toBeInstanceOf(UnrecoverableError);
+    const t = travailSynchro(depsSynchro(prisma, faux, undefined, alerter));
+    await expect(t(itemId)).resolves.toBe('revoque');
     await expect(t(itemId)).resolves.toBe('sans_agenda');
     expect(alerter).toHaveBeenCalledTimes(1);
     expect(alerter).toHaveBeenCalledWith({ type: 'autorisation_retiree', utilisateurId: uid });
   });
 
+  it('alerteur en échec : classification inchangée', async () => {
+    const { uid } = await compteConnecte(prisma, faux);
+    const itemId = await actionDatee(prisma, uid);
+    faux.rafraichissements.clear();
+    const t = travailSynchro(depsSynchro(prisma, faux, undefined, async () => { throw new Error('boum'); }));
+    await expect(t(itemId)).resolves.toBe('revoque');
+  });
+
+  it('panne de base : erreur d\'origine, réessayable (pas Unrecoverable)', async () => {
+    const { uid } = await compteConnecte(prisma, faux);
+    const itemId = await actionDatee(prisma, uid);
+    const d = depsSynchro(prisma, faux);
+    const panne = new Error('Can\'t reach database server');
+    vi.spyOn(d.prisma.action, 'findUnique').mockRejectedValue(panne);
+    vi.spyOn(d.prisma.action, 'findUniqueOrThrow').mockRejectedValue(panne);
+    const err = await travailSynchro(d)(itemId).catch((e: unknown) => e);
+    vi.restoreAllMocks();
+    expect(err).toBe(panne);
+    expect(err).not.toBeInstanceOf(UnrecoverableError);
+  });
+
+  it('GoogleRefuse : échec final', async () => {
+    const { uid } = await compteConnecte(prisma, faux);
+    const itemId = await actionDatee(prisma, uid);
+    faux.forcer(/^POST \/calendar\//, 403, { error: { errors: [{ reason: 'forbidden' }] } });
+    await expect(travailSynchro(depsSynchro(prisma, faux))(itemId)).rejects.toBeInstanceOf(UnrecoverableError);
+  });
+
   it('requête invalide : échec final ; 429 : erreur d\'origine, réessayable', async () => {
     const { uid } = await compteConnecte(prisma, faux);
     const itemId = await actionDatee(prisma, uid);
-    const t = travailSynchro(depsSynchro(prisma, faux), { alerter: async () => {} });
+    const t = travailSynchro(depsSynchro(prisma, faux));
     faux.forcer(/^POST \/calendar\//, 400);
     await expect(t(itemId)).rejects.toBeInstanceOf(UnrecoverableError);
     faux.forcer(/^POST \/calendar\//, 429, { error: { errors: [{ reason: 'rateLimitExceeded' }] } });
