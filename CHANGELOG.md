@@ -9,6 +9,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Le cahier précise le pont Google Agenda (identifiant déterministe, durée, contenu, scheduler seul à joindre Google, proposition du bot) et découpe le lot 2 ; le lot 2-A livre l'agenda et l'alarme item par item (2026-10-05).
 
 ### Ajouté
+- Le contenu d'un événement (titre court, 30 minutes, fuseau de Paris, rappel de 10 minutes seulement avec l'alarme, jamais de description ni de pensée) et le plan de synchronisation sans appel à Google ; changements d'heure testés (2026-10-05).
 - Les clients Google du scheduler, sans bibliothèque Google : OAuth (échange PKCE, rafraîchissement, révocation) et Calendar v3 (agenda dédié, événements), erreurs classées sans jeton ni texte de Google ; faux serveur Google pour les tests (2026-10-05).
 - Le service `scheduler` (squelette) : configuration Google exigée en production, jeton de rafraîchissement chiffré en AES-256-GCM lié au compte, sonde de sortie, paquet esbuild vérifié ; l'image installe ses dépendances et `.env.example` reprend les noms lus (2026-10-05).
 - Les contrats partagés de l'agenda : files `agenda` et `propositions`, jobs, délai de 15 s après un cochage, état de la connexion pour la PWA, alarme dans une correction, portée Google définie une fois, titre court et date en clair (2026-10-05).
