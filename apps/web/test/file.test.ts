@@ -145,7 +145,7 @@ describe('garderPuisEnvoyer', () => {
       return new Response(null, { status: 201 });
     }) as typeof fetch;
     const v = creerVideur(file, f);
-    const c = await garderPuisEnvoyer(file, v, enregistrement);
+    const c = await garderPuisEnvoyer(file, v, enregistrement, 'prive');
     await v.vider();
     expect(c.id).toMatch(UUID);
     expect(presente).toBe(true);
@@ -154,10 +154,66 @@ describe('garderPuisEnvoyer', () => {
   it('refuse un enregistrement vide : rien en file, rien envoyé', async () => {
     const file = base();
     const { f, envois } = serveur([201]);
-    await expect(garderPuisEnvoyer(file, creerVideur(file, f), { ...enregistrement, blob: new Blob([]) }))
+    await expect(garderPuisEnvoyer(file, creerVideur(file, f), { ...enregistrement, blob: new Blob([]) }, 'prive'))
       .rejects.toBeInstanceOf(EnregistrementVide);
     expect(await file.lister()).toEqual([]);
     expect(envois).toEqual([]);
+  });
+});
+
+describe('mode de la capture (règle n° 6) : l\'adresse d\'envoi vient du type fixé à la création', () => {
+  const enregistrement = { blob: new Blob(['audio']), mime: 'audio/webm', dureeS: 3, emisLe: '2026-10-06T08:00:00.000Z' };
+
+  it('privé : /api/captures/privees ; ordinaire : /api/captures', async () => {
+    const p = serveur([201]);
+    await envoyerCapture({ ...capture(1), mode: 'prive' }, p.f);
+    const o = serveur([201]);
+    await envoyerCapture({ ...capture(2), mode: 'ordinaire' }, o.f);
+    expect(p.envois.map((e) => e.url)).toEqual(['/api/captures/privees']);
+    expect(o.envois.map((e) => e.url)).toEqual(['/api/captures']);
+  });
+
+  it('une entrée sans mode (file d\'avant le lot 2-B) est privée : jamais ordinaire par défaut', async () => {
+    const { f, envois } = serveur([201]);
+    expect(capture(1).mode).toBeUndefined();
+    await envoyerCapture(capture(1), f);
+    expect(envois.map((e) => e.url)).toEqual(['/api/captures/privees']);
+  });
+
+  it('garderPuisEnvoyer inscrit le mode dans la file, il survit à la réouverture', async () => {
+    const nom = `test-${crypto.randomUUID()}`;
+    const file = ouvrirFilePrivee(nom);
+    const { f } = serveur(['coupure']);
+    await garderPuisEnvoyer(file, creerVideur(file, f), enregistrement, 'prive', capture(1).id);
+    await garderPuisEnvoyer(file, creerVideur(file, f), enregistrement, 'ordinaire', capture(2).id);
+    expect((await ouvrirFilePrivee(nom).lister()).map((c) => [c.id, c.mode])).toEqual([[capture(1).id, 'prive'], [capture(2).id, 'ordinaire']]);
+  });
+
+  it('INVARIANT : vidage d\'une file mixte, hors ligne puis en ligne — chaque capture ne part que vers sa route', async () => {
+    const file = base();
+    const horsLigne = serveur(['coupure']);
+    const v = creerVideur(file, horsLigne.f);
+    await garderPuisEnvoyer(file, v, enregistrement, 'prive', capture(1).id);
+    await garderPuisEnvoyer(file, v, enregistrement, 'ordinaire', capture(2).id);
+    await v.vider();
+    await v.vider();
+    const enLigne = serveur([201]);
+    await creerVideur(file, enLigne.f).vider();
+    const parId = (envois: Envoi[]) => envois.map((e) => [e.entetes.get('x-capture-id'), e.url]);
+    const tous = [...parId(horsLigne.envois), ...parId(enLigne.envois)];
+    for (const [id, url] of tous) {
+      expect(url).toBe(id === capture(1).id ? '/api/captures/privees' : '/api/captures');
+    }
+    expect(parId(enLigne.envois)).toEqual([[capture(1).id, '/api/captures/privees'], [capture(2).id, '/api/captures']]);
+    expect(await file.lister()).toEqual([]);
+  });
+
+  it('un refus de la route ordinaire ne bascule jamais une capture privée ailleurs', async () => {
+    const file = base();
+    await file.ajouter({ ...capture(1), mode: 'prive' });
+    const { f, envois } = serveur([404]);
+    await creerVideur(file, f).vider();
+    expect(envois.map((e) => e.url)).toEqual(['/api/captures/privees']);
   });
 });
 
@@ -209,7 +265,7 @@ describe('fiabilité', () => {
     const v = creerVideur(file, f);
     const premier = v.vider();
     await vi.waitFor(() => expect(envois).toHaveLength(1));
-    await garderPuisEnvoyer(file, v, { ...capture(2), blob: new Blob(['b']) }, capture(2).id);
+    await garderPuisEnvoyer(file, v, { ...capture(2), blob: new Blob(['b']) }, 'prive', capture(2).id);
     lacher();
     await premier;
     await vi.waitFor(() => expect(envois).toEqual([capture(1).id, capture(2).id]));

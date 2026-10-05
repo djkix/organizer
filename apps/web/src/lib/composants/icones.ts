@@ -9,6 +9,7 @@ export const TRACES = {
   lecture: ['M8 5v14l11-7z'],
   pause: ['M8 5v14', 'M16 5v14'],
   cloche: ['M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z', 'M10 21h4'],
+  micro: ['M9 3h6v10a3 3 0 0 1-6 0z', 'M5 11a7 7 0 0 0 14 0', 'M12 18v3'],
   coche: ['M5 12l5 5 9-10'],
 } as const satisfies Record<string, readonly string[]>;
 

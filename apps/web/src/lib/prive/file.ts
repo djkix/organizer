@@ -3,9 +3,25 @@ import { openDB, type DBSchema, type IDBPDatabase, type OpenDBCallbacks } from '
 
 /** Ce que rend l'enregistreur. emisLe : début de l'enregistrement (CAP-05), ISO 8601. */
 export interface Enregistrement { blob: Blob; mime: string; dureeS: number; emisLe: string }
-/** Capture privée en attente sur le téléphone. L'id est fixé à la mise en file et sert à tous les essais. */
+/**
+ * Le mode d'une capture est fixé par l'écran qui l'a enregistrée, à la mise en file, et ne change plus (règle n° 6).
+ * L'adresse d'envoi en est dérivée : aucune valeur par défaut « ordinaire », l'ordinaire doit être écrit en toutes lettres.
+ */
+export type ModeCapture = 'prive' | 'ordinaire';
+
+export const URL_DEPOT_PRIVE = '/api/captures/privees';
+export const URL_DEPOT_ORDINAIRE = '/api/captures';
+
+/** Une entrée sans mode (file écrite avant le lot 2-B) était forcément privée : elle le reste. */
+export function urlDepot(mode: ModeCapture | undefined): string {
+  return mode === 'ordinaire' ? URL_DEPOT_ORDINAIRE : URL_DEPOT_PRIVE;
+}
+
+/** Capture en attente sur le téléphone, privée ou ordinaire. L'id est fixé à la mise en file et sert à tous les essais. */
 export interface CapturePrivee extends Enregistrement {
   id: string;
+  /** Absent seulement sur les entrées anciennes, toutes privées. */
+  mode?: ModeCapture;
   /** Refus définitif du serveur : la copie reste, mais les vidages automatiques l'ignorent. */
   refuse?: { statut: number; le: string };
 }
@@ -117,7 +133,7 @@ export async function envoyerCapture(c: CapturePrivee, f: typeof fetch = (e, i) 
   });
   try {
     const r = await Promise.race([
-      f('/api/captures/privees', {
+      f(urlDepot(c.mode), {
         method: 'POST',
         credentials: 'same-origin',
         body: c.blob,
@@ -239,11 +255,11 @@ export function creerVideur(file: FilePrivee, f?: typeof fetch): Videur {
 
 /** La copie locale d'abord, l'envoi ensuite : une coupure ne perd rien (CAP-10). */
 export async function garderPuisEnvoyer(
-  file: FilePrivee, videur: Videur, e: Enregistrement, id: string = crypto.randomUUID(),
+  file: FilePrivee, videur: Videur, e: Enregistrement, mode: ModeCapture, id: string = crypto.randomUUID(),
 ): Promise<CapturePrivee> {
   // Vide, l'API répondrait 400 à chaque essai : la capture resterait en file pour toujours.
   if (e.blob.size === 0) throw new EnregistrementVide();
-  const c: CapturePrivee = { id, ...e };
+  const c: CapturePrivee = { id, mode, ...e };
   await file.ajouter(c);
   void videur.vider().catch(() => undefined);
   return c;

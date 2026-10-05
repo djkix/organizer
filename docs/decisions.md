@@ -25,6 +25,7 @@
 | 21 | Lots 0 et 1 | Menés en parallèle. Thèmes, types d'échéance et prompt sont des données, branchées en fin de lot 1 |
 | 22 | Mise en service | Directe, sans attendre la sortie du lot 0. L'application démarre en production avec le prompt actuel (`tri/v1`) ; le classement est affiné à l'usage, sur les captures réelles et les corrections. Le corpus du lot 0 continue de servir de jeu de test, sans bloquer la mise en service |
 | 23 | Empreinte digitale | Avancée du lot 3 à un lot 1-D, livré juste après la mise en service. WebAuthn (clé d'accès Android) pour la reconnexion seulement ; le mot de passe reste toujours possible. Pas de mot de passe redemandé avant « Activer l'empreinte » (la session suffit) ; la synchronisation des clés d'accès Google sur les autres Android de L est acceptée (5 octobre 2026) |
+| 24 | Capture ordinaire dans la PWA | Bouton d'enregistrement ordinaire dans la PWA, à côté du bouton privé, avancé du lot 3 au lot 2-B le 5 octobre 2026. Telegram reste un point d'entrée. |
 
 ## Points encore ouverts
 

@@ -78,6 +78,14 @@
     void rendreFocus();
   }
 
+  // Retour d'un enregistrement ordinaire : « Reçu. », puis le bandeau se tait.
+  $effect(() => {
+    if (!page.state.recu) return;
+    annonce = MESSAGES.recu;
+    const m = setTimeout(() => { if (annonce === MESSAGES.recu) annonce = null; }, 6000);
+    return () => clearTimeout(m);
+  });
+
   // Le geste retour d'Android retire l'entrée du détail : le détail se ferme.
   $effect(() => {
     if (selection && !page.state.detail) {

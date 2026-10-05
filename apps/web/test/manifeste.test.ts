@@ -27,8 +27,9 @@ describe('manifeste', () => {
     expect(manifeste).not.toHaveProperty('gcm_sender_id');
   });
 
-  it('raccourcis : l\'enregistreur privé d\'abord (CAP-07), puis Aujourd\'hui', () => {
+  it('raccourcis : Enregistrer, l\'enregistreur privé (CAP-07), puis Aujourd\'hui', () => {
     expect(manifeste.shortcuts.map((s) => [s.name, s.url])).toEqual([
+      ['Enregistrer', '/enregistrer'],
       ['Enregistrement privé', '/prive/enregistrer'],
       ["Aujourd'hui", '/?vue=aujourdhui'],
     ]);

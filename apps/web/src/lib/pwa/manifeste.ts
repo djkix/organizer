@@ -22,6 +22,12 @@ export const manifeste = {
   ],
   shortcuts: [
     {
+      name: 'Enregistrer',
+      short_name: 'Enregistrer',
+      url: CHEMINS.enregistrer,
+      icons: [{ src: '/icones/raccourci-enregistrer-96.png', sizes: '96x96', type: 'image/png' }],
+    },
+    {
       name: 'Enregistrement privé',
       short_name: 'Privé',
       url: CHEMINS.enregistreur,

@@ -14,17 +14,17 @@ import { AudioIllisible, ServeurOccupe } from './reencodeur.js';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const schemaEtiquette = z.object({ etiquette: z.string().trim().max(80).nullable() });
 
-function entete(req: RequeteAuthentifiee, nom: string): string | undefined {
+export function entete(req: RequeteAuthentifiee, nom: string): string | undefined {
   const v = req.headers[nom];
   return Array.isArray(v) ? v[0] : v;
 }
 
-function emisLe(valeur: string | undefined, maintenant: Date): Date {
+export function emisLe(valeur: string | undefined, maintenant: Date): Date {
   const d = valeur ? new Date(valeur) : maintenant;
   return Number.isNaN(d.getTime()) || d.getTime() > maintenant.getTime() + 5 * 60_000 ? maintenant : d;
 }
 
-function duree(valeur: string | undefined): number | null {
+export function duree(valeur: string | undefined): number | null {
   if (valeur === undefined || !/^\d{1,4}$/.test(valeur)) return null;
   const n = Number(valeur);
   return n <= 3600 ? n : null;

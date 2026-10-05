@@ -6,6 +6,7 @@ export const CHEMINS = {
   connexion: '/connexion',
   prive: '/prive',
   enregistreur: '/prive/enregistrer',
+  enregistrer: '/enregistrer',
   reglages: '/reglages',
   aRevoir: '/a-revoir',
 } as const;
