@@ -64,7 +64,7 @@ jobs:
           for cible in api worker scheduler web sortie; do
             docker buildx build --load --target "$cible" -f infra/image/Dockerfile \
               --cache-from type=gha,scope="$cible" --cache-to type=gha,mode=max,scope="$cible" \
-              -t "ghcr.io/djkix/organizer-$cible:essai" .
+              --build-arg ORGANIZER_VERSION=essai -t "ghcr.io/djkix/organizer-$cible:essai" .
           done
       - name: Analyser les vulnérabilités (critiques corrigeables bloquantes)
         run: |
@@ -99,6 +99,6 @@ jobs:
           echo "$JETON" | docker login ghcr.io -u "$ACTEUR" --password-stdin
           for cible in api worker scheduler web sortie; do
             docker buildx build --push --target "$cible" -f infra/image/Dockerfile \
-              --cache-from type=gha,scope="$cible" \
+              --cache-from type=gha,scope="$cible" --build-arg ORGANIZER_VERSION="$VERSION" \
               -t "ghcr.io/djkix/organizer-$cible:$VERSION" .
           done

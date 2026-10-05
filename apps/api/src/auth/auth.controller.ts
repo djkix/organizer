@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpException, Inject, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { lireVar } from '@organizer/shared';
 import { z } from 'zod';
 import { AUTH } from '../jetons.js';
 import type { AuthService } from './auth.service.js';
@@ -35,7 +36,9 @@ export class AuthController {
 
   @Get('moi')
   @UseGuards(SessionGuard)
-  moi(@Req() req: RequeteAuthentifiee): { nom: string } {
-    return { nom: req.utilisateur.nom };
+  moi(@Req() req: RequeteAuthentifiee): { nom: string; admin: boolean; versionServeur?: string } {
+    const { nom, admin } = req.utilisateur;
+    // La version du serveur ne sort que pour l'administrateur.
+    return admin ? { nom, admin, versionServeur: lireVar('ORGANIZER_VERSION') ?? 'dev' } : { nom, admin };
   }
 }

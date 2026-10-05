@@ -9,11 +9,13 @@
   import { activerEmpreinte, CLE_INCONNUE, memoLocal, retirerEmpreinte } from '$lib/empreinte';
   import { ceremoniesNavigateur } from '$lib/empreinte-navigateur';
   import { ajouteeLe } from '$lib/format';
+  import { libelleVersion } from '$lib/version';
   import { MESSAGES } from '$lib/messages';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
   let message = $state<string | null>(null);
+  const version = $derived(data.session?.etat === 'connecte' && data.session.admin ? libelleVersion(__VERSION_PWA__, data.session.versionServeur) : null);
   const nom = $derived(data.session?.etat === 'connecte' ? data.session.nom : '');
 
   const memo = memoLocal();
@@ -137,7 +139,7 @@
 </script>
 
 <main class="ecran">
-  <header class="entete"><h1>Réglages</h1></header>
+  <header class="entete entete-version"><h1>Réglages</h1>{#if version}<span class="discret" data-testid="version">{version}</span>{/if}</header>
   <h2 class="groupe">Compte</h2>
   <div class="carte reglage"><span>Connecté</span><span class="discret">{nom}</span></div>
   <h2 class="groupe">Empreinte</h2>
