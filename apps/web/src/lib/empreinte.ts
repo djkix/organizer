@@ -8,6 +8,13 @@ import { MESSAGES } from './messages.js';
 /** Clé de stockage : identifiant WebAuthn (public) de la clé de ce téléphone. Rien de personnel. */
 export const CLE_MEMO = 'organizer.empreinte';
 
+/**
+ * Mémo « une clé est présente sur ce téléphone, identifiant inconnu » : posé quand l'activation répond
+ * « déjà active » sans qu'on connaisse la clé (PWA réinstallée, clé synchronisée). Jamais un identifiant WebAuthn
+ * (base64url, sans « ? ») ; la première connexion réussie le remplace par le vrai.
+ */
+export const CLE_INCONNUE = '?';
+
 /** Les deux invites du téléphone. Injectées : les tests n'ont pas de navigateur. */
 export interface Ceremonies {
   disponible(): boolean;
@@ -85,6 +92,8 @@ export async function activerEmpreinte(
     memo.poser(cle.identifiant);
     return { ok: true, cle };
   } catch (err) {
+    // Une clé de ce compte est déjà sur ce téléphone : la connexion doit pouvoir la proposer.
+    if (nomErreur(err) === 'InvalidStateError' && memo.lire() === null) memo.poser(CLE_INCONNUE);
     return { ok: false, message: messageEmpreinte(err, 'activation') };
   }
 }

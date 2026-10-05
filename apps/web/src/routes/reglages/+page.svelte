@@ -5,7 +5,7 @@
   import { api, garde } from '$lib/client';
   import Icone from '$lib/composants/Icone.svelte';
   import { CHEMINS, FUSEAU } from '$lib/config';
-  import { activerEmpreinte, memoLocal, retirerEmpreinte } from '$lib/empreinte';
+  import { activerEmpreinte, CLE_INCONNUE, memoLocal, retirerEmpreinte } from '$lib/empreinte';
   import { ceremoniesNavigateur } from '$lib/empreinte-navigateur';
   import { ajouteeLe } from '$lib/format';
   import { MESSAGES } from '$lib/messages';
@@ -22,7 +22,7 @@
   let disponible = $state(false);
   let occupe = $state(false);
   let messageEmpreinte = $state<string | null>(null);
-  const iciActive = $derived(ici !== null && cles.some((c) => c.identifiant === ici));
+  const iciActive = $derived(ici !== null && (ici === CLE_INCONNUE || cles.some((c) => c.identifiant === ici)));
   const appareil = (c: ResumeEmpreinte): string => (c.identifiant === ici ? MESSAGES.cetAppareil : MESSAGES.autreAppareil);
 
   onMount(async () => {
@@ -32,12 +32,15 @@
       cles = await api.empreintes();
       chargee = true;
       // La clé de ce téléphone a été retirée ailleurs : la connexion n'a plus à la proposer.
-      if (ici !== null && !cles.some((c) => c.identifiant === ici)) {
+      // Mémo « clé inconnue » : gardé tant que le compte a une clé ; effacé quand il n'en a plus.
+      const contredit = ici === CLE_INCONNUE ? cles.length === 0 : !cles.some((c) => c.identifiant === ici);
+      if (ici !== null && contredit) {
         memo.effacer();
         ici = null;
       }
     } catch {
       cles = [];
+      messageEmpreinte = MESSAGES.serveurIndisponible;
     }
   });
 
@@ -51,20 +54,26 @@
       messageEmpreinte = MESSAGES.empreinteActivee;
     } else {
       messageEmpreinte = r.message;
+      ici = memo.lire();
     }
     occupe = false;
   }
 
   async function retirer(c: ResumeEmpreinte): Promise<void> {
+    occupe = true;
     messageEmpreinte = null;
     const r = await retirerEmpreinte(api, c, memo);
     if (r.ok) {
       cles = cles.filter((x) => x.id !== c.id);
-      if (ici === c.identifiant) ici = null;
+      if (ici === c.identifiant || (ici === CLE_INCONNUE && cles.length === 0)) {
+        memo.effacer();
+        ici = null;
+      }
       messageEmpreinte = MESSAGES.empreinteRetiree;
     } else {
       messageEmpreinte = r.message;
     }
+    occupe = false;
   }
 
   async function deconnecter(): Promise<void> {
@@ -86,13 +95,13 @@
   {#each cles as c (c.id)}
     <div class="carte reglage">
       <span class="cle"><span>{appareil(c)}</span><span class="discret">{ajouteeLe(c.creeLe, FUSEAU)}</span></span>
-      <button class="lien" onclick={() => retirer(c)} aria-label={`${MESSAGES.retirer}, ${appareil(c)}`}>{MESSAGES.retirer}</button>
+      <button class="lien" onclick={() => retirer(c)} disabled={occupe} aria-label={`${MESSAGES.retirer}, ${appareil(c)}`}>{MESSAGES.retirer}</button>
     </div>
   {/each}
   {#if chargee && disponible && !iciActive}
     <button class="bouton activer" onclick={activer} disabled={occupe}>{MESSAGES.activerEmpreinte}</button>
   {/if}
-  {#if messageEmpreinte}<p class="discret message" role="status">{messageEmpreinte}</p>{/if}
+  <p class="discret message" aria-live="polite">{messageEmpreinte ?? ''}</p>
   <section class="carte note">
     <h2>{MESSAGES.sortDeLaMaisonTitre}</h2>
     <p>{MESSAGES.sortDeLaMaison1} {MESSAGES.sortDeLaMaison2}</p>
@@ -100,7 +109,7 @@
   </section>
   <a class="carte reglage" href={CHEMINS.aRevoir}><span>À revoir</span><Icone nom="suivant" /></a>
   <div class="bas">
-    {#if message}<p class="discret" role="status">{message}</p>{/if}
+    <p class="discret" aria-live="polite">{message ?? ''}</p>
     <button class="bouton" onclick={deconnecter}>Me déconnecter</button>
   </div>
 </main>

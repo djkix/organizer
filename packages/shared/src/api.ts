@@ -1,5 +1,8 @@
 import type { Nature } from './tri.js';
 
+/** Plafond de clés d'empreinte par compte (API et PWA). */
+export const MAX_CLES_PAR_COMPTE = 10;
+
 export interface LigneAction {
   itemId: string;
   captureId: string;

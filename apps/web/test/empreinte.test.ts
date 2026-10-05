@@ -5,7 +5,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { ErreurApi, HorsLigne } from '../src/lib/api.js';
 import {
-  activerEmpreinte, CLE_MEMO, connecterParEmpreinte, memoLocal, messageEmpreinte, retirerEmpreinte, type Ceremonies, type Memo,
+  activerEmpreinte, CLE_INCONNUE, CLE_MEMO, connecterParEmpreinte, memoLocal, messageEmpreinte, retirerEmpreinte, type Ceremonies, type Memo,
 } from '../src/lib/empreinte.js';
 import { MESSAGES } from '../src/lib/messages.js';
 
@@ -137,14 +137,30 @@ describe('activerEmpreinte et retirerEmpreinte', () => {
     expect(memo.valeur).toBe('cle-1');
   });
 
-  it('clé déjà sur ce téléphone, ou dix clés : un message, rien de retenu', async () => {
+  it('dix clés : un message, rien de retenu', async () => {
+    const memo = memoFaux();
+    const plein = { optionsInscriptionEmpreinte: async (): Promise<PublicKeyCredentialCreationOptionsJSON> => { throw new ErreurApi(409, 'x'); }, inscrireEmpreinte: async () => CLE };
+    expect(await activerEmpreinte(plein, ceremonies(), memo)).toEqual({ ok: false, message: MESSAGES.empreintesTrop });
+    expect(memo.valeur).toBeNull();
+  });
+
+  it('« déjà active » sans mémo : la clé présente est retenue sans identifiant, puis remplacée à la connexion', async () => {
     const api = { optionsInscriptionEmpreinte: async () => CREATION, inscrireEmpreinte: async () => CLE };
     const memo = memoFaux();
     expect(await activerEmpreinte(api, ceremonies(new DOMException('x', 'InvalidStateError')), memo))
       .toEqual({ ok: false, message: MESSAGES.empreinteDejaActive });
-    const plein = { optionsInscriptionEmpreinte: async (): Promise<PublicKeyCredentialCreationOptionsJSON> => { throw new ErreurApi(409, 'x'); }, inscrireEmpreinte: async () => CLE };
-    expect(await activerEmpreinte(plein, ceremonies(), memo)).toEqual({ ok: false, message: MESSAGES.empreintesTrop });
-    expect(memo.valeur).toBeNull();
+    expect(memo.valeur).toBe(CLE_INCONNUE);
+    const connexion = { optionsConnexionEmpreinte: async () => DEMANDE, connecterParEmpreinte: async () => {} };
+    expect(await connecterParEmpreinte(connexion, ceremonies(), memo)).toEqual({ ok: true });
+    expect(memo.valeur).toBe('cle-1');
+  });
+
+  it('« déjà active » avec un identifiant connu : il n\'est pas écrasé', async () => {
+    const api = { optionsInscriptionEmpreinte: async () => CREATION, inscrireEmpreinte: async () => CLE };
+    const memo = memoFaux();
+    memo.poser('cle-1');
+    await activerEmpreinte(api, ceremonies(new DOMException('x', 'InvalidStateError')), memo);
+    expect(memo.valeur).toBe('cle-1');
   });
 
   it('retirer la clé de ce téléphone l\'oublie ; une autre clé ne change rien ; déjà partie (404) vaut succès', async () => {

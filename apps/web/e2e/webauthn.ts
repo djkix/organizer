@@ -69,6 +69,7 @@ export function serveurEmpreinte(etat: { connecte: boolean }): { table: Table; c
     'POST /api/empreintes/options': async (r) => {
       const o = await generateRegistrationOptions({
         rpName: 'Organizer', rpID: RP_ID, userName: 'test', userID: new TextEncoder().encode(COMPTE), attestationType: 'none',
+        excludeCredentials: [...publiques.keys()].map((id) => ({ id })),
         authenticatorSelection: { residentKey: 'required', userVerification: 'required', authenticatorAttachment: 'platform' },
       });
       defi = o.challenge;

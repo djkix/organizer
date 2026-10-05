@@ -68,7 +68,7 @@
   <form onsubmit={connecter}>
     <label>Nom<input bind:value={nom} name="nom" autocomplete="username" autocapitalize="none" required /></label>
     <label>Mot de passe<input bind:value={motDePasse} name="motDePasse" type="password" autocomplete="current-password" required /></label>
-    {#if message}<p role="status">{message}</p>{/if}
+    <p aria-live="polite">{message ?? ''}</p>
     {#if enAttente}<p class="discret">{MESSAGES.partiraApresConnexion}</p>{/if}
     {#if empreinte}
       <button class="bouton-principal" type="button" onclick={parEmpreinte} disabled={envoi}>{MESSAGES.connecterEmpreinte}</button>

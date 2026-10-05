@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@organizer/db';
-import type { ResumeEmpreinte } from '@organizer/shared/api';
+import { MAX_CLES_PAR_COMPTE, type ResumeEmpreinte } from '@organizer/shared/api';
 import {
   generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse,
   type AuthenticationResponseJSON, type PublicKeyCredentialCreationOptionsJSON, type PublicKeyCredentialRequestOptionsJSON,
@@ -10,7 +10,7 @@ import { DelaiDepasse, type MagasinDefis } from './defis.js';
 
 /** Durée laissée au téléphone pour l'invite (options.timeout). Le défi vit deux fois plus. */
 export const DELAI_CEREMONIE_MS = 60_000;
-export const MAX_CLES_PAR_COMPTE = 10;
+export { MAX_CLES_PAR_COMPTE };
 /** ES256 (toutes les clés Android), puis RS256. */
 const ALGORITHMES = [-7, -257];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -139,12 +139,11 @@ export class EmpreintesService {
       },
     }));
     if (v === null || !v.verified) return null;
-    await this.prisma.cleAcces.update({
-      where: { id: cle.id },
-      data: {
-        compteur: BigInt(v.authenticationInfo.newCounter), utiliseeLe: this.maintenant(),
-        sauvegardee: v.authenticationInfo.credentialBackedUp,
-      },
+    // Compteur mis à jour seulement s'il avance (ou reste nul : clés Android) : deux connexions simultanées ne le font pas reculer.
+    const nouveau = BigInt(v.authenticationInfo.newCounter);
+    await this.prisma.cleAcces.updateMany({
+      where: { id: cle.id, OR: [{ compteur: { lt: nouveau } }, { compteur: 0n }] },
+      data: { compteur: nouveau, utiliseeLe: this.maintenant(), sauvegardee: v.authenticationInfo.credentialBackedUp },
     });
     return cle.utilisateurId;
   }
