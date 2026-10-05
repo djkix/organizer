@@ -1,6 +1,6 @@
 import { UnrecoverableError } from 'bullmq';
 import { ErreurGoogle, GoogleIndisponible } from '../google/erreurs.js';
-import { AutorisationRetiree } from './jetons.js';
+import { AutorisationRetiree, NonConnecte } from './jetons.js';
 import { AgendaSupprime, synchroniserAction, type DepsSynchro, type IssueSynchro } from './synchroniser.js';
 
 /**
@@ -15,28 +15,27 @@ export function estReessayable(e: unknown): boolean {
   return e instanceof TypeError || (e instanceof Error && (e.name === 'AbortError' || e.name === 'TimeoutError'));
 }
 
-export type AlerteAgenda =
-  | { type: 'autorisation_retiree'; utilisateurId: string }
-  | { type: 'agenda_supprime'; utilisateurId: string };
-
-export interface OptionsTravail {
-  /** Point d'accroche de l'alerte à l'administrateur (câblé à la tâche 9). Appelé une fois : l'état de la connexion change. */
-  alerter: (a: AlerteAgenda) => Promise<void>;
+/** Échec définitif : refus Google non réessayable, ou agenda supprimé. Tout le reste (base, réseau, inconnu) se réessaie. */
+function estDefinitif(e: unknown): boolean {
+  return e instanceof AgendaSupprime || (e instanceof ErreurGoogle && !estReessayable(e));
 }
 
 /**
- * Travail de la file de synchronisation. Les échecs définitifs deviennent des UnrecoverableError (BullMQ ne les rejoue
- * pas) ; les pannes passagères repartent telles quelles. Ni titre ni jeton dans les messages.
+ * Travail de la file de synchronisation (alertes : jetons.ts et synchroniser.ts, une fois par changement d'état).
+ * AutorisationRetiree finit normalement en 'revoque', NonConnecte en 'sans_agenda'. Les refus Google définitifs
+ * deviennent des UnrecoverableError. Tout autre échec (GoogleIndisponible, panne base, réseau, inconnu) repart tel quel,
+ * réessayable. Tâche 9 : sur GoogleIndisponible, mettre la file en pause 15 min et alerter une fois par épisode.
+ * Ni titre ni jeton dans les messages.
  */
-export function travailSynchro(d: DepsSynchro, o: OptionsTravail): (itemId: string) => Promise<IssueSynchro> {
+export function travailSynchro(d: DepsSynchro): (itemId: string) => Promise<IssueSynchro | 'revoque'> {
   return async (itemId) => {
     try {
       return await synchroniserAction(itemId, d);
     } catch (e) {
-      if (e instanceof AutorisationRetiree) await o.alerter({ type: 'autorisation_retiree', utilisateurId: e.utilisateurId });
-      else if (e instanceof AgendaSupprime) await o.alerter({ type: 'agenda_supprime', utilisateurId: e.utilisateurId });
-      if (estReessayable(e)) throw e;
-      const nom = e instanceof Error ? e.name : 'erreur';
+      if (e instanceof AutorisationRetiree) return 'revoque';
+      if (e instanceof NonConnecte) return 'sans_agenda';
+      if (!estDefinitif(e)) throw e;
+      const nom = (e as Error).name;
       throw new UnrecoverableError(`Synchronisation définitive en échec : ${nom}${e instanceof ErreurGoogle ? ` ${e.statut}` : ''}`);
     }
   };

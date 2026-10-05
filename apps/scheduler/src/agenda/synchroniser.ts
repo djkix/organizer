@@ -2,7 +2,7 @@ import type { Prisma, PrismaClient } from '@organizer/db';
 import type { ClientCalendrier, CorpsEvenement } from '../google/calendrier.js';
 import { DejaPresent, Introuvable } from '../google/erreurs.js';
 import { contenuEvenement, empreinteContenu, idEvenement, type ActionPourAgenda } from './contenu.js';
-import { appelerAvecJeton, type Jetons } from './jetons.js';
+import { alerterSansEchec, appelerAvecJeton, type Alerteur, type Jetons } from './jetons.js';
 import { planifier, type EtatSynchro } from './plan.js';
 
 export class AgendaSupprime extends Error {
@@ -12,7 +12,7 @@ export class AgendaSupprime extends Error {
   }
 }
 
-export interface DepsSynchro { prisma: PrismaClient; calendrier: ClientCalendrier; jetons: Jetons; maintenant?: () => Date }
+export interface DepsSynchro { prisma: PrismaClient; calendrier: ClientCalendrier; jetons: Jetons; maintenant?: () => Date; alerter?: Alerteur }
 export type IssueSynchro = 'rien' | 'cree' | 'remplace' | 'supprime' | 'sans_agenda';
 
 export const inclusionAction = {
@@ -38,7 +38,10 @@ export function etatSynchro(a: ActionChargee): EtatSynchro {
 /** Une insertion qui répond 404 : l'agenda a-t-il disparu (supprimé par L) ? */
 async function verifierAgenda(d: DepsSynchro, uid: string, agenda: string): Promise<void> {
   if (await appelerAvecJeton(d.jetons, uid, (j) => d.calendrier.agendaExiste(j, agenda))) return;
-  await d.prisma.agendaGoogle.updateMany({ where: { utilisateurId: uid, calendrierId: agenda }, data: { etat: 'agenda_supprime' } });
+  const { count } = await d.prisma.agendaGoogle.updateMany({
+    where: { utilisateurId: uid, calendrierId: agenda, etat: 'connecte' }, data: { etat: 'agenda_supprime' },
+  });
+  if (count === 1) await alerterSansEchec(d.alerter, { type: 'agenda_supprime', utilisateurId: uid });
   throw new AgendaSupprime(uid);
 }
 

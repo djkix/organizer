@@ -3,6 +3,21 @@ import { dechiffrer } from '../chiffre.js';
 import { JetonRefuse, OctroiInvalide } from '../google/erreurs.js';
 import type { ClientOAuth } from '../google/oauth.js';
 
+export type AlerteAgenda =
+  | { type: 'autorisation_retiree'; utilisateurId: string }
+  | { type: 'agenda_supprime'; utilisateurId: string };
+export type Alerteur = (a: AlerteAgenda) => Promise<void>;
+
+/** Alerte l'administrateur sans jamais changer l'issue : si le hook échoue, on note seulement le nom de l'erreur. */
+export async function alerterSansEchec(alerter: Alerteur | undefined, a: AlerteAgenda): Promise<void> {
+  if (!alerter) return;
+  try {
+    await alerter(a);
+  } catch (e) {
+    console.error(`Alerte agenda ${a.type} non envoyée : ${(e as Error).name}`);
+  }
+}
+
 export class NonConnecte extends Error {
   override name = 'NonConnecte';
 }
@@ -26,6 +41,8 @@ export class Jetons {
     private readonly oauth: Pick<ClientOAuth, 'rafraichir'>,
     private readonly cle: Buffer,
     private readonly maintenant: () => Date = () => new Date(),
+    /** Câblé à la tâche 9. Appelé une fois par changement d'état de la connexion (revoque). */
+    private readonly alerter?: Alerteur,
   ) {}
 
   retenir(uid: string, acces: string, expireDansS: number): void {
@@ -61,9 +78,10 @@ export class Jetons {
     } catch (e) {
       if (!(e instanceof OctroiInvalide)) throw e;
       this.oublier(uid);
-      await this.prisma.agendaGoogle.updateMany({
+      const { count } = await this.prisma.agendaGoogle.updateMany({
         where: { utilisateurId: uid, etat: 'connecte' }, data: { etat: 'revoque', jetonChiffre: null, erreur: null },
       });
+      if (count === 1) await alerterSansEchec(this.alerter, { type: 'autorisation_retiree', utilisateurId: uid });
       throw new AutorisationRetiree(uid);
     }
     this.retenir(uid, r.acces, r.expireDansS);
