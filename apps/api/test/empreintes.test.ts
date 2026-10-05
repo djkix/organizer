@@ -103,6 +103,45 @@ describe('activer une empreinte', () => {
   });
 });
 
+describe('garde-fous de l\'activation', () => {
+  it('des défis émis avant le plafond ne le dépassent pas', async () => {
+    await prisma.cleAcces.createMany({
+      data: Array.from({ length: MAX_CLES_PAR_COMPTE - 1 }, (_, i) => ({ identifiant: `cle-${i}`, utilisateurId: u.id, clePublique: new Uint8Array([1]) })),
+    });
+    const a = await service.optionsInscription(u);
+    const b = await service.optionsInscription(u);
+    const resultats = await Promise.all([service.inscrire(u, telephone().inscrire(a)), service.inscrire(u, telephone().inscrire(b))]);
+    expect(resultats.filter((r) => r !== null)).toHaveLength(1);
+    expect(await prisma.cleAcces.count()).toBe(MAX_CLES_PAR_COMPTE);
+  });
+
+  it('une panne Valkey quelconque devient DelaiDepasse, journalisée sans détail du client', async () => {
+    const casse: MagasinDefis = { poser: async () => {}, prendre: () => Promise.reject(new Error('ECONNRESET secret')) };
+    const s = new EmpreintesService(prisma, casse, CONFIG_ESSAI, () => new Date(horloge), (m) => { journal.push(m); });
+    const o = await service.optionsInscription(u);
+    await expect(s.inscrire(u, telephone().inscrire(o))).rejects.toBeInstanceOf(DelaiDepasse);
+    expect(journal).toEqual(['Valkey en erreur : ECONNRESET secret']);
+  });
+
+  it('un refus de la bibliothèque ne journalise ni le défi ni l\'origine reçus', async () => {
+    const o = await service.optionsInscription(u);
+    await service.inscrire(u, telephone().inscrire(o, { origine: 'https://evil.example' }));
+    expect(journal).toHaveLength(1);
+    expect(journal[0]).not.toContain('evil.example');
+    expect(journal[0]).not.toContain(o.challenge);
+  });
+
+  it('la même clé déjà gardée : refus, pas d\'erreur', async () => {
+    const r = telephone().inscrire(await service.optionsInscription(u));
+    await prisma.cleAcces.create({ data: { identifiant: r.id, utilisateurId: u.id, clePublique: new Uint8Array([1]) } });
+    expect(await service.inscrire(u, r)).toBeNull();
+  });
+
+  it('retirer : un identifiant mal formé vaut faux', async () => {
+    expect(await service.retirer(u.id, 'pas-un-uuid')).toBe(false);
+  });
+});
+
 describe('lister et retirer', () => {
   it('chacun ne voit et ne retire que ses clés', async () => {
     const autre = await prisma.utilisateur.create({ data: { nom: 'f' } });
@@ -159,7 +198,7 @@ describe('se reconnecter par l\'empreinte', () => {
     expect(await service.verifierConnexion(croissant.authentifier(await service.optionsConnexion()))).toBe(u.id);
     expect((await prisma.cleAcces.findFirstOrThrow()).compteur).toBe(2n);
     expect(await service.verifierConnexion(croissant.authentifier(await service.optionsConnexion(), { compteur: 1 }))).toBeNull();
-    expect(journal.at(-1)).toMatch(/counter/);
+    expect(journal.at(-1)).toMatch(/compteur/);
   });
 
   it.each([

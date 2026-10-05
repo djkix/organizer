@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Corrigé
+- L'activation de l'empreinte : plafond de dix clés recompté sous verrou à l'enregistrement, journal sans le message de la bibliothèque (défi et origine du client), algorithmes imposés à la vérification, retrait d'un identifiant mal formé sans erreur (2026-10-05).
+
 ### Ajouté
 - La reconnexion par empreinte dans l'API : défi à usage unique, origine et RP exacts, empreinte exigée, compte de la clé vérifié, compteur qui recule refusé ; la même session que le mot de passe (2026-10-05).
 - L'activation d'une empreinte par WebAuthn (`@simplewebauthn/server` 14) : clé découvrable, empreinte exigée, sans attestation, défi lié au compte, dix clés au plus ; liste et retrait de ses clés (2026-10-05).
