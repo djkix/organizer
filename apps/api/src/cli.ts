@@ -11,6 +11,7 @@ import { optionsClientTelegram } from './telegram/client.js';
 import { chatPriveValide, LiaisonService } from './telegram/liaison.service.js';
 import { formaterMesures, mesurer } from './veille/mesures.js';
 import { etatWebhook, poserWebhook, retirerWebhook } from './telegram/webhook.js';
+import { retirerEmpreintes } from './auth/empreintes/empreintes.service.js';
 
 /** Lit une ligne sans l'afficher : la sortie de readline est coupée pendant la frappe. */
 async function saisirMasque(invite: string): Promise<string> {
@@ -92,6 +93,14 @@ const COMMANDES: Record<string, Commande> = {
       if (motDePasse !== (await saisirMasque('Confirme le mot de passe : '))) throw new Error('Les deux saisies diffèrent.');
       await new AuthService(prisma).definirMotDePasse(nom, motDePasse);
       console.log(`Mot de passe de ${nom} enregistré.`);
+    },
+  },
+  'retirer-empreintes': {
+    usage: 'retirer-empreintes <nom>',
+    async lancer([nom], prisma) {
+      if (!nom) throw new Usage();
+      const n = await retirerEmpreintes(prisma, nom);
+      console.log(`${n} empreinte(s) retirée(s) pour ${nom}, sessions fermées. Le mot de passe reste valable.`);
     },
   },
   'essai-sortie': {

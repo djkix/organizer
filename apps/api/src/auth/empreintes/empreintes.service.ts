@@ -161,3 +161,14 @@ export class EmpreintesService {
     return count > 0;
   }
 }
+
+/** Téléphone perdu : toutes les clés du compte et toutes ses sessions. Renvoie le nombre de clés retirées. */
+export async function retirerEmpreintes(prisma: PrismaClient, nom: string): Promise<number> {
+  const u = await prisma.utilisateur.findUnique({ where: { nom } });
+  if (!u) throw new Error('Compte introuvable.');
+  const [cles] = await prisma.$transaction([
+    prisma.cleAcces.deleteMany({ where: { utilisateurId: u.id } }),
+    prisma.session.deleteMany({ where: { utilisateurId: u.id } }),
+  ]);
+  return cles.count;
+}
