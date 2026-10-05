@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { creerPrisma } from '@organizer/db';
@@ -179,6 +179,19 @@ const mp4 = (): Buffer => execFileSync('ffmpeg', [
   '-movflags', 'frag_keyframe+empty_moov', '-f', 'mp4', 'pipe:1',
 ]);
 
+/** MP4 classique : sans fragmentation ni faststart, l'index (moov) est écrit en fin de fichier, comme beaucoup de bulles réelles. */
+const mp4MoovFin = (): Buffer => {
+  const dossier = mkdtempSync(join(tmpdir(), 'mp4-'));
+  const f = join(dossier, 'v.mp4');
+  execFileSync('ffmpeg', [
+    '-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=size=64x64:rate=5:duration=1',
+    '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:v', 'mpeg4', '-c:a', 'aac', '-shortest', f,
+  ]);
+  const b = readFileSync(f);
+  rmSync(dossier, { recursive: true });
+  return b;
+};
+
 const bulle = (ref: string): CaptureEntrante => ({
   sourceRef: ref, emisLe: new Date('2026-10-06T06:12:00Z'), dureeS: 5, fichier: { id: 'V', mime: 'video/mp4' }, texte: null,
 });
@@ -236,6 +249,20 @@ describe('bulle vidéo Telegram : seul le son est gardé', () => {
     await service.finaliser(id);
     expect(await prisma.capture.findUniqueOrThrow({ where: { id } })).toMatchObject({ etat: 'a_revoir', erreur: 'media_video' });
     expect(file.ids).toEqual([]);
+  });
+
+  it('avec un vrai ffmpeg : un MP4 dont le moov est en fin de fichier est lu, sans fichier temporaire résiduel', async () => {
+    const donnees = mp4MoovFin();
+    expect(donnees.indexOf('moov')).toBeGreaterThan(donnees.indexOf('mdat'));
+    const avant = readdirSync(tmpdir()).filter((f) => f.startsWith('organizer-'));
+    const s = new IngestionService(prisma, new StockageAudio(racine), { telecharger: async () => ({ donnees, extension: 'mp4' }) },
+      file, () => {}, new ReencodeurBorne(new ReencodeurFfmpeg()));
+    const { id } = await s.recevoir(utilisateurId, bulle('tg:7:205'));
+    await s.finaliser(id);
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id } });
+    expect(c).toMatchObject({ etat: 'en_file', audioMime: 'audio/ogg' });
+    expect(readFileSync(join(racine, c.audioPath!)).subarray(0, 4).toString()).toBe('OggS');
+    expect(readdirSync(tmpdir()).filter((f) => f.startsWith('organizer-'))).toEqual(avant);
   });
 
   it('avec un vrai ffmpeg : le fichier range est de l\'Ogg sans piste vidéo', async () => {
