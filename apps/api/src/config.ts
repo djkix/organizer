@@ -1,4 +1,5 @@
 import { lireConfigWebauthn, type ConfigWebauthn } from './auth/empreintes/config.js';
+import { lireConfigAgenda, type ConfigAgendaApi } from './agenda/config.js';
 import { chargerPrompt, cheminConfigure, exigerVar, lireVar, valeursAdmises } from '@organizer/shared';
 
 export interface ConfigApi {
@@ -15,6 +16,8 @@ export interface ConfigApi {
   webhookUrl?: string;
   /** Empreinte (WebAuthn) : identifiant de RP et origine de la PWA. */
   webauthn: ConfigWebauthn;
+  /** Client OAuth de Google Agenda ; null hors production sans GOOGLE_CLIENT_ID. */
+  agenda: ConfigAgendaApi | null;
 }
 
 export function lireConfigApi(): ConfigApi {
@@ -36,5 +39,6 @@ export function lireConfigApi(): ConfigApi {
       'echeance_type',
     ),
     webauthn: lireConfigWebauthn(),
+    agenda: lireConfigAgenda(),
   };
 }

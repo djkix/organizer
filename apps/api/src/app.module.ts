@@ -1,10 +1,13 @@
 import { Inject, Module, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { creerPrisma, type PrismaClient } from '@organizer/db';
-import { creerFetchSortant, FILE_ALERTES, FILE_CLASSEMENT, OPTIONS_JOB_ALERTE, type JobAlerte, type JobClassement } from '@organizer/shared';
+import { creerFetchSortant, FILE_AGENDA, FILE_ALERTES, FILE_CLASSEMENT, OPTIONS_JOB_ALERTE, type JobAgenda, type JobAlerte, type JobClassement } from '@organizer/shared';
 import { Queue, type Worker } from 'bullmq';
 import type { Bot } from 'grammy';
 import { Redis } from 'ioredis';
 import { demarrerAlertes } from './alertes.js';
+import { AgendaController } from './agenda/agenda.controller.js';
+import { AgendaService } from './agenda/agenda.service.js';
+import { MagasinEtatsValkey } from './agenda/etats.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
 import { EmpreintesController } from './auth/empreintes/empreintes.controller.js';
@@ -16,7 +19,7 @@ import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
 import { TelechargeurTelegram } from './ingestion/telechargeur.js';
-import { AUTH, BOT, EMPREINTES, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, REDIS, REENCODEUR, VUES } from './jetons.js';
+import { AGENDA, AUTH, BOT, EMPREINTES, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, QUEUE_AGENDA, REDIS, REENCODEUR, VUES } from './jetons.js';
 import { ItemsController } from './items/items.controller.js';
 import { ItemsService } from './items/items.service.js';
 import { PriveesController } from './privees/privees.controller.js';
@@ -48,6 +51,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     @Inject(BOT) private readonly bot: Bot,
     @Inject(INGESTION) private readonly ingestion: IngestionService,
     @Inject(AUTH) private readonly auth: AuthService,
+    @Inject(QUEUE_AGENDA) private readonly fileAgenda: Queue<JobAgenda>,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -93,12 +97,13 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     if (this.config.telegramMode === 'polling' && this.bot.isRunning()) await this.bot.stop();
     await this.alertes?.close();
     await this.prisma.$disconnect();
+    await this.fileAgenda.close();
     this.redis.disconnect();
   }
 }
 
 @Module({
-  controllers: [TelegramController, AuthController, EmpreintesController, VuesController, ItemsController, PriveesController, SanteController],
+  controllers: [TelegramController, AgendaController, AuthController, EmpreintesController, VuesController, ItemsController, PriveesController, SanteController],
   providers: [
     { provide: CONFIG, useFactory: lireConfigApi },
     { provide: PRISMA, useFactory: () => creerPrisma() },
@@ -129,6 +134,13 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     // Un seul réencodeur borné pour l'API : PWA privée et bulles vidéo Telegram se partagent le plafond de ffmpeg.
     { provide: REENCODEUR, useFactory: (): Reencodeur => new ReencodeurBorne(new ReencodeurFfmpeg()) },
     { provide: PRIVEES, inject: [CONFIG, PRISMA, REENCODEUR], useFactory: (c: ConfigApi, prisma: PrismaClient, reencodeur: Reencodeur) => new CapturesPriveesService(prisma, new StockageAudio(c.audioRacine), reencodeur) },
+    { provide: QUEUE_AGENDA, inject: [REDIS], useFactory: (redis: Redis) => new Queue<JobAgenda>(FILE_AGENDA, { connection: redis }) },
+    {
+      provide: AGENDA,
+      inject: [CONFIG, PRISMA, REDIS, QUEUE_AGENDA],
+      useFactory: (c: ConfigApi, prisma: PrismaClient, redis: Redis, file: Queue<JobAgenda>) =>
+        new AgendaService(prisma, new MagasinEtatsValkey(redis), file, c.agenda),
+    },
     SessionGuard,
     Cycle,
   ],
