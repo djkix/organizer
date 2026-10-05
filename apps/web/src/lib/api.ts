@@ -24,7 +24,7 @@ export class HorsLigne extends Error {
 export interface ClientApi {
   connecter(c: CorpsConnexion): Promise<void>;
   deconnecter(): Promise<void>;
-  moi(): Promise<{ nom: string }>;
+  moi(): Promise<{ nom: string; admin?: boolean; versionServeur?: string }>;
   optionsConnexionEmpreinte(): Promise<PublicKeyCredentialRequestOptionsJSON>;
   connecterParEmpreinte(r: AuthenticationResponseJSON): Promise<void>;
   optionsInscriptionEmpreinte(): Promise<PublicKeyCredentialCreationOptionsJSON>;

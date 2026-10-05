@@ -5,5 +5,7 @@ declare global {
     /** État d'historique du détail ouvert (navigation superficielle). */
     interface PageState { detail?: string }
   }
+  /** Version de la PWA, figée par Vite à la construction. */
+  const __VERSION_PWA__: string;
 }
 export {};

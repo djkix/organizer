@@ -4,7 +4,7 @@ import type { PrismaClient } from '@organizer/db';
 
 const DUREE_SESSION_MS = 90 * 24 * 3600_000;
 
-export interface UtilisateurSession { id: string; nom: string; fuseau: string }
+export interface UtilisateurSession { id: string; nom: string; fuseau: string; admin: boolean }
 
 const empreinte = (jeton: string): string => createHash('sha256').update(jeton).digest('hex');
 
@@ -54,7 +54,7 @@ export class AuthService {
   async utilisateurDeSession(jeton: string): Promise<UtilisateurSession | null> {
     const s = await this.prisma.session.findUnique({ where: { jetonHash: empreinte(jeton) }, include: { utilisateur: true } });
     if (!s || s.expireLe <= this.maintenant()) return null;
-    return { id: s.utilisateur.id, nom: s.utilisateur.nom, fuseau: s.utilisateur.fuseau };
+    return { id: s.utilisateur.id, nom: s.utilisateur.nom, fuseau: s.utilisateur.fuseau, admin: s.utilisateur.admin };
   }
 
   async fermerSession(jeton: string): Promise<void> {

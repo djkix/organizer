@@ -33,6 +33,7 @@ x-app: &app
     REDIS_URL: redis://queue:6379
     PROMPTS_DIR: /app/prompts
     PROMPT_VERSION: ${PROMPT_VERSION:-tri/v1}
+    ORGANIZER_VERSION: ${ORGANIZER_VERSION:?}
     AUDIO_STORAGE_PATH: /data/audio
     HTTPS_PROXY: http://sortie:3128
     NO_PROXY: db,queue,localhost,127.0.0.1

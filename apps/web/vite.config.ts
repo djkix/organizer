@@ -29,6 +29,8 @@ const annonceurSansStyleEnLigne: Plugin = {
 };
 
 export default defineConfig({
+  // Version de la PWA figée à la construction (Docker : ORGANIZER_VERSION ; en local : « dev »).
+  define: { __VERSION_PWA__: JSON.stringify(process.env.ORGANIZER_VERSION || 'dev') },
   plugins: [
     entetesProduction,
     annonceurSansStyleEnLigne,

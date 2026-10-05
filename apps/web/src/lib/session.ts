@@ -1,7 +1,7 @@
 import { ErreurApi, type ClientApi } from './api.js';
 import { CHEMINS } from './config.js';
 
-export type EtatSession = { etat: 'connecte'; nom: string } | { etat: 'deconnecte' } | { etat: 'hors-ligne' };
+export type EtatSession = { etat: 'connecte'; nom: string; admin: boolean; versionServeur: string | null } | { etat: 'deconnecte' } | { etat: 'hors-ligne' };
 
 /** Au-delà, l'écran s'affiche sans attendre : la vérification continue en arrière-plan. */
 export const DELAI_GARDE_MS = 2_500;
@@ -46,7 +46,7 @@ export class GardeSession {
     if (this.enCours) return this.enCours;
     const generation = this.generation;
     const lancee = this.api.moi().then(
-      ({ nom }): EtatSession => ({ etat: 'connecte', nom }),
+      ({ nom, admin, versionServeur }): EtatSession => ({ etat: 'connecte', nom, admin: admin === true, versionServeur: versionServeur ?? null }),
       // Seul un 401 prouve l'absence de session ; le reste n'empêche pas d'utiliser l'application.
       (e: unknown): EtatSession => (e instanceof ErreurApi && e.statut === 401 ? { etat: 'deconnecte' } : { etat: 'hors-ligne' }),
     ).then((e) => {

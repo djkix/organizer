@@ -60,3 +60,15 @@ test('refus et accès décoché : des mots calmes, le bouton reste', async ({ pa
   await expect(page.getByText("Coche l'accès à l'agenda pour connecter.")).toBeVisible();
   await expect(page.getByRole('button', { name: 'Connecter Google Agenda' })).toBeVisible();
 });
+
+test('Réglages : la version apparaît pour l\'administrateur seulement', async ({ page }) => {
+  const reglages = { ...REGLAGES, 'GET /api/agenda': json(200, { etat: 'deconnecte', erreur: null }) };
+  await simuler(page, { ...reglages, 'GET /api/session/moi': json(200, { nom: 'test', admin: true, versionServeur: '9.9.9' }) });
+  await page.goto('/reglages');
+  await expect(page.getByTestId('version')).toHaveText(/^\S+ · serveur v9\.9\.9$/);
+  await page.unroute('**/api/**');
+  await simuler(page, reglages);
+  await page.goto('/reglages');
+  await expect(page.getByRole('heading', { name: 'Réglages' })).toBeVisible();
+  await expect(page.getByTestId('version')).toHaveCount(0);
+});

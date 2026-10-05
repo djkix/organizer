@@ -21,6 +21,9 @@ COPY packages/db/package.json packages/db/
 COPY packages/db/prisma packages/db/prisma
 
 FROM outils AS construction
+# Version de la PWA, figée au build (affichée aux administrateurs dans Réglages).
+ARG ORGANIZER_VERSION=dev
+ENV ORGANIZER_VERSION=${ORGANIZER_VERSION}
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm --filter @organizer/api --filter @organizer/worker --filter @organizer/scheduler build \

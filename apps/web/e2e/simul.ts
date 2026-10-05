@@ -35,4 +35,4 @@ export function ligne(n: number, texte: string, plus: Partial<LigneAction> = {})
   };
 }
 
-export const CONNECTE: Table = { 'GET /api/session/moi': json(200, { nom: 'test' }) };
+export const CONNECTE: Table = { 'GET /api/session/moi': json(200, { nom: 'test', admin: false }) };

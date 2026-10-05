@@ -6,7 +6,7 @@ describe('GardeSession', () => {
   it('connecté : une seule vérification, retenue jusqu\'à oublier()', async () => {
     let n = 0;
     const g = new GardeSession({ moi: async () => { n++; return { nom: 'test' }; } });
-    expect(await g.etat()).toEqual({ etat: 'connecte', nom: 'test' });
+    expect(await g.etat()).toEqual({ etat: 'connecte', nom: 'test', admin: false, versionServeur: null });
     await g.etat();
     expect(n).toBe(1);
     g.oublier();
@@ -71,7 +71,7 @@ describe('GardeSession sur un réseau lent', () => {
     await vi.advanceTimersByTimeAsync(2_600);
     l.repondre({ nom: 'test' });
     await vi.advanceTimersByTimeAsync(0);
-    expect(await g.etat()).toEqual({ etat: 'connecte', nom: 'test' });
+    expect(await g.etat()).toEqual({ etat: 'connecte', nom: 'test', admin: false, versionServeur: null });
     expect(l.appels()).toBe(1);
   });
 
@@ -101,7 +101,7 @@ describe('GardeSession sur un réseau lent', () => {
 
 describe('redirection', () => {
   const D: EtatSession = { etat: 'deconnecte' };
-  const C: EtatSession = { etat: 'connecte', nom: 'test' };
+  const C: EtatSession = { etat: 'connecte', nom: 'test', admin: false, versionServeur: null };
   const H: EtatSession = { etat: 'hors-ligne' };
 
   it('déconnecté : vers la connexion, sauf l\'enregistreur privé', () => {

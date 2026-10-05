@@ -78,7 +78,7 @@ describe('/api/session/empreinte', () => {
     const pose = r.headers.get('set-cookie') ?? '';
     expect(pose).toContain(`${NOM_COOKIE}=`);
     for (const attribut of [/HttpOnly/, /Secure/, /SameSite=Lax/, /Max-Age=7776000/]) expect(pose).toMatch(attribut);
-    expect(await (await appeler('GET', '/api/session/moi', undefined, cookieDe(r))).json()).toEqual({ nom: 'l' });
+    expect(await (await appeler('GET', '/api/session/moi', undefined, cookieDe(r))).json()).toEqual({ nom: 'l', admin: false });
   });
 
   it('une empreinte refusée : 401, message court, aucun cookie', async () => {

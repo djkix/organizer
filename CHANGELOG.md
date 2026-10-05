@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Réglages affiche à l'administrateur, en haut à droite et en discret, la version de la PWA (figée au build par `ORGANIZER_VERSION`, argument de build Docker passé par la CI) et, si elle diffère, celle du serveur (`GET /api/session/moi`, réservée à l'administrateur) ; rien pour L ; l'API reçoit `ORGANIZER_VERSION` de la stack (2026-10-05).
+
 ## [1.2.0] - 2026-10-05
 
 ### Ajouté
