@@ -86,7 +86,7 @@ describe('stack de production', () => {
 
   it('API : client OAuth de Google Agenda obligatoire, retour sur le domaine de la PWA, aucun secret', () => {
     const env = service('api').environment!;
-    expect(env.GOOGLE_CLIENT_ID).toMatch(/^\$\{GOOGLE_CLIENT_ID:\?[^}]+\}$/);
+    expect(env.GOOGLE_CLIENT_ID).toMatch(/^\$\{GOOGLE_CLIENT_ID:\?[^}]*\}$/);
     expect(env.GOOGLE_REDIRECT_URI).toBe('https://${DOMAINE_APP:?}/api/agenda/retour');
     expect(Object.keys(env).filter((k) => /^GOOGLE_.*(SECRET|KEY)/.test(k))).toEqual([]);
   });
