@@ -7,7 +7,8 @@ import type { Ceremonies } from './empreinte.js';
 const bibliotheque = (): Promise<typeof import('@simplewebauthn/browser')> => import('@simplewebauthn/browser');
 
 export const ceremoniesNavigateur: Ceremonies = {
-  // Détection sans la bibliothèque : même test (API présente), rien à charger pour afficher l'écran.
+  // Détection sans la bibliothèque, donc plus stricte que browserSupportsWebAuthn() (qui ne vérifie que PublicKeyCredential) :
+  // on exige aussi navigator.credentials.create, que la bibliothèque appelle. Rien à charger pour afficher l'écran.
   disponible: () => typeof window !== 'undefined' && typeof window.PublicKeyCredential === 'function' && typeof navigator.credentials?.create === 'function',
   creer: async (optionsJSON) => (await bibliotheque()).startRegistration({ optionsJSON }),
   obtenir: async (optionsJSON) => (await bibliotheque()).startAuthentication({ optionsJSON }),

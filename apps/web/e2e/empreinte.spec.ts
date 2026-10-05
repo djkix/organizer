@@ -126,8 +126,35 @@ test('API d\'empreinte indisponible (503) : message calme, mot de passe toujours
   await page.getByRole('button', { name: 'Me déconnecter' }).click();
   await expect(page).toHaveURL(/\/connexion$/);
 
-  s.table['POST /api/session/empreinte/options'] = (r) => r.fulfill({ status: 503, json: { message: 'Empreinte indisponible. Essaie ton mot de passe.' } });
+  // Le serveur dit « x » : le texte affiché vient du client, pas de l'API.
+  s.table['POST /api/session/empreinte/options'] = (r) => r.fulfill({ status: 503, json: { message: 'x' } });
   await page.getByRole('button', { name: BOUTON_EMPREINTE }).click();
   await expect(page.getByText('Empreinte indisponible. Essaie ton mot de passe.')).toBeVisible();
+  await expect(page.getByText('x', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Mot de passe')).toBeVisible();
+});
+
+test('mémo vide, clé déjà sur le téléphone : « déjà active », puis le bouton de connexion revient', async ({ page }) => {
+  await authentificateurVirtuel(page);
+  const etat = { connecte: true };
+  const s = serveurEmpreinte(etat);
+  await simuler(page, s.table);
+  await activer(page);
+  // PWA réinstallée : la clé est toujours sur le téléphone, le mémo local a disparu.
+  await page.evaluate(() => localStorage.removeItem('organizer.empreinte'));
+  // Le serveur exclut les clés connues : le téléphone répond « déjà active ».
+  await page.reload();
+  await expect(page.getByRole('button', { name: "Activer l'empreinte" })).toBeVisible();
+  await page.getByRole('button', { name: "Activer l'empreinte" }).click();
+  await expect(page.getByText("L'empreinte est déjà active sur ce téléphone.")).toBeVisible();
+  await expect(page.getByRole('button', { name: "Activer l'empreinte" })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('organizer.empreinte'))).toBe('?');
+
+  await page.getByRole('button', { name: 'Me déconnecter' }).click();
+  await expect(page).toHaveURL(/\/connexion$/);
+  await page.getByRole('button', { name: BOUTON_EMPREINTE }).click();
+  await expect(page).toHaveURL(/\/$/);
+  const memo = await page.evaluate(() => localStorage.getItem('organizer.empreinte'));
+  expect(memo).toBe(s.cles[0]?.identifiant);
+  expect(s.erreurs).toEqual([]);
 });

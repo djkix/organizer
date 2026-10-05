@@ -1,3 +1,5 @@
+import { MAX_CLES_PAR_COMPTE } from '@organizer/shared/api';
+
 /** Tous les textes visibles : tutoiement, moins de 12 mots, ni emoji, ni culpabilisation. */
 export const MESSAGES = {
   // Connexion et réseau
@@ -64,7 +66,7 @@ export const MESSAGES = {
   empreinteRefusee: 'Empreinte non activée. Réessaie.',
   empreinteNonReconnue: 'Empreinte non reconnue. Essaie ton mot de passe.',
   empreinteServeurIndisponible: 'Empreinte indisponible. Essaie ton mot de passe.',
-  empreintesTrop: 'Dix empreintes au plus. Retires-en une.',
+  empreintesTrop: `${MAX_CLES_PAR_COMPTE} empreintes au plus. Retires-en une.`,
   empreinteRetiree: 'Empreinte retirée.',
   retraitRate: 'Pas pu retirer. Réessaie dans un moment.',
   cetAppareil: 'Ce téléphone',
