@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { ClientRefuse, ErreurGoogle, OctroiInvalide } from '../src/google/erreurs.js';
+import { ClientRefuse, ErreurGoogle, OctroiInvalide, RequeteInvalide } from '../src/google/erreurs.js';
 import { ClientOAuth, PORTEE_AGENDA } from '../src/google/oauth.js';
 import { FauxGoogle, PORTEE, SECRET_ESSAI } from './faux-google.js';
 
@@ -46,11 +46,23 @@ describe('ClientOAuth', () => {
     await expect(client().rafraichir('rafr-ok')).rejects.toBeInstanceOf(OctroiInvalide);
   });
 
+  it('le rafraîchissement n\'envoie pas redirect_uri ; un délai dépassé n\'est pas une erreur classée', async () => {
+    faux.connecte('rafr-r');
+    await client().rafraichir('rafr-r');
+    expect(new URLSearchParams(faux.requetes[0]!.corps).has('redirect_uri')).toBe(false);
+    const lent = (() => Promise.reject(new DOMException('delai', 'TimeoutError'))) as unknown as typeof fetch;
+    const e = await new ClientOAuth({ clientId: 'a', clientSecret: 'b', redirectUri: 'c', baseOauth: faux.url, baseCalendrier: '' }, lent).rafraichir('x').catch((x: unknown) => x);
+    expect(e).not.toBeInstanceOf(ErreurGoogle);
+    expect((e as Error).name).toBe('TimeoutError');
+  });
+
   it('5xx : ErreurGoogle simple (reprise) ; révocation d\'un jeton déjà mort : sans erreur', async () => {
     faux.forcer(/^POST \/token$/, 503, { error: 'backendError' });
     const e = await client().rafraichir('x').catch((x: unknown) => x);
     expect(e).toBeInstanceOf(ErreurGoogle);
     expect((e as ErreurGoogle).constructor).toBe(ErreurGoogle);
+    faux.forcer(/^POST \/token$/, 400, { error: 'autre' });
+    await expect(client().rafraichir('x')).rejects.toBeInstanceOf(RequeteInvalide);
     faux.forcer(/^POST \/revoke$/, 400, { error: 'invalid_token' });
     await expect(client().revoquer('mort')).resolves.toBeUndefined();
   });

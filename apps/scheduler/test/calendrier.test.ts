@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ClientCalendrier, type CorpsEvenement } from '../src/google/calendrier.js';
-import { DejaPresent, GoogleIndisponible, JetonRefuse } from '../src/google/erreurs.js';
+import { DejaPresent, GoogleIndisponible, GoogleRefuse, JetonRefuse, RequeteInvalide } from '../src/google/erreurs.js';
 import { FauxGoogle } from './faux-google.js';
 
 let faux: FauxGoogle;
@@ -52,5 +52,19 @@ describe('ClientCalendrier', () => {
     expect((e as Error).message).toBe('Google HTTP 429 (rateLimitExceeded)');
     faux.forcer(/^POST /, 403, { error: { code: 403, errors: [{ reason: 'quotaExceeded' }] } });
     await expect(cal.inserer('acces-t', a, 'ev00003', corps)).rejects.toBeInstanceOf(GoogleIndisponible);
+  });
+
+  it('403 forbidden : GoogleRefuse ; identifiant invalide (400) : RequeteInvalide ; écritures sans notification', async () => {
+    const a = faux.agenda('agenda-d@group.calendar.google.com');
+    faux.forcer(/^POST /, 403, { error: { code: 403, errors: [{ reason: 'forbidden' }] } });
+    await expect(cal.inserer('acces-t', a, 'ev00004', corps)).rejects.toBeInstanceOf(GoogleRefuse);
+    await expect(cal.inserer('acces-t', a, 'MAJUSCULE', corps)).rejects.toBeInstanceOf(RequeteInvalide);
+    expect(faux.requetes.at(-1)!.recherche).toBe('?sendUpdates=none');
+  });
+
+  it('délai dépassé : erreur réseau brute, à réessayer', async () => {
+    const lent = (() => Promise.reject(new DOMException('delai', 'TimeoutError'))) as unknown as typeof fetch;
+    const e = await new ClientCalendrier(faux.url, lent).lire('x', 'a', 'ev00001').catch((x: unknown) => x);
+    expect((e as Error).name).toBe('TimeoutError');
   });
 });

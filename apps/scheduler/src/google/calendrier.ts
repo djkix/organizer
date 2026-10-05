@@ -31,8 +31,8 @@ export class ClientCalendrier {
     return r;
   }
 
-  private static evenements(agenda: string, id?: string): string {
-    return `/calendars/${encodeURIComponent(agenda)}/events${id ? `/${encodeURIComponent(id)}` : ''}`;
+  private static evenements(agenda: string, id?: string, ecriture = false): string {
+    return `/calendars/${encodeURIComponent(agenda)}/events${id ? `/${encodeURIComponent(id)}` : ''}${ecriture ? '?sendUpdates=none' : ''}`;
   }
 
   async creerAgenda(jeton: string, nom: string, fuseau: string): Promise<string> {
@@ -52,7 +52,7 @@ export class ClientCalendrier {
   }
 
   async inserer(jeton: string, agenda: string, id: string, corps: CorpsEvenement): Promise<void> {
-    const r = await this.appeler(jeton, 'POST', ClientCalendrier.evenements(agenda), { id, ...corps });
+    const r = await this.appeler(jeton, 'POST', ClientCalendrier.evenements(agenda, undefined, true), { id, ...corps });
     await r.body?.cancel();
   }
 
@@ -67,14 +67,14 @@ export class ClientCalendrier {
   }
 
   async remplacer(jeton: string, agenda: string, id: string, corps: CorpsEvenement): Promise<void> {
-    const r = await this.appeler(jeton, 'PUT', ClientCalendrier.evenements(agenda, id), { id, ...corps });
+    const r = await this.appeler(jeton, 'PUT', ClientCalendrier.evenements(agenda, id, true), { id, ...corps });
     await r.body?.cancel();
   }
 
   /** Déjà supprimé (410) ou inconnu (404) : rien à faire. */
   async supprimer(jeton: string, agenda: string, id: string): Promise<void> {
     try {
-      const r = await this.appeler(jeton, 'DELETE', ClientCalendrier.evenements(agenda, id));
+      const r = await this.appeler(jeton, 'DELETE', ClientCalendrier.evenements(agenda, id, true));
       await r.body?.cancel();
     } catch (e) {
       if (!(e instanceof Introuvable)) throw e;
