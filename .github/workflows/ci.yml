@@ -59,9 +59,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - name: Construire les quatre images
+      - name: Construire les cinq images
         run: |
-          for cible in api worker web sortie; do
+          for cible in api worker scheduler web sortie; do
             docker buildx build --load --target "$cible" -f infra/image/Dockerfile \
               --cache-from type=gha,scope="$cible" --cache-to type=gha,mode=max,scope="$cible" \
               -t "ghcr.io/djkix/organizer-$cible:essai" .
@@ -69,7 +69,7 @@ jobs:
       - name: Analyser les vulnérabilités (critiques corrigeables bloquantes)
         run: |
           echec=0
-          for cible in api worker web sortie; do
+          for cible in api worker scheduler web sortie; do
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.63.0 image \
               --scanners vuln --ignore-unfixed --severity CRITICAL --exit-code 1 "ghcr.io/djkix/organizer-$cible:essai" || echec=1
           done
@@ -97,7 +97,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "$JETON" | docker login ghcr.io -u "$ACTEUR" --password-stdin
-          for cible in api worker web sortie; do
+          for cible in api worker scheduler web sortie; do
             docker buildx build --push --target "$cible" -f infra/image/Dockerfile \
               --cache-from type=gha,scope="$cible" \
               -t "ghcr.io/djkix/organizer-$cible:$VERSION" .
