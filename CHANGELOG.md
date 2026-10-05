@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.2.0] - 2026-10-05
+
 ### Ajouté
 - Le service `scheduler` rejoint la stack (image `organizer-scheduler`, non root, racine en lecture seule, 256 Mo, réseaux `core` et `sortie`) ; Squid ne lui ouvre que `www.googleapis.com` et `oauth2.googleapis.com` ; nouvelle variable obligatoire `GOOGLE_CLIENT_ID`, nouveaux secrets `google_client_secret` et `agenda_cle` ; cinq images en CI ; l'essai de fumée éprouve la sortie du scheduler ; l'exploitation documente Google Agenda et ses alertes (2026-10-05).
 - La PWA porte l'interrupteur « Alarme 10 minutes avant » sur un rendez-vous daté, et une section Google Agenda dans Réglages : connecter (écran de Google), état après le retour, refus ou accès décoché dits calmement, déconnecter sans rien effacer dans Google ; e2e sur API simulée (2026-10-05).
