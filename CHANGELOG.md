@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- La configuration de l'empreinte : identifiant de RP et origine exacte, obligatoires en production, vérifiés au démarrage ; la stack les tire de `DOMAINE_APP`, nouvelle variable obligatoire du `.env` (2026-10-05).
 - La table des clés d'accès WebAuthn (identifiant, clé publique, compteur, transports), effacée avec le compte (2026-10-05).
 - Le plan du lot 1-D : reconnexion par empreinte digitale (WebAuthn) dans la PWA, décision 23 à poser en première tâche, publication en 1.1.0 (2026-10-05).
 

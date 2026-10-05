@@ -1,3 +1,4 @@
+import { lireConfigWebauthn, type ConfigWebauthn } from './auth/empreintes/config.js';
 import { chargerPrompt, cheminConfigure, exigerVar, lireVar, valeursAdmises } from '@organizer/shared';
 
 export interface ConfigApi {
@@ -12,6 +13,8 @@ export interface ConfigApi {
   telegramApiRoot?: string;
   /** Adresse publique du webhook, pour la CLI telegram-webhook. */
   webhookUrl?: string;
+  /** Empreinte (WebAuthn) : identifiant de RP et origine de la PWA. */
+  webauthn: ConfigWebauthn;
 }
 
 export function lireConfigApi(): ConfigApi {
@@ -32,5 +35,6 @@ export function lireConfigApi(): ConfigApi {
       chargerPrompt(cheminConfigure('PROMPTS_DIR', lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v1'),
       'echeance_type',
     ),
+    webauthn: lireConfigWebauthn(),
   };
 }
