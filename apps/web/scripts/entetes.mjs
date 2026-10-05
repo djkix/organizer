@@ -47,7 +47,7 @@ export function politiqueCsp(empreintes) {
 export function entetesCoquille(html) {
   return {
     'Content-Security-Policy': politiqueCsp(empreintesScripts(html)),
-    'Permissions-Policy': 'microphone=(self), camera=(), geolocation=()',
+    'Permissions-Policy': 'microphone=(self), camera=(), geolocation=(), publickey-credentials-create=(self), publickey-credentials-get=(self)',
     'Referrer-Policy': 'no-referrer',
     'X-Content-Type-Options': 'nosniff',
   };

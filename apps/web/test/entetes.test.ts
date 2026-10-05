@@ -21,9 +21,9 @@ describe('en-têtes de la coquille', () => {
     expect(csp).not.toContain('unsafe');
   });
 
-  it('micro limité à l\'origine, aucun référent, pas de devinette de type', () => {
+  it('micro et empreinte limités à l\'origine, aucun référent, pas de devinette de type', () => {
     expect(entetesCoquille('<html></html>')).toMatchObject({
-      'Permissions-Policy': 'microphone=(self), camera=(), geolocation=()',
+      'Permissions-Policy': 'microphone=(self), camera=(), geolocation=(), publickey-credentials-create=(self), publickey-credentials-get=(self)',
       'Referrer-Policy': 'no-referrer',
       'X-Content-Type-Options': 'nosniff',
     });
