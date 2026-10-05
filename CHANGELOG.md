@@ -9,6 +9,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - L'activation de l'empreinte : plafond de dix clés recompté sous verrou à l'enregistrement, journal sans le message de la bibliothèque (défi et origine du client), algorithmes imposés à la vérification, retrait d'un identifiant mal formé sans erreur (2026-10-05).
 
 ### Ajouté
+- L'empreinte dans la PWA : « Activer l'empreinte », liste et retrait dans Réglages ; « Me connecter avec l'empreinte » sur l'écran de connexion, seulement si ce téléphone a une clé ; mot de passe toujours là ; bibliothèque chargée au toucher du bouton ; messages selon le contexte (connexion ou activation), 503 dit calmement ; e2e par l'authentificateur virtuel de Chromium (2026-10-05).
 - Le client et la logique d'empreinte de la PWA (`@simplewebauthn/browser` 14) : invites injectées, messages calmes, clé de ce téléphone retenue sans rien de personnel (2026-10-05).
 - La commande `retirer-empreintes <nom>` : retire toutes les empreintes d'un compte et ferme ses sessions, pour un téléphone perdu (2026-10-05).
 - Les routes de l'empreinte : options et reconnexion sous `/api/session/empreinte`, activation, liste et retrait sous `/api/empreintes`, 10 essais par minute et par IP, 503 court si Valkey ne répond pas (2026-10-05).

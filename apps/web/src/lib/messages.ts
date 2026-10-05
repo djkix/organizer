@@ -62,6 +62,8 @@ export const MESSAGES = {
   empreinteDejaActive: "L'empreinte est déjà active sur ce téléphone.",
   empreinteIndisponible: "L'empreinte n'est pas disponible ici.",
   empreinteRefusee: 'Empreinte non activée. Réessaie.',
+  empreinteNonReconnue: 'Empreinte non reconnue. Essaie ton mot de passe.',
+  empreinteServeurIndisponible: 'Empreinte indisponible. Essaie ton mot de passe.',
   empreintesTrop: 'Dix empreintes au plus. Retires-en une.',
   empreinteRetiree: 'Empreinte retirée.',
   retraitRate: 'Pas pu retirer. Réessaie dans un moment.',

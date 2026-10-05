@@ -45,13 +45,16 @@ export type Issue = { ok: true } | { ok: false; message: string };
 const nomErreur = (err: unknown): string =>
   typeof err === 'object' && err !== null && 'name' in err ? String((err as { name: unknown }).name) : '';
 
-/** Message calme pour tout échec d'empreinte. Seuls 401 et 429 portent un message de l'API. */
-export function messageEmpreinte(err: unknown): string {
+export type Contexte = 'connexion' | 'activation';
+
+/** Message calme pour tout échec d'empreinte. Seuls 401 et 429 portent un message de l'API ; 400 et 409 se lisent selon le contexte. */
+export function messageEmpreinte(err: unknown, contexte: Contexte): string {
   if (err instanceof HorsLigne) return MESSAGES.horsLigne;
   if (err instanceof ErreurApi) {
     if (err.statut === 401 || err.statut === 429) return err.message;
-    if (err.statut === 409) return MESSAGES.empreintesTrop;
-    if (err.statut === 400) return MESSAGES.empreinteRefusee;
+    if (err.statut === 503) return MESSAGES.empreinteServeurIndisponible;
+    if (err.statut === 409 && contexte === 'activation') return MESSAGES.empreintesTrop;
+    if (err.statut === 400) return contexte === 'activation' ? MESSAGES.empreinteRefusee : MESSAGES.empreinteNonReconnue;
     return MESSAGES.serveurIndisponible;
   }
   const nom = nomErreur(err);
@@ -70,7 +73,7 @@ export async function connecterParEmpreinte(
     memo.poser(reponse.id);
     return { ok: true };
   } catch (err) {
-    return { ok: false, message: messageEmpreinte(err) };
+    return { ok: false, message: messageEmpreinte(err, 'connexion') };
   }
 }
 
@@ -82,7 +85,7 @@ export async function activerEmpreinte(
     memo.poser(cle.identifiant);
     return { ok: true, cle };
   } catch (err) {
-    return { ok: false, message: messageEmpreinte(err) };
+    return { ok: false, message: messageEmpreinte(err, 'activation') };
   }
 }
 

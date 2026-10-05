@@ -68,19 +68,31 @@ describe('memoLocal', () => {
 
 describe('messageEmpreinte', () => {
   it.each([
-    [new DOMException('x', 'NotAllowedError'), MESSAGES.empreinteAnnulee],
-    [new DOMException('x', 'AbortError'), MESSAGES.empreinteAnnulee],
-    [new DOMException('x', 'InvalidStateError'), MESSAGES.empreinteDejaActive],
-    [new DOMException('x', 'SecurityError'), MESSAGES.empreinteIndisponible],
-    [new Error('WebAuthn is not supported in this browser'), MESSAGES.empreinteIndisponible],
-    [new HorsLigne(), MESSAGES.horsLigne],
-    [new ErreurApi(401, 'Empreinte non reconnue. Essaie ton mot de passe.'), 'Empreinte non reconnue. Essaie ton mot de passe.'],
-    [new ErreurApi(429, 'Trop d\'essais. Réessaie dans une minute.'), 'Trop d\'essais. Réessaie dans une minute.'],
-    [new ErreurApi(409, 'x'), MESSAGES.empreintesTrop],
-    [new ErreurApi(400, 'x'), MESSAGES.empreinteRefusee],
-    [new ErreurApi(500, 'x'), MESSAGES.serveurIndisponible],
-  ])('%s', (err, message) => {
-    expect(messageEmpreinte(err)).toBe(message);
+    ['connexion', new DOMException('x', 'NotAllowedError'), MESSAGES.empreinteAnnulee],
+    ['connexion', new DOMException('x', 'AbortError'), MESSAGES.empreinteAnnulee],
+    ['activation', new DOMException('x', 'InvalidStateError'), MESSAGES.empreinteDejaActive],
+    ['connexion', new DOMException('x', 'SecurityError'), MESSAGES.empreinteIndisponible],
+    ['connexion', new Error('WebAuthn is not supported in this browser'), MESSAGES.empreinteIndisponible],
+    ['connexion', new HorsLigne(), MESSAGES.horsLigne],
+    ['connexion', new ErreurApi(401, 'Empreinte non reconnue. Essaie ton mot de passe.'), 'Empreinte non reconnue. Essaie ton mot de passe.'],
+    ['connexion', new ErreurApi(429, 'Trop d\'essais. Réessaie dans une minute.'), 'Trop d\'essais. Réessaie dans une minute.'],
+    ['activation', new ErreurApi(409, 'x'), MESSAGES.empreintesTrop],
+    ['connexion', new ErreurApi(409, 'x'), MESSAGES.serveurIndisponible],
+    ['activation', new ErreurApi(400, 'x'), MESSAGES.empreinteRefusee],
+    ['connexion', new ErreurApi(400, 'x'), MESSAGES.empreinteNonReconnue],
+    ['connexion', new ErreurApi(503, 'x'), MESSAGES.empreinteServeurIndisponible],
+    ['activation', new ErreurApi(503, 'x'), MESSAGES.empreinteServeurIndisponible],
+    ['connexion', new ErreurApi(500, 'x'), MESSAGES.serveurIndisponible],
+  ] as const)('%s : %s', (contexte, err, message) => {
+    expect(messageEmpreinte(err, contexte)).toBe(message);
+  });
+
+  it('à la connexion, jamais « non activée » ni « au plus »', () => {
+    for (const statut of [400, 409, 503]) {
+      const m = messageEmpreinte(new ErreurApi(statut, 'x'), 'connexion');
+      expect(m).not.toContain('activée');
+      expect(m).not.toContain('au plus');
+    }
   });
 });
 
