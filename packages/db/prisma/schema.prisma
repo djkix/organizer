@@ -29,6 +29,17 @@ enum Nature {
   ambigu
 }
 
+/// État de la connexion d'un compte à Google Agenda (lot 2-A).
+enum EtatAgenda {
+  deconnecte
+  en_cours
+  connecte
+  deconnexion
+  revoque
+  echec
+  agenda_supprime
+}
+
 model Utilisateur {
   id             String        @id @default(uuid()) @db.Uuid
   nom            String        @unique
@@ -42,6 +53,7 @@ model Utilisateur {
   prochainePrivee Boolean   @default(false) @map("prochaine_privee")
   sessions        Session[]
   clesAcces       CleAcces[]
+  agenda          AgendaGoogle?
 
   @@map("utilisateur")
 }
@@ -134,6 +146,13 @@ model Action {
   alarmeExpr   String?   @map("alarme_expr")
   faitLe       DateTime? @map("fait_le")
   reporteN     Int       @default(0) @map("reporte_n")
+  /// Événement Google Agenda (lot 2-A) : identifiant déterministe, agenda, empreinte du contenu écrit, génération.
+  evenementId           String?   @map("evenement_id")
+  evenementCalendrierId String?   @map("evenement_calendrier_id")
+  evenementEmpreinte    String?   @map("evenement_empreinte")
+  evenementGeneration   Int       @default(0) @map("evenement_generation")
+  /// Bouton « Avec alarme » déjà proposé dans Telegram : jamais deux fois.
+  alarmeProposeeLe      DateTime? @map("alarme_proposee_le")
   item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@map("action")
@@ -187,4 +206,21 @@ model CleAcces {
 
   @@index([utilisateurId])
   @@map("cle_acces")
+}
+
+/// Connexion d'un compte à son Google Agenda (décision 10). Le jeton de rafraîchissement est chiffré
+/// (AES-256-GCM, clé en secret Docker) et n'est lu que par le scheduler. Jamais journalisé.
+model AgendaGoogle {
+  utilisateurId String      @id @map("utilisateur_id") @db.Uuid
+  etat          EtatAgenda
+  /// Code technique du dernier échec (portee_refusee, echange), jamais un message de Google.
+  erreur        String?
+  jetonChiffre  String?     @map("jeton_chiffre")
+  calendrierId  String?     @map("calendrier_id")
+  connecteLe    DateTime?   @map("connecte_le")
+  rafraichiLe   DateTime?   @map("rafraichi_le")
+  modifieLe     DateTime    @updatedAt @map("modifie_le")
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@map("agenda_google")
 }
