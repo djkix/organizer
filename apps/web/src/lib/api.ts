@@ -68,6 +68,15 @@ async function messageDe(r: Response): Promise<string> {
     }
     return r.status === 429 ? MESSAGES.tropDeRequetes : MESSAGES.identifiantsInvalides;
   }
+  if (r.status === 400) {
+    // Seul refus connu et calme de l'API (alarme sans heure) : montré tel quel ; le reste ne l'est jamais.
+    try {
+      const corps = (await r.json()) as Partial<ReponseErreur>;
+      if (corps.message === MESSAGES.alarmeSansHeure) return corps.message;
+    } catch {
+      // Corps absent ou illisible : message par défaut.
+    }
+  }
   return MESSAGES.serveurIndisponible;
 }
 

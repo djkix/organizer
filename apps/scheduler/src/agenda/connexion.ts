@@ -3,7 +3,7 @@ import type { PrismaClient } from '@organizer/db';
 import { z } from 'zod';
 import { chiffrer, dechiffrer } from '../chiffre.js';
 import type { ClientCalendrier } from '../google/calendrier.js';
-import { OctroiInvalide } from '../google/erreurs.js';
+import { OctroiInvalide, decrire } from '../google/erreurs.js';
 import { PORTEE_AGENDA, type ClientOAuth, type JetonsObtenus } from '../google/oauth.js';
 import type { Jetons } from './jetons.js';
 
@@ -82,7 +82,7 @@ export async function echangerCode(j: { utilisateurId: string; code: string; ver
     if (cree) await d.calendrier.supprimerAgenda(t.acces, cree).catch(() => undefined);
     await d.oauth.revoquer(t.rafraichissement).catch(() => undefined);
     await echec(d, uid, 'echange').catch(() => undefined);
-    throw new UnrecoverableError(`Connexion en échec après l'échange du code : ${e instanceof Error ? e.name : 'erreur'}`);
+    throw new UnrecoverableError(`Connexion en échec après l'échange du code : ${decrire(e)}`);
   }
   // Connexion faite : un enfilage en panne ne la défait pas, le balayage périodique rattrape.
   await d.enfilerBalayage(uid).catch((e: unknown) => console.error(`Agenda : balayage de connexion reporté (${(e as Error).name})`));

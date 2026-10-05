@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { CorpsCorrection, LigneAction } from '@organizer/shared/api';
-  import { urlAudio } from '$lib/api';
+  import { ErreurApi, urlAudio } from '$lib/api';
   import { api } from '$lib/client';
   import { FUSEAU } from '$lib/config';
   import { appliquerCorrection, choixDepuisChamp, corpsEcheance, corpsNature, type ChoixEcheance } from '$lib/correction';
@@ -27,10 +27,12 @@
     if (envoi) return;
     envoi = true;
     message = null;
+    let refus: string | null = null;
     try {
-      const r = await appliquerCorrection(construire, (corps) => enfiler(() => api.corriger(ligne.itemId, corps)));
+      const r = await appliquerCorrection(construire, (corps) => enfiler(() => api.corriger(ligne.itemId, corps)),
+        (e) => { if (e instanceof ErreurApi && e.statut === 400) refus = e.message; });
       if (r === 'faite') surCorrige(apres);
-      else message = MESSAGES.correctionRatee;
+      else message = refus ?? MESSAGES.correctionRatee;
     } finally {
       envoi = false;
     }

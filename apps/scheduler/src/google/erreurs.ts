@@ -46,3 +46,9 @@ export async function erreurCalendrier(r: Response): Promise<ErreurGoogle> {
   if (r.status >= 400 && r.status < 500) return new RequeteInvalide(r.status, raison);
   return new ErreurGoogle(r.status, raison);
 }
+
+/** Description journalisable : classe, et statut + raison plafonnée pour les erreurs construites par nos classes. Jamais de corps ni de jeton. */
+export function decrire(e: unknown): string {
+  if (e instanceof ErreurGoogle) return `${e.name} ${e.statut}${e.raison ? ` (${e.raison})` : ''}`;
+  return e instanceof Error ? e.name : 'erreur';
+}

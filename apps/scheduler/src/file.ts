@@ -7,7 +7,7 @@ import { abandonnerDeconnexion, deconnecterAgenda, echangerCode, type DepsConnex
 import type { Alerteur } from './agenda/jetons.js';
 import type { DepsSynchro } from './agenda/synchroniser.js';
 import { travailSynchro } from './agenda/travail.js';
-import { ClientRefuse, GoogleIndisponible } from './google/erreurs.js';
+import { ClientRefuse, ErreurGoogle, GoogleIndisponible, decrire } from './google/erreurs.js';
 
 /** Textes des alertes à l'administrateur (jamais à L) ; repris dans docs/exploitation.md. Ni jeton, ni titre, ni code. */
 export const MESSAGES_ADMIN = {
@@ -16,6 +16,7 @@ export const MESSAGES_ADMIN = {
     `Google Agenda refuse (${statut}${raison ? `, ${raison}` : ''}) : écritures suspendues 15 minutes.`,
   client: 'Google Agenda : client OAuth refusé. Vérifier GOOGLE_CLIENT_ID et google_client_secret.',
   agendaSupprime: (nom: string) => `Google Agenda du compte ${nom} : l'agenda Organizer a été supprimé. Écritures arrêtées.`,
+  connexion: (nom: string) => `Google Agenda du compte ${nom} : connexion en échec. Voir les journaux du scheduler.`,
   echecs: (n: number) => `Google Agenda : ${n} écritures en échec depuis une heure.`,
   revocationImpossible: (nom: string) => `Google Agenda du compte ${nom} : révocation impossible. Retirer l'accès depuis le compte Google.`,
 };
@@ -103,6 +104,7 @@ export function demarrerFileAgenda(d: DepsFileAgenda): Worker<JobAgenda> {
             if (r === 'connecte') {
               signaleur.retablir(`revoque:${j.utilisateurId}`);
               signaleur.retablir(`agenda:${j.utilisateurId}`);
+              signaleur.retablir(`connexion:${j.utilisateurId}`);
             }
             return r;
           }
@@ -140,7 +142,7 @@ export function demarrerFileAgenda(d: DepsFileAgenda): Worker<JobAgenda> {
     if (!job) return;
     const definitif = err instanceof UnrecoverableError || err.name === 'UnrecoverableError' || job.attemptsMade >= (job.opts.attempts ?? 1);
     if (!definitif) return;
-    console.error(`Agenda : job ${job.name} en échec définitif (${err.name})`);
+    console.error(`Agenda : job ${job.name} en échec définitif (${err instanceof UnrecoverableError || err.name === 'UnrecoverableError' ? err.message : err instanceof ErreurGoogle ? decrire(err) : err.name})`);
     const type = (job.data as { type?: string }).type;
     const uid = (job.data as { utilisateurId?: string }).utilisateurId;
     void (async () => {
@@ -148,6 +150,7 @@ export function demarrerFileAgenda(d: DepsFileAgenda): Worker<JobAgenda> {
         await d.prisma.agendaGoogle.updateMany({
           where: { utilisateurId: uid, etat: 'en_cours' }, data: { etat: 'echec', erreur: 'echange', jetonChiffre: null },
         });
+        if (!err.message.includes('ClientRefuse')) await signaleur.une(`connexion:${uid}`, MESSAGES_ADMIN.connexion(await nom(uid)));
       }
       if (type === 'deconnecter' && uid) {
         await abandonnerDeconnexion(uid, d);

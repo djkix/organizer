@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { PrismaClient } from '@organizer/db';
 import { OPTIONS_JOB_AGENDA, OPTIONS_JOB_ECHANGE, PORTEE_AGENDA, type FileJobs, type JobAgenda } from '@organizer/shared';
 import type { ErreurAgenda, ReponseAgenda, ReponseConnexionAgenda } from '@organizer/shared/api';
+import { borner, DELAI_VALKEY_MS } from '../auth/empreintes/defis.js';
 import type { ConfigAgendaApi } from './config.js';
 import type { MagasinEtats } from './etats.js';
 
@@ -23,6 +24,7 @@ export class AgendaService {
     private readonly etats: MagasinEtats,
     private readonly file: FileJobs<JobAgenda>,
     private readonly config: ConfigAgendaApi | null,
+    private readonly delaiMs = DELAI_VALKEY_MS,
   ) {}
 
   async etat(uid: string): Promise<ReponseAgenda> {
@@ -60,7 +62,17 @@ export class AgendaService {
       create: { utilisateurId: v.utilisateurId, etat: 'en_cours' },
       update: { etat: 'en_cours', erreur: null },
     });
-    await this.file.add('echanger', { type: 'echanger', utilisateurId: v.utilisateurId, code: q.code, verificateur: v.verificateur }, OPTIONS_JOB_ECHANGE);
+    try {
+      await borner(
+        this.file.add('echanger', { type: 'echanger', utilisateurId: v.utilisateurId, code: q.code, verificateur: v.verificateur }, OPTIONS_JOB_ECHANGE),
+        this.delaiMs,
+      );
+    } catch (e) {
+      // Rien n'est enfilé : l'état ne doit pas rester « en cours » pour toujours.
+      console.error(`Agenda : échange non enfilé (${(e as Error).name})`);
+      await this.prisma.agendaGoogle.updateMany({ where: { utilisateurId: v.utilisateurId, etat: 'en_cours' }, data: { etat: 'echec', erreur: 'echange' } }).catch(() => undefined);
+      return 'expire';
+    }
     return 'retour';
   }
 

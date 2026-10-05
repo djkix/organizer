@@ -75,6 +75,8 @@ export const MESSAGES = {
   // Alarme et Google Agenda
   alarme: `Alarme ${MINUTES_ALARME} minutes avant`,
   alarmeAide: 'Elle sonne par Google Agenda, seulement pour ce rendez-vous.',
+  /** Identique au message de l'API : seul refus 400 que la PWA montre. */
+  alarmeSansHeure: "L'alarme demande un jour et une heure.",
   alarmeActivee: `Alarme activée, ${MINUTES_ALARME} minutes avant.`,
   alarmeRetiree: 'Alarme retirée.',
   connecterAgenda: 'Connecter Google Agenda',

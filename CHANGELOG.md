@@ -9,18 +9,6 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Le service `scheduler` rejoint la stack (image `organizer-scheduler`, non root, racine en lecture seule, 256 Mo, réseaux `core` et `sortie`) ; Squid ne lui ouvre que `www.googleapis.com` et `oauth2.googleapis.com` ; nouvelle variable obligatoire `GOOGLE_CLIENT_ID`, nouveaux secrets `google_client_secret` et `agenda_cle` ; cinq images en CI ; l'essai de fumée éprouve la sortie du scheduler ; l'exploitation documente Google Agenda et ses alertes (2026-10-05).
 - La PWA porte l'interrupteur « Alarme 10 minutes avant » sur un rendez-vous daté, et une section Google Agenda dans Réglages : connecter (écran de Google), état après le retour, refus ou accès décoché dits calmement, déconnecter sans rien effacer dans Google ; e2e sur API simulée (2026-10-05).
 - Après le classement, chaque rendez-vous daté part vers l'agenda ; sur une capture Telegram, le bot propose « Avec alarme » dans un message silencieux en réponse au vocal, une seule fois, seulement si l'agenda est connecté, la capture fraîche et le rendez-vous à venir ; l'appui réécrit le message (« Sans alarme » pour revenir) ; le webhook reçoit les `callback_query` (rejouer `telegram-webhook poser`) (2026-10-05).
-
-### Modifié
-- Le cahier précise le pont Google Agenda (identifiant déterministe, durée, contenu, scheduler seul à joindre Google, proposition du bot) et découpe le lot 2 ; le lot 2-A livre l'agenda et l'alarme item par item (2026-10-05).
-
-### Corrigé
-- La pause de 15 minutes de la file agenda dure vraiment 15 minutes (elle reprenait toutes les 30 secondes), un client Google refusé pendant une synchronisation alerte l'administrateur, et l'arrêt du scheduler ferme chaque ressource même si l'une échoue (2026-10-05).
-- La connexion à l'agenda ne défait plus une déconnexion demandée pendant l'échange du code (jeton révoqué, agenda neuf retiré) ; un agenda créé puis non relié au compte est supprimé au lieu de laisser un doublon ; le balayage survit à une révocation dont le traitement échoue, et un jeton illisible laisse une trace sans détail (2026-10-05).
-- Les tests du classement des échecs de synchronisation n'abîment plus le client de base partagé, et une action dont l'événement n'a pas de calendrier connu, une fois ses champs vidés, est signalée comme supprimée (2026-10-05).
-- La synchronisation de l'agenda classe mieux ses échecs : autorisation retirée et agenda absent finissent sans erreur, seuls les refus définitifs de Google sont abandonnés, toute autre panne (base, réseau) est réessayée ; l'alerte à l'administrateur ne part qu'au changement d'état (2026-10-05).
-- Les clients Google du scheduler distinguent les erreurs à réessayer (limite de débit, 5xx, réseau, délai) de celles qui ne le sont pas (403 de refus, 400 de requête invalide) ; les écritures d'agenda n'envoient aucune notification (2026-10-05).
-
-### Ajouté
 - L'alarme item par item dans l'API (`PATCH /api/items/:id { alarme }`), refusée hors rendez-vous daté, historisée, retirée quand l'échéance perd son heure ou que l'item cesse d'être une action ; chaque cochage, décochage ou correction prévient le scheduler (15 s après un cochage), sans jamais faire échouer le geste (2026-10-05).
 - Le parcours OAuth de Google Agenda dans l'API, sans jamais joindre Google : adresse de consentement (portée `calendar.app.created` seule, état et PKCE S256 dans Valkey, 10 minutes, usage unique), retour sur `/api/agenda/retour` lié à la session, code confié au scheduler, état et déconnexion pour Réglages ; la stack et la documentation d'exploitation exigent `GOOGLE_CLIENT_ID` pour l'API (2026-10-05).
 - La file `agenda` du scheduler (une instance, concurrence 1) : synchronisation, échange, déconnexion et balayage toutes les 10 minutes (planificateur répétable idempotent), données de chaque job validées, clients Google passés par la sortie contrôlée ; un refus de débit de Google met la file en pause 15 minutes avec une seule alerte par épisode ; autorisation retirée, agenda supprimé, client refusé, révocation impossible et échecs répétés alertent l'administrateur seul, une fois par constat ; arrêt propre sur SIGTERM ; sonde `agenda` (2026-10-05).
@@ -32,6 +20,18 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Les contrats partagés de l'agenda : files `agenda` et `propositions`, jobs, délai de 15 s après un cochage, état de la connexion pour la PWA, alarme dans une correction, portée Google définie une fois, titre court et date en clair (2026-10-05).
 - La connexion d'un compte à Google Agenda (état, jeton de rafraîchissement chiffré, agenda dédié) et l'événement de chaque action (identifiant, agenda, empreinte, génération), en migration additive (2026-10-05).
 - Le plan du lot 2-A : Google Agenda par un service `scheduler` seul à joindre Google (OAuth porté par L, portée `calendar.app.created`, jeton chiffré), rendez-vous datés sans rappel par défaut, alarme item par item (voix, bouton du bot, interrupteur de la PWA), publication en 1.2.0 (2026-10-05).
+
+### Modifié
+- Le cahier précise le pont Google Agenda (identifiant déterministe, durée, contenu, scheduler seul à joindre Google, proposition du bot) et découpe le lot 2 ; le lot 2-A livre l'agenda et l'alarme item par item (2026-10-05).
+
+### Corrigé
+- Les échecs de l'agenda se diagnostiquent : le journal du scheduler dit la classe, le statut et la raison de Google (jamais de corps, de jeton ni de texte d'action), et un échec définitif de connexion alerte l'administrateur une fois ; le bouton « Avec alarme » est toujours acquitté et une erreur n'est plus relancée (plus de relivraison qui bloquerait les vocaux), les anciens boutons sont acquittés sans rien faire (2026-10-05).
+- La proposition d'alarme est marquée avant l'envoi (au plus une fois) et tient en moins de 12 mots ; l'alarme est refusée sur une capture privée ; une file muette après le retour de Google remet la connexion en échec, calmement ; la PWA ne suit que les adresses `accounts.google.com` et montre le refus court de l'API pour l'alarme (2026-10-05).
+- La pause de 15 minutes de la file agenda dure vraiment 15 minutes (elle reprenait toutes les 30 secondes), un client Google refusé pendant une synchronisation alerte l'administrateur, et l'arrêt du scheduler ferme chaque ressource même si l'une échoue (2026-10-05).
+- La connexion à l'agenda ne défait plus une déconnexion demandée pendant l'échange du code (jeton révoqué, agenda neuf retiré) ; un agenda créé puis non relié au compte est supprimé au lieu de laisser un doublon ; le balayage survit à une révocation dont le traitement échoue, et un jeton illisible laisse une trace sans détail (2026-10-05).
+- Les tests du classement des échecs de synchronisation n'abîment plus le client de base partagé, et une action dont l'événement n'a pas de calendrier connu, une fois ses champs vidés, est signalée comme supprimée (2026-10-05).
+- La synchronisation de l'agenda classe mieux ses échecs : autorisation retirée et agenda absent finissent sans erreur, seuls les refus définitifs de Google sont abandonnés, toute autre panne (base, réseau) est réessayée ; l'alerte à l'administrateur ne part qu'au changement d'état (2026-10-05).
+- Les clients Google du scheduler distinguent les erreurs à réessayer (limite de débit, 5xx, réseau, délai) de celles qui ne le sont pas (403 de refus, 400 de requête invalide) ; les écritures d'agenda n'envoient aucune notification (2026-10-05).
 
 ## [1.1.0] - 2026-10-05
 

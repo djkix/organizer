@@ -1,5 +1,5 @@
 import { UnrecoverableError } from 'bullmq';
-import { ClientRefuse, ErreurGoogle, GoogleIndisponible } from '../google/erreurs.js';
+import { ClientRefuse, ErreurGoogle, GoogleIndisponible, decrire } from '../google/erreurs.js';
 import { AutorisationRetiree, NonConnecte } from './jetons.js';
 import { AgendaSupprime, synchroniserAction, type DepsSynchro, type IssueSynchro } from './synchroniser.js';
 
@@ -36,8 +36,7 @@ export function travailSynchro(d: DepsSynchro): (itemId: string) => Promise<Issu
       if (e instanceof NonConnecte) return 'sans_agenda';
       // Client OAuth refusé : tel quel, le travailleur alerte l'administrateur puis abandonne le job.
       if (e instanceof ClientRefuse || !estDefinitif(e)) throw e;
-      const nom = (e as Error).name;
-      throw new UnrecoverableError(`Synchronisation définitive en échec : ${nom}${e instanceof ErreurGoogle ? ` ${e.statut}` : ''}`);
+      throw new UnrecoverableError(`Synchronisation définitive en échec : ${decrire(e)}`);
     }
   };
 }
