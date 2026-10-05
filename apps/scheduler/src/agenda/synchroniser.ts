@@ -85,7 +85,9 @@ export async function synchroniserAction(itemId: string, d: DepsSynchro): Promis
     // et on passe à la génération suivante pour ne pas retomber sur lui.
     const nettoye = { evenementId: null, evenementCalendrierId: null, evenementEmpreinte: null, evenementGeneration: a.evenementGeneration + 1 };
     await d.prisma.action.update({ where: { itemId }, data: nettoye });
-    return synchroniserAction(itemId, d);
+    // Champs vidés : même sans rien à recréer, l'issue n'est pas 'rien'.
+    const suite = await synchroniserAction(itemId, d);
+    return suite === 'rien' ? 'supprime' : suite;
   }
   const etat = etatSynchro(a);
   const plan = planifier(etat, agenda, (d.maintenant ?? (() => new Date()))());

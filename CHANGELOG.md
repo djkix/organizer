@@ -9,6 +9,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Le cahier précise le pont Google Agenda (identifiant déterministe, durée, contenu, scheduler seul à joindre Google, proposition du bot) et découpe le lot 2 ; le lot 2-A livre l'agenda et l'alarme item par item (2026-10-05).
 
 ### Corrigé
+- Les tests du classement des échecs de synchronisation n'abîment plus le client de base partagé, et une action dont l'événement n'a pas de calendrier connu, une fois ses champs vidés, est signalée comme supprimée (2026-10-05).
 - La synchronisation de l'agenda classe mieux ses échecs : autorisation retirée et agenda absent finissent sans erreur, seuls les refus définitifs de Google sont abandonnés, toute autre panne (base, réseau) est réessayée ; l'alerte à l'administrateur ne part qu'au changement d'état (2026-10-05).
 - Les clients Google du scheduler distinguent les erreurs à réessayer (limite de débit, 5xx, réseau, délai) de celles qui ne le sont pas (403 de refus, 400 de requête invalide) ; les écritures d'agenda n'envoient aucune notification (2026-10-05).
 
