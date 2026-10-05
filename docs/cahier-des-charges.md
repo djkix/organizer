@@ -63,6 +63,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 20 | Bot Telegram | `@organizer_lud_bot` |
 | 21 | Lots 0 et 1 | **Menés en parallèle**, décidé par Franck le 3 octobre 2026. Thèmes, types d'échéance et prompt sont des données et de la configuration, branchées en fin de lot 1 |
 | 22 | Mise en service | **Directe, sans attendre la sortie du lot 0**, décidé par Franck le 4 octobre 2026. L'application démarre en production avec le prompt actuel (`tri/v1`) ; le classement est affiné à l'usage, sur les captures réelles et les corrections. Le corpus du lot 0 continue de servir de jeu de test, sans bloquer la mise en service. Motif : le banc d'essai classe déjà les vraies captures de L avec le même prompt, et chaque élément garde la version du prompt et le modèle, donc une capture se reclasse après un changement de prompt |
+| 23 | Empreinte digitale | **Avancée du lot 3 à un lot 1-D**, livrée juste après la mise en service, décidée par Franck le 4 octobre 2026. WebAuthn (clé d'accès, Credential Manager Android) remplace seulement la saisie du mot de passe à la reconnexion ; le mot de passe reste toujours possible, et aucune invite biométrique ne précède jamais un enregistrement. Précisions de Franck le 5 octobre 2026 : le mot de passe n'est pas redemandé avant « Activer l'empreinte » (la session suffit), et la synchronisation des clés d'accès Google sur les autres appareils Android de L est acceptée |
 
 ## Périmètre fonctionnel
 
@@ -687,7 +688,7 @@ Le système contient des pensées intimes de L sur elle-même et sur des tiers n
 | --- | --- |
 | Comptes locaux | Identifiant et mot de passe, haché en Argon2id |
 | Session PWA | Jeton en cookie `HttpOnly`, `Secure`, `SameSite=Lax`, durée 90 jours |
-| Reconnexion | Empreinte digitale via WebAuthn et Credential Manager Android, au lot 3 |
+| Reconnexion | Empreinte digitale via WebAuthn et Credential Manager Android, au lot 1-D (décision 23). Le mot de passe reste toujours possible ; aucune invite ne précède un enregistrement |
 | Bot Telegram | Liaison du `chat_id` à un compte par code à usage unique, expirant en 10 minutes |
 | Webhook Telegram | Jeton secret dans l'en-tête, vérifié à chaque appel |
 | Flux iCalendar | URL signée, révocable, sans données du flux Pensées |
@@ -868,7 +869,7 @@ Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo p
 
 ## Trajectoire de livraison
 
-Quatre lots. Le lot 0 collecte le corpus réel qui déterminera les catégories de tri. Le lot 1 démarre en parallèle (décision 21) : ses briques ne dépendent pas du corpus. Ce qui en dépend, la liste des thèmes, les types d'échéance et le prompt, reste en données et en configuration. Rien de tout cela n'est codé en dur ; la typologie est branchée au fil de l'usage et du corpus annoté ; la mise en service ne l'attend pas (décision 22).
+Quatre lots. Le lot 1-D, avancé du lot 3 (décision 23), s'intercale entre les lots 1 et 2. Le lot 0 collecte le corpus réel qui déterminera les catégories de tri. Le lot 1 démarre en parallèle (décision 21) : ses briques ne dépendent pas du corpus. Ce qui en dépend, la liste des thèmes, les types d'échéance et le prompt, reste en données et en configuration. Rien de tout cela n'est codé en dur ; la typologie est branchée au fil de l'usage et du corpus annoté ; la mise en service ne l'attend pas (décision 22).
 
 ### Lot 0 — Collecte et validation
 
@@ -893,6 +894,17 @@ Mise en service : directe, sans attendre la sortie du lot 0 (décision 22). L'ap
 
 Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses anciennes habitudes.
 
+### Lot 1-D — Reconnexion par empreinte
+
+Avancé du lot 3 (décision 23), livré juste après la mise en service, en version 1.1.0.
+
+- Activation de l'empreinte depuis Réglages, liste et retrait de ses clés.
+- Bouton « Me connecter avec l'empreinte » sur l'écran de connexion, sans nom à saisir.
+- Le mot de passe reste toujours possible ; l'enregistreur privé et sa file ne demandent jamais l'empreinte.
+- Retrait de toutes les clés d'un compte en ligne de commande, pour un téléphone perdu.
+
+Critère de sortie : L se reconnecte par l'empreinte sur son téléphone, et le raccourci privé enregistre toujours sans invite.
+
 ### Lot 2 — Rappels et fils
 
 - Scheduler, écriture des rendez-vous dans Google Agenda sans rappel par défaut, et rotation de l'audio ordinaire au-delà de 40 Go.
@@ -906,7 +918,6 @@ Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses
 
 - Capture vocale ordinaire depuis la PWA, en plus du bouton privé.
 - Recherche sémantique globale.
-- WebAuthn pour la reconnexion par empreinte.
 - Apprentissage par exemples issus des corrections.
 - Lecture des créneaux occupés de l'agenda de L, pour proposer un moment.
 - Transcription locale des captures privées, si L veut les retrouver par le texte.
