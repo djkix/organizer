@@ -252,6 +252,37 @@ importers:
         specifier: ^4.20.0
         version: 4.23.15
 
+  apps/scheduler:
+    dependencies:
+      '@organizer/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@organizer/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@prisma/client':
+        specifier: ^6.16.0
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      bullmq:
+        specifier: ^5.58.0
+        version: 5.81.5(supports-color@7.2.0)
+      https-proxy-agent:
+        specifier: ^7.0.6
+        version: 7.0.6(supports-color@7.2.0)
+      ioredis:
+        specifier: ^5.7.0
+        version: 5.11.1(supports-color@7.2.0)
+      undici:
+        specifier: ^7.0.0
+        version: 7.30.0
+      zod:
+        specifier: ^4.1.0
+        version: 4.6.5
+    devDependencies:
+      tsx:
+        specifier: ^4.20.0
+        version: 4.23.15
+
   apps/web:
     dependencies:
       '@organizer/shared':
