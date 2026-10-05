@@ -37,6 +37,7 @@ test('la déconnexion depuis Réglages ramène à la connexion', async ({ page }
     'GET /api/session/moi': (r) => (connecte
       ? r.fulfill({ json: { nom: 'test' } })
       : r.fulfill({ status: 401, json: { message: 'Connecte-toi pour continuer.' } })),
+    'GET /api/agenda': json(200, { etat: 'deconnecte', erreur: null }),
     'DELETE /api/session': (r) => {
       connecte = false;
       return r.fulfill({ status: 204 });

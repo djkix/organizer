@@ -1,4 +1,4 @@
-import { MAX_CLES_PAR_COMPTE } from '@organizer/shared/api';
+import { MAX_CLES_PAR_COMPTE, MINUTES_ALARME } from '@organizer/shared/api';
 
 /** Tous les textes visibles : tutoiement, moins de 12 mots, ni emoji, ni culpabilisation. */
 export const MESSAGES = {
@@ -72,6 +72,27 @@ export const MESSAGES = {
   cetAppareil: 'Ce téléphone',
   autreAppareil: 'Un autre appareil',
   retirer: 'Retirer',
+  // Alarme et Google Agenda
+  alarme: `Alarme ${MINUTES_ALARME} minutes avant`,
+  alarmeAide: 'Elle sonne par Google Agenda, seulement pour ce rendez-vous.',
+  alarmeActivee: `Alarme activée, ${MINUTES_ALARME} minutes avant.`,
+  alarmeRetiree: 'Alarme retirée.',
+  connecterAgenda: 'Connecter Google Agenda',
+  deconnecterAgenda: 'Déconnecter Google Agenda',
+  agendaConnecte: 'Tes rendez-vous datés vont dans Google Agenda.',
+  agendaDeconnecte: 'Tes rendez-vous datés peuvent aller dans ton Google Agenda.',
+  agendaSansPensees: "Seulement l'heure et un titre court. Jamais tes pensées.",
+  agendaEnCours: 'Connexion à Google Agenda en cours.',
+  agendaAttente: 'Ça prend du temps. Reviens dans un moment.',
+  agendaDeconnexion: 'Déconnexion de Google Agenda en cours.',
+  agendaRevoque: "Google Agenda n'est plus relié. Tu peux le reconnecter.",
+  agendaSupprime: "L'agenda Organizer a été supprimé. Tu peux le recréer.",
+  agendaEchec: "La connexion n'a pas abouti. Réessaie quand tu veux.",
+  agendaPorteeRefusee: "Coche l'accès à l'agenda pour connecter.",
+  agendaIndisponible: "Google Agenda n'est pas encore configuré.",
+  agendaRefus: "Connexion annulée. Rien n'a changé.",
+  agendaExpire: 'Lien expiré. Recommence.',
+  agendaGarde: "L'agenda Organizer reste dans ton Google Agenda.",
   // Réglages : les deux textes « Ce qui sort de la maison » des maquettes, en phrases courtes
   sortDeLaMaisonTitre: 'Ce qui sort de la maison',
   sortDeLaMaison1: 'Pour ranger tes vocaux, ils passent par une IA.',
