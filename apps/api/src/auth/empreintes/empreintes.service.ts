@@ -1,0 +1,114 @@
+import type { PrismaClient } from '@organizer/db';
+import type { ResumeEmpreinte } from '@organizer/shared/api';
+import {
+  generateRegistrationOptions, verifyRegistrationResponse,
+  type PublicKeyCredentialCreationOptionsJSON, type RegistrationResponseJSON,
+} from '@simplewebauthn/server';
+import type { ConfigWebauthn } from './config.js';
+import { DelaiDepasse, type MagasinDefis } from './defis.js';
+
+/** Durée laissée au téléphone pour l'invite (options.timeout). Le défi vit deux fois plus. */
+export const DELAI_CEREMONIE_MS = 60_000;
+export const MAX_CLES_PAR_COMPTE = 10;
+/** ES256 (toutes les clés Android), puis RS256. */
+const ALGORITHMES = [-7, -257];
+
+export class TropDeCles extends Error {
+  override name = 'TropDeCles';
+}
+
+interface LigneCle { id: string; identifiant: string; creeLe: Date; utiliseeLe: Date | null }
+
+const resume = (c: LigneCle): ResumeEmpreinte => ({
+  id: c.id, identifiant: c.identifiant, creeLe: c.creeLe.toISOString(), utiliseeLe: c.utiliseeLe?.toISOString() ?? null,
+});
+
+/** Identifiant WebAuthn du compte (user.id) : l'UUID du compte en UTF-8, rien de nominatif. */
+const handleDe = (utilisateurId: string): Uint8Array<ArrayBuffer> => new Uint8Array(new TextEncoder().encode(utilisateurId));
+
+export class EmpreintesService {
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly defis: MagasinDefis,
+    private readonly config: ConfigWebauthn,
+    private readonly maintenant: () => Date = () => new Date(),
+    private readonly journal: (m: string) => void = (m) => { console.warn(m); },
+  ) {}
+
+  /** Vérification de la bibliothèque : un refus vaut null et se journalise (message technique, jamais de corps). */
+  protected async verifier<T>(etape: string, verification: () => Promise<T>): Promise<T | null> {
+    try {
+      return await verification();
+    } catch (err) {
+      if (err instanceof DelaiDepasse) throw err;
+      this.journal(`Empreinte refusée (${etape}) : ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /** Toute panne de Valkey (pas seulement le délai) devient DelaiDepasse : refus propre, sans détail interne. */
+  private async defi<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (err) {
+      if (!(err instanceof DelaiDepasse)) this.journal(`Valkey en erreur : ${(err as Error).message}`);
+      throw err instanceof DelaiDepasse ? err : new DelaiDepasse();
+    }
+  }
+
+  async optionsInscription(u: { id: string; nom: string }): Promise<PublicKeyCredentialCreationOptionsJSON> {
+    const cles = await this.prisma.cleAcces.findMany({ where: { utilisateurId: u.id }, select: { identifiant: true, transports: true } });
+    if (cles.length >= MAX_CLES_PAR_COMPTE) throw new TropDeCles();
+    const options = await generateRegistrationOptions({
+      rpName: this.config.nomRp,
+      rpID: this.config.rpId,
+      userName: u.nom,
+      userDisplayName: u.nom,
+      userID: handleDe(u.id),
+      attestationType: 'none',
+      timeout: DELAI_CEREMONIE_MS,
+      supportedAlgorithmIDs: ALGORITHMES,
+      excludeCredentials: cles.map((c) => ({ id: c.identifiant, transports: c.transports })),
+      authenticatorSelection: { residentKey: 'required', userVerification: 'required', authenticatorAttachment: 'platform' },
+    });
+    await this.defi(() => this.defis.poser('inscription', options.challenge, u.id));
+    return options;
+  }
+
+  async inscrire(u: { id: string }, reponse: RegistrationResponseJSON): Promise<ResumeEmpreinte | null> {
+    const v = await this.verifier('inscription', () => verifyRegistrationResponse({
+      response: reponse,
+      // Lu et effacé d'un coup : un défi ne sert qu'une fois, et seulement au compte qui l'a demandé.
+      expectedChallenge: async (defi) => (await this.defi(() => this.defis.prendre('inscription', defi))) === u.id,
+      expectedOrigin: this.config.origine,
+      expectedRPID: this.config.rpId,
+      requireUserVerification: true,
+    }));
+    if (v === null || !v.verified) return null;
+    const { credential, credentialBackedUp } = v.registrationInfo;
+    try {
+      const c = await this.prisma.cleAcces.create({
+        data: {
+          identifiant: credential.id, utilisateurId: u.id, clePublique: new Uint8Array(credential.publicKey), creeLe: this.maintenant(),
+          compteur: BigInt(credential.counter), transports: credential.transports ?? [], sauvegardee: credentialBackedUp,
+        },
+      });
+      return resume(c);
+    } catch (err) {
+      // Même clé déjà gardée (identifiant unique) : refus, pas d'erreur interne.
+      if ((err as { code?: string }).code === 'P2002') return null;
+      throw err;
+    }
+  }
+
+  async lister(utilisateurId: string): Promise<ResumeEmpreinte[]> {
+    const cles = await this.prisma.cleAcces.findMany({ where: { utilisateurId }, orderBy: { creeLe: 'asc' } });
+    return cles.map(resume);
+  }
+
+  /** Faux si la clé n'existe pas ou appartient à un autre compte. */
+  async retirer(utilisateurId: string, id: string): Promise<boolean> {
+    const { count } = await this.prisma.cleAcces.deleteMany({ where: { id, utilisateurId } });
+    return count > 0;
+  }
+}
