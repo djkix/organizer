@@ -28,6 +28,13 @@ afterAll(async () => { await faux.arreter(); await prisma.$disconnect(); });
 beforeEach(async () => { await viderBase(prisma); });
 
 describe('travailSynchro', () => {
+  it('client OAuth refusé : ClientRefuse relancé tel quel', async () => {
+    const { uid } = await compteConnecte(prisma, faux);
+    const itemId = await actionDatee(prisma, uid);
+    faux.forcer(/^POST \/token$/, 401, { error: 'invalid_client' });
+    await expect(travailSynchro(depsSynchro(prisma, faux))(itemId)).rejects.toBeInstanceOf(ClientRefuse);
+  });
+
   it('autorisation retirée : issue revoque sans erreur, alerte une seule fois ; ensuite sans_agenda', async () => {
     const { uid } = await compteConnecte(prisma, faux);
     const itemId = await actionDatee(prisma, uid);

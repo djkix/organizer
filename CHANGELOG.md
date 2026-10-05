@@ -9,6 +9,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Le cahier précise le pont Google Agenda (identifiant déterministe, durée, contenu, scheduler seul à joindre Google, proposition du bot) et découpe le lot 2 ; le lot 2-A livre l'agenda et l'alarme item par item (2026-10-05).
 
 ### Corrigé
+- La pause de 15 minutes de la file agenda dure vraiment 15 minutes (elle reprenait toutes les 30 secondes), un client Google refusé pendant une synchronisation alerte l'administrateur, et l'arrêt du scheduler ferme chaque ressource même si l'une échoue (2026-10-05).
 - La connexion à l'agenda ne défait plus une déconnexion demandée pendant l'échange du code (jeton révoqué, agenda neuf retiré) ; un agenda créé puis non relié au compte est supprimé au lieu de laisser un doublon ; le balayage survit à une révocation dont le traitement échoue, et un jeton illisible laisse une trace sans détail (2026-10-05).
 - Les tests du classement des échecs de synchronisation n'abîment plus le client de base partagé, et une action dont l'événement n'a pas de calendrier connu, une fois ses champs vidés, est signalée comme supprimée (2026-10-05).
 - La synchronisation de l'agenda classe mieux ses échecs : autorisation retirée et agenda absent finissent sans erreur, seuls les refus définitifs de Google sont abandonnés, toute autre panne (base, réseau) est réessayée ; l'alerte à l'administrateur ne part qu'au changement d'état (2026-10-05).

@@ -129,7 +129,11 @@ export function demarrerFileAgenda(d: DepsFileAgenda): Worker<JobAgenda> {
         throw e;
       }
     },
-    { connection: d.connexion, concurrency: 1 },
+    {
+      connection: d.connexion, concurrency: 1,
+      // rateLimit(ms) n'agit que si un limiteur existe (sinon le délai tombe à 0) et est plafonné par maximumRateLimitDelay.
+      limiter: { max: 1000, duration: 1000 }, maximumRateLimitDelay: Math.max(d.pauseMs ?? 15 * 60_000, 1000),
+    },
   );
 
   w.on('failed', (job, err) => {
