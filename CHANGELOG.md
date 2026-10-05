@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.3.0] - 2026-10-06
+
 ### Corrigé
 - Une nouvelle version ne vide plus le cache des dépendances lors de la construction des images (2026-10-05).
 
