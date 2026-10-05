@@ -72,6 +72,7 @@ entete / permissions-policy | grep -qF 'publickey-credentials-get=(self)' || ech
 # API derrière Caddy
 [ "$(entete /api/session/moi cache-control)" = "no-store" ] || echec "/api doit être no-store"
 [ "$(statut "$URL/api/session/moi")" = 401 ] || echec "/api/session/moi sans session"
+curl -sS -X POST "$URL/api/session/empreinte/options" | grep -qF '"rpId":"organizer.essai"' || echec "options d'empreinte : identifiant de RP"
 
 # Webhook : seulement sur le domaine du bot, secret vérifié
 [ "$(statut -X POST "$URL/telegram/webhook")" = 404 ] || echec "webhook ouvert sur le domaine principal"
