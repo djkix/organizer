@@ -36,6 +36,8 @@ export interface CorpsConnexion { nom: string; motDePasse: string }
 export interface CorpsCorrection {
   nature?: Nature;
   echeance?: { type: string; date?: string | null; debut?: string | null; fin?: string | null };
+  /** Alarme 10 minutes avant, seulement sur une échéance `datee`. */
+  alarme?: boolean;
 }
 
 export interface CorpsEtiquette { etiquette: string | null }
@@ -60,3 +62,12 @@ export const delaiEnvoiPriveMs = (octets: number): number => 60_000 + Math.ceil(
 
 /** Délai de la plus grosse capture admise (environ 27 min). */
 export const DELAI_ENVOI_PRIVE_MAX_MS = delaiEnvoiPriveMs(TAILLE_MAX_CAPTURE_PRIVEE);
+
+/** Rappel de l'alarme dans Google Agenda, en minutes avant le rendez-vous (cahier, Pont Google Agenda). */
+export const MINUTES_ALARME = 10;
+
+/** `indisponible` : Google Agenda n'est pas configuré sur ce serveur. Les autres valeurs sont celles de la base. */
+export type EtatAgenda = 'indisponible' | 'deconnecte' | 'en_cours' | 'connecte' | 'deconnexion' | 'revoque' | 'echec' | 'agenda_supprime';
+export type ErreurAgenda = 'portee_refusee' | 'echange' | null;
+export interface ReponseAgenda { etat: EtatAgenda; erreur: ErreurAgenda }
+export interface ReponseConnexionAgenda { url: string }
