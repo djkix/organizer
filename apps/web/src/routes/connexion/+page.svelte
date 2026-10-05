@@ -4,15 +4,21 @@
   import { ErreurApi } from '$lib/api';
   import { api, garde } from '$lib/client';
   import { CHEMINS } from '$lib/config';
+  import { connecterParEmpreinte, memoLocal } from '$lib/empreinte';
+  import { ceremoniesNavigateur } from '$lib/empreinte-navigateur';
   import { MESSAGES } from '$lib/messages';
   import { filePrivee, videur } from '$lib/prive/demarrage';
 
+  const memo = memoLocal();
   let nom = $state('');
   let motDePasse = $state('');
   let message = $state<string | null>(null);
   let envoi = $state(false);
   let enAttente = $state(false);
+  // Bouton seulement si ce téléphone a une clé ; jamais d'invite ouverte d'elle-même.
+  let empreinte = $state(false);
   onMount(async () => {
+    empreinte = memo.lire() !== null && ceremoniesNavigateur.disponible();
     try {
       enAttente = (await filePrivee.lister()).some((c) => !c.refuse);
     } catch {
@@ -20,21 +26,37 @@
     }
   });
 
+  async function entrer(): Promise<void> {
+    garde.oublier();
+    // Des enregistrements ont pu attendre la session : ils partent maintenant.
+    void videur.vider().catch(() => undefined);
+    await goto(CHEMINS.accueil);
+  }
+
   async function connecter(e: SubmitEvent): Promise<void> {
     e.preventDefault();
     envoi = true;
     message = null;
     try {
       await api.connecter({ nom: nom.trim(), motDePasse });
-      garde.oublier();
-      // Des enregistrements ont pu attendre la session : ils partent maintenant.
-      void videur.vider().catch(() => undefined);
-      await goto(CHEMINS.accueil);
+      await entrer();
     } catch (err) {
       if (err instanceof ErreurApi && (err.statut === 401 || err.statut === 400 || err.statut === 422)) message = MESSAGES.identifiantsInvalides;
       else if (err instanceof ErreurApi && err.statut === 429) message = MESSAGES.tropDeRequetes;
       else if (err instanceof ErreurApi) message = MESSAGES.serveurIndisponible;
       else message = MESSAGES.horsLigne;
+    } finally {
+      envoi = false;
+    }
+  }
+
+  async function parEmpreinte(): Promise<void> {
+    envoi = true;
+    message = null;
+    try {
+      const r = await connecterParEmpreinte(api, ceremoniesNavigateur, memo);
+      if (r.ok) await entrer();
+      else message = r.message;
     } finally {
       envoi = false;
     }
@@ -48,7 +70,12 @@
     <label>Mot de passe<input bind:value={motDePasse} name="motDePasse" type="password" autocomplete="current-password" required /></label>
     {#if message}<p role="status">{message}</p>{/if}
     {#if enAttente}<p class="discret">{MESSAGES.partiraApresConnexion}</p>{/if}
-    <button class="bouton-principal" type="submit" disabled={envoi}>Me connecter</button>
+    {#if empreinte}
+      <button class="bouton-principal" type="button" onclick={parEmpreinte} disabled={envoi}>{MESSAGES.connecterEmpreinte}</button>
+      <button class="bouton" type="submit" disabled={envoi}>Me connecter</button>
+    {:else}
+      <button class="bouton-principal" type="submit" disabled={envoi}>Me connecter</button>
+    {/if}
   </form>
 </main>
 
