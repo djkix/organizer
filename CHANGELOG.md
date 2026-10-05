@@ -12,6 +12,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Les clients Google du scheduler distinguent les erreurs à réessayer (limite de débit, 5xx, réseau, délai) de celles qui ne le sont pas (403 de refus, 400 de requête invalide) ; les écritures d'agenda n'envoient aucune notification (2026-10-05).
 
 ### Ajouté
+- La synchronisation d'une action avec son événement Google : création, remplacement, suppression au cochage dans l'agenda propre à l'événement, identifiant déterministe et génération suivante après une suppression, rien de recréé tant que l'action ne change pas, nouveau jeton sur un 401, autorisation retirée ou agenda supprimé notés en base ; le travail de file classe les échecs (réessayables ou définitifs) et prévoit l'alerte à l'administrateur (2026-10-05).
 - Le contenu d'un événement (titre court, 30 minutes, fuseau de Paris, rappel de 10 minutes seulement avec l'alarme, jamais de description ni de pensée) et le plan de synchronisation sans appel à Google ; changements d'heure testés (2026-10-05).
 - Les clients Google du scheduler, sans bibliothèque Google : OAuth (échange PKCE, rafraîchissement, révocation) et Calendar v3 (agenda dédié, événements), erreurs classées sans jeton ni texte de Google ; faux serveur Google pour les tests (2026-10-05).
 - Le service `scheduler` (squelette) : configuration Google exigée en production, jeton de rafraîchissement chiffré en AES-256-GCM lié au compte, sonde de sortie, paquet esbuild vérifié ; l'image installe ses dépendances et `.env.example` reprend les noms lus (2026-10-05).
