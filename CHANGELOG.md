@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.1.0] - 2026-10-05
+
 ### Corrigé
 - Sans mémo local (PWA réinstallée, données effacées), « Activer » répondait « déjà active » sans rendre la connexion par empreinte : le bouton de connexion revient, le vrai identifiant remplace le mémo à la première connexion. Réglages dit calmement un échec de chargement, retire une clé sans double envoi, annonce ses messages par une zone permanente ; le plafond de clés vient du paquet partagé ; le compteur d'une clé n'est mis à jour que s'il avance ; le retrait et la mise à jour vers la 1.1.0 sont documentés (retour à la 1.0.1 sans restauration, `DOMAINE_APP` avant `pull`) (2026-10-05).
 - L'activation de l'empreinte : plafond de dix clés recompté sous verrou à l'enregistrement, journal sans le message de la bibliothèque (défi et origine du client), algorithmes imposés à la vérification, retrait d'un identifiant mal formé sans erreur (2026-10-05).
