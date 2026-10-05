@@ -40,6 +40,16 @@ export class ClientCalendrier {
     return agendaCree.parse(await r.json()).id;
   }
 
+  /** Retire un agenda que l'application vient de créer ; déjà absent : rien à faire. */
+  async supprimerAgenda(jeton: string, id: string): Promise<void> {
+    try {
+      const r = await this.appeler(jeton, 'DELETE', `/calendars/${encodeURIComponent(id)}`);
+      await r.body?.cancel();
+    } catch (e) {
+      if (!(e instanceof Introuvable)) throw e;
+    }
+  }
+
   async agendaExiste(jeton: string, id: string): Promise<boolean> {
     try {
       const r = await this.appeler(jeton, 'GET', `/calendars/${encodeURIComponent(id)}`);

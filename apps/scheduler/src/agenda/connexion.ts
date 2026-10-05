@@ -23,8 +23,9 @@ export type IssueEchange = 'connecte' | 'portee_refusee' | 'echange' | 'ignore';
 
 const donneesEchange = z.object({ utilisateurId: z.uuid(), code: z.string().min(1), verificateur: z.string().min(1) });
 
+// Seule une connexion encore « en_cours » passe en échec : une déconnexion demandée entre-temps n'est pas écrasée.
 async function echec(d: DepsConnexion, uid: string, erreur: 'portee_refusee' | 'echange'): Promise<void> {
-  await d.prisma.agendaGoogle.update({ where: { utilisateurId: uid }, data: { etat: 'echec', erreur, jetonChiffre: null } });
+  await d.prisma.agendaGoogle.updateMany({ where: { utilisateurId: uid, etat: 'en_cours' }, data: { etat: 'echec', erreur, jetonChiffre: null } });
 }
 
 /**
@@ -55,21 +56,30 @@ export async function echangerCode(j: { utilisateurId: string; code: string; ver
   }
   // Le code est consommé : toute panne d'ici là ne se rejoue pas (un second échange échouerait). On révoque ce jeton
   // tout neuf, on note l'échec et on arrête les reprises ; L relance la connexion.
+  let cree: string | null = null;
   try {
     let agenda = a.calendrierId;
     if (!agenda || !(await d.calendrier.agendaExiste(t.acces, agenda))) {
-      agenda = await d.calendrier.creerAgenda(t.acces, NOM_AGENDA, a.utilisateur.fuseau);
+      agenda = cree = await d.calendrier.creerAgenda(t.acces, NOM_AGENDA, a.utilisateur.fuseau);
     }
     const maintenant = (d.maintenant ?? (() => new Date()))();
-    await d.prisma.agendaGoogle.update({
-      where: { utilisateurId: uid },
+    // Écriture conditionnelle : une déconnexion demandée pendant l'échange ne doit pas être écrasée.
+    const { count } = await d.prisma.agendaGoogle.updateMany({
+      where: { utilisateurId: uid, etat: 'en_cours' },
       data: {
         etat: 'connecte', erreur: null, jetonChiffre: chiffrer(t.rafraichissement, d.cle, uid),
         calendrierId: agenda, connecteLe: maintenant, rafraichiLe: maintenant,
       },
     });
+    if (count === 0) {
+      if (cree) await d.calendrier.supprimerAgenda(t.acces, cree).catch(() => undefined);
+      await d.oauth.revoquer(t.rafraichissement).catch(() => undefined);
+      return 'ignore';
+    }
     d.jetons.retenir(uid, t.acces, t.expireDansS);
   } catch (e) {
+    // Agenda créé mais jamais relié au compte : on le retire (avant la révocation, qui coupe l'accès) pour ne pas en laisser un doublon.
+    if (cree) await d.calendrier.supprimerAgenda(t.acces, cree).catch(() => undefined);
     await d.oauth.revoquer(t.rafraichissement).catch(() => undefined);
     await echec(d, uid, 'echange').catch(() => undefined);
     throw new UnrecoverableError(`Connexion en échec après l'échange du code : ${e instanceof Error ? e.name : 'erreur'}`);
@@ -87,7 +97,8 @@ export async function deconnecterAgenda(uid: string, d: DepsConnexion): Promise<
     let jeton: string | null = null;
     try {
       jeton = dechiffrer(a.jetonChiffre, d.cle, uid);
-    } catch {
+    } catch (e) {
+      console.error(`Agenda : jeton illisible effacé sans révocation (${(e as Error).name})`);
       jeton = null; // illisible (clé changée) : rien à révoquer d'ici
     }
     if (jeton) await d.oauth.revoquer(jeton);
