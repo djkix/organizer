@@ -29,8 +29,8 @@ describe('manifeste', () => {
 
   it('raccourcis : Enregistrer, l\'enregistreur privé (CAP-07), puis Aujourd\'hui', () => {
     expect(manifeste.shortcuts.map((s) => [s.name, s.url])).toEqual([
-      ['Enregistrer', '/enregistrer'],
-      ['Enregistrement privé', '/prive/enregistrer'],
+      ['Enregistrer', '/enregistrer?auto=1'],
+      ['Enregistrement privé', '/prive/enregistrer?auto=1'],
       ["Aujourd'hui", '/?vue=aujourdhui'],
     ]);
   });

@@ -6,8 +6,8 @@ test.use({ serviceWorkers: 'allow' });
 test('le manifeste annonce le raccourci privé', async ({ request }) => {
   const m = (await (await request.get('/manifest.webmanifest')).json()) as { display: string; shortcuts: { url: string }[] };
   expect(m.display).toBe('standalone');
-  expect(m.shortcuts.map((x) => x.url)).toContain('/prive/enregistrer');
-  expect(m.shortcuts.map((x) => x.url)).toContain('/enregistrer');
+  expect(m.shortcuts.map((x) => x.url)).toContain('/prive/enregistrer?auto=1');
+  expect(m.shortcuts.map((x) => x.url)).toContain('/enregistrer?auto=1');
 });
 
 test('la coquille s\'ouvre hors ligne, et /api ne vient jamais du cache', async ({ page, context }) => {

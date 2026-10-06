@@ -24,13 +24,13 @@ export const manifeste = {
     {
       name: 'Enregistrer',
       short_name: 'Enregistrer',
-      url: CHEMINS.enregistrer,
+      url: `${CHEMINS.enregistrer}?auto=1`,
       icons: [{ src: '/icones/raccourci-enregistrer-96.png', sizes: '96x96', type: 'image/png' }],
     },
     {
       name: 'Enregistrement privé',
       short_name: 'Privé',
-      url: CHEMINS.enregistreur,
+      url: `${CHEMINS.enregistreur}?auto=1`,
       icons: [{ src: '/icones/raccourci-prive-96.png', sizes: '96x96', type: 'image/png' }],
     },
     {

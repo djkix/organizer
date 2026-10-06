@@ -6,8 +6,9 @@ const PRIVE = 'POST /api/captures/privees';
 const envois = (appels: Appel[], cle: string): Appel[] => appels.filter((a) => a.cle === cle);
 const ACCUEIL: Table = { ...CONNECTE, 'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [], suggestions: [] }) };
 
-async function enregistrerUnPeu(page: import('@playwright/test').Page): Promise<void> {
-  await page.getByRole('button', { name: "Commencer l'enregistrement" }).click();
+async function enregistrerUnPeu(page: import('@playwright/test').Page, depuisAccueil = false): Promise<void> {
+  // Depuis l'accueil, l'enregistrement démarre seul ; le bouton manuel ne sert qu'à l'ouverture directe.
+  if (!depuisAccueil) await page.getByRole('button', { name: "Commencer l'enregistrement" }).click();
   await expect(page.getByRole('heading', { name: "J'écoute" })).toBeVisible();
   await page.waitForTimeout(1500);
   await page.getByRole('button', { name: 'Arrêter et garder' }).click();
@@ -24,8 +25,8 @@ test('l\'accueil porte deux grands boutons côte à côte, dans le tiers inféri
   await expect(prive).toContainText('Reste sur le serveur');
   const a = (await ordinaire.boundingBox())!;
   const b = (await prive.boundingBox())!;
-  expect(a.height).toBeGreaterThanOrEqual(64);
-  expect(b.height).toBeGreaterThanOrEqual(64);
+  expect(a.height).toBeGreaterThanOrEqual(88);
+  expect(b.height).toBeGreaterThanOrEqual(88);
   expect(Math.abs(a.y - b.y)).toBeLessThan(2);
   expect(a.x).toBeLessThan(b.x);
   const hauteur = page.viewportSize()!.height;
@@ -39,7 +40,7 @@ test('enregistrer en ordinaire : POST /api/captures, jamais la route privée, pu
   await expect(page).toHaveURL(/\/enregistrer$/);
   await expect(page.getByText('Envoyé au tri.')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Mode privé' })).toHaveCount(0);
-  await enregistrerUnPeu(page);
+  await enregistrerUnPeu(page, true);
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText('Reçu.')).toBeVisible();
   expect(envois(appels, ORDINAIRE)).toHaveLength(1);
@@ -54,7 +55,7 @@ test('enregistrer en privé : POST /api/captures/privees, jamais la route ordina
   await page.goto('/');
   await page.getByRole('link', { name: 'Enregistrement privé' }).click();
   await expect(page.getByText('Ça reste à la maison.')).toBeVisible();
-  await enregistrerUnPeu(page);
+  await enregistrerUnPeu(page, true);
   await expect(page).toHaveURL(/\/prive$/);
   await expect.poll(() => envois(appels, PRIVE).length).toBe(1);
   expect(envois(appels, ORDINAIRE)).toHaveLength(0);
@@ -93,4 +94,40 @@ test('INVARIANT : hors ligne, une capture privée et une ordinaire en file repar
   const sur = (cle: string) => new Set(envois(appels, cle).map((a) => a.entetes['x-capture-id']));
   expect(sur(PRIVE)).toEqual(new Set([idPrive]));
   expect(sur(ORDINAIRE)).toEqual(new Set([idOrdinaire]));
+});
+
+test('accueil, « Enregistrer » : l\'enregistrement démarre sans second appui, et un rechargement ne relance rien', async ({ page }) => {
+  await simuler(page, ACCUEIL);
+  await page.goto('/');
+  await page.getByRole('link', { name: /Enregistrer/ }).click();
+  await expect(page.getByRole('heading', { name: "J'écoute" })).toBeVisible();
+  await expect(page).toHaveURL(/\/enregistrer$/);
+  await page.reload();
+  await expect(page.getByRole('button', { name: "Commencer l'enregistrement" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "J'écoute" })).toHaveCount(0);
+});
+
+test('accueil, « Privé » : démarre seul, repère privé visible dès l\'écoute', async ({ page }) => {
+  await simuler(page, { ...ACCUEIL, 'GET /api/captures/privees': json(200, []) });
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Enregistrement privé' }).click();
+  await expect(page.getByRole('heading', { name: "J'écoute" })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Mode privé' })).toBeVisible();
+  await expect(page.getByText('Ça reste à la maison.')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: "Commencer l'enregistrement" })).toBeVisible();
+});
+
+test('raccourci avec micro refusé : message calme, bouton manuel, pas de boucle', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __essais: number };
+    w.__essais = 0;
+    navigator.mediaDevices.getUserMedia = async () => { w.__essais += 1; throw new DOMException('x', 'NotAllowedError'); };
+  });
+  await simuler(page, { ...CONNECTE, 'GET /api/captures/privees': json(200, []) });
+  await page.goto('/prive/enregistrer?auto=1');
+  await expect(page.getByRole('button', { name: "Commencer l'enregistrement" })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Mode privé' })).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => (window as unknown as { __essais: number }).__essais)).toBe(1);
 });
