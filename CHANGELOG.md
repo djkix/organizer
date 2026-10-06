@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.4.0] - 2026-10-06
+
 ### Ajouté
 - Effacer une action : glisser la ligne vers la gauche découvre « Effacer » (aussi dans le détail), une confirmation calme et neutre (« Effacer cette note ? ») précède `DELETE /api/items/:id` ; l'item est archivé (`archiveLe`), la capture et son audio restent, l'événement Google Agenda est retiré ; propre au compte (404 sinon), idempotent ; hors réseau, la ligne revient avec un mot calme (2026-10-06).
 
