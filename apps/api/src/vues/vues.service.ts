@@ -11,7 +11,9 @@ const HORIZON_SUGGESTIONS_JOURS = 14;
 const MAX_LISTE = 20;
 const TYPES_DATES = ['datee', 'jour', 'relative'];
 
-const ouvertes = { nature: 'action', archiveLe: null, action: { is: { faitLe: null } } } satisfies Prisma.ItemWhereInput;
+const ouvertes = (utilisateurId: string) => ({
+  nature: 'action', archiveLe: null, capture: { utilisateurId }, action: { is: { faitLe: null } },
+}) satisfies Prisma.ItemWhereInput;
 const inclure = { action: true, theme: true, capture: { select: { audioPath: true } } } satisfies Prisma.ItemInclude;
 type ItemComplet = Prisma.ItemGetPayload<{ include: typeof inclure }>;
 
@@ -33,34 +35,34 @@ function ligne(it: ItemComplet): LigneAction {
 export class VuesService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private datees(debut: Date, fin: Date, max: number): Promise<ItemComplet[]> {
+  private datees(utilisateurId: string, debut: Date, fin: Date, max: number): Promise<ItemComplet[]> {
     return this.prisma.item.findMany({
-      where: { ...ouvertes, action: { is: { faitLe: null, echeanceType: { in: TYPES_DATES }, echeanceDate: { gte: debut, lt: fin } } } },
+      where: { ...ouvertes(utilisateurId), action: { is: { faitLe: null, echeanceType: { in: TYPES_DATES }, echeanceDate: { gte: debut, lt: fin } } } },
       include: inclure, orderBy: [{ action: { echeanceDate: 'asc' } }, { id: 'asc' }], take: max,
     });
   }
 
-  private fenetres(debut: Date, fin: Date | undefined, max: number): Promise<ItemComplet[]> {
+  private fenetres(utilisateurId: string, debut: Date, fin: Date | undefined, max: number): Promise<ItemComplet[]> {
     return this.prisma.item.findMany({
-      where: { ...ouvertes, action: { is: { faitLe: null, echeanceType: 'fenetre', fenetreFin: { gte: debut, ...(fin ? { lt: fin } : {}) } } } },
+      where: { ...ouvertes(utilisateurId), action: { is: { faitLe: null, echeanceType: 'fenetre', fenetreFin: { gte: debut, ...(fin ? { lt: fin } : {}) } } } },
       include: inclure, orderBy: [{ action: { fenetreFin: 'asc' } }, { id: 'asc' }], take: max,
     });
   }
 
-  async aujourdhui(maintenant: Date, fuseau: string): Promise<VueAujourdhui> {
+  async aujourdhui(utilisateurId: string, maintenant: Date, fuseau: string): Promise<VueAujourdhui> {
     const jour = jourLocal(maintenant, fuseau);
     const debut = debutJour(jour, fuseau);
-    const actions = await this.datees(debut, debutJour(ajouterJours(jour, 1), fuseau), MAX_AUJOURDHUI);
+    const actions = await this.datees(utilisateurId, debut, debutJour(ajouterJours(jour, 1), fuseau), MAX_AUJOURDHUI);
     const place = Math.min(MAX_SUGGESTIONS, MAX_AUJOURDHUI - actions.length);
     const suggestions = place > 0
-      ? await this.fenetres(debut, debutJour(ajouterJours(jour, HORIZON_SUGGESTIONS_JOURS), fuseau), place)
+      ? await this.fenetres(utilisateurId, debut, debutJour(ajouterJours(jour, HORIZON_SUGGESTIONS_JOURS), fuseau), place)
       : [];
     return { jour, actions: actions.map(ligne), suggestions: suggestions.map(ligne) };
   }
 
-  async semaine(maintenant: Date, fuseau: string): Promise<VueSemaine> {
+  async semaine(utilisateurId: string, maintenant: Date, fuseau: string): Promise<VueSemaine> {
     const jour = jourLocal(maintenant, fuseau);
-    const items = await this.datees(debutJour(jour, fuseau), debutJour(ajouterJours(jour, 7), fuseau), MAX_LISTE);
+    const items = await this.datees(utilisateurId, debutJour(jour, fuseau), debutJour(ajouterJours(jour, 7), fuseau), MAX_LISTE);
     const jours = new Map<string, LigneAction[]>();
     for (const it of items) {
       const j = jourLocal(it.action!.echeanceDate!, fuseau);
@@ -69,8 +71,8 @@ export class VuesService {
     return { jours: [...jours].map(([j, actions]) => ({ jour: j, actions })) };
   }
 
-  async horizons(maintenant: Date, fuseau: string): Promise<VueHorizons> {
-    const items = await this.fenetres(debutJour(jourLocal(maintenant, fuseau), fuseau), undefined, MAX_LISTE);
+  async horizons(utilisateurId: string, maintenant: Date, fuseau: string): Promise<VueHorizons> {
+    const items = await this.fenetres(utilisateurId, debutJour(jourLocal(maintenant, fuseau), fuseau), undefined, MAX_LISTE);
     const bornes = new Map<string, { libelle: string | null; actions: LigneAction[] }>();
     for (const it of items) {
       const fin = it.action!.fenetreFin!.toISOString();
@@ -82,14 +84,14 @@ export class VuesService {
     return { bornes: [...bornes].map(([fin, b]) => ({ fin, ...b })) };
   }
 
-  async aRevoir(): Promise<VueARevoir> {
+  async aRevoir(utilisateurId: string): Promise<VueARevoir> {
     const items = await this.prisma.item.findMany({
-      where: { nature: 'ambigu', archiveLe: null, capture: { prive: false } },
+      where: { nature: 'ambigu', archiveLe: null, capture: { prive: false, utilisateurId } },
       include: { capture: { select: { emisLe: true, audioPath: true } } },
       orderBy: [{ capture: { emisLe: 'desc' } }, { id: 'asc' }], take: MAX_LISTE,
     });
     const captures = await this.prisma.capture.findMany({
-      where: { etat: 'a_revoir', prive: false }, orderBy: [{ emisLe: 'desc' }, { id: 'asc' }], take: MAX_LISTE,
+      where: { etat: 'a_revoir', prive: false, utilisateurId }, orderBy: [{ emisLe: 'desc' }, { id: 'asc' }], take: MAX_LISTE,
     });
     // Budget commun : les plus récents d'abord, toutes sortes confondues, puis séparés.
     const retenus = [

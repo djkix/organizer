@@ -9,7 +9,7 @@ import { AUTH, VUES } from '../src/jetons.js';
 import { VuesController } from '../src/vues/vues.controller.js';
 import { VuesService } from '../src/vues/vues.service.js';
 import { demarrerAppTest } from './aides-http.js';
-import { creerAction } from './aides-items.js';
+import { compteTest, creerAction } from './aides-items.js';
 
 const prisma = creerPrisma();
 const vues = new VuesService(prisma);
@@ -26,7 +26,7 @@ describe('aujourdhui', () => {
     await creerAction(prisma, { texte: 'hier', type: 'jour', date: '2026-10-05T00:00:00+02:00' });
     await creerAction(prisma, { texte: 'demain', type: 'jour', date: '2026-10-07T00:00:00+02:00' });
     await creerAction(prisma, { texte: 'pensée', type: null, nature: 'pensee' });
-    const v = await vues.aujourdhui(MAINTENANT, PARIS);
+    const v = await vues.aujourdhui(await compteTest(prisma), MAINTENANT, PARIS);
     expect(v.jour).toBe('2026-10-06');
     expect(v.actions.map((a) => a.texte)).toEqual(['a', 'b']);
   });
@@ -35,7 +35,7 @@ describe('aujourdhui', () => {
     for (let i = 0; i < 5; i++) await creerAction(prisma, { texte: `jour${i}`, type: 'jour', date: '2026-10-06T00:00:00+02:00' });
     for (let i = 0; i < 4; i++) await creerAction(prisma, { texte: `fen${i}`, type: 'fenetre', fin: `2026-10-1${i}T23:59:00+02:00` });
     await creerAction(prisma, { texte: 'loin', type: 'fenetre', fin: '2026-12-24T23:59:00+01:00' });
-    const v = await vues.aujourdhui(MAINTENANT, PARIS);
+    const v = await vues.aujourdhui(await compteTest(prisma), MAINTENANT, PARIS);
     expect(v.actions).toHaveLength(5);
     expect(v.suggestions.map((a) => a.texte)).toEqual(['fen0', 'fen1']);
   });
@@ -44,13 +44,13 @@ describe('aujourdhui', () => {
     await creerAction(prisma, { texte: 'minuit', type: 'jour', date: '2026-10-25T00:00:00+02:00' });
     await creerAction(prisma, { texte: 'soir', type: 'datee', date: '2026-10-25T23:30:00+01:00' });
     await creerAction(prisma, { texte: 'lendemain', type: 'jour', date: '2026-10-26T00:00:00+01:00' });
-    const v = await vues.aujourdhui(new Date('2026-10-25T10:00:00Z'), PARIS);
+    const v = await vues.aujourdhui(await compteTest(prisma), new Date('2026-10-25T10:00:00Z'), PARIS);
     expect(v.actions.map((a) => a.texte)).toEqual(['minuit', 'soir']);
   });
 
   it('une ligne porte le thème, l\'audio et aucune mention de retard', async () => {
     await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });
-    const [l] = (await vues.aujourdhui(MAINTENANT, PARIS)).actions;
+    const [l] = (await vues.aujourdhui(await compteTest(prisma), MAINTENANT, PARIS)).actions;
     expect(Object.keys(l!).sort()).toEqual(['aAudio', 'alarme', 'captureId', 'echeanceDate', 'echeanceExpr', 'echeanceType', 'fenetreFin', 'itemId', 'texte', 'theme']);
   });
 });
@@ -60,7 +60,7 @@ describe('semaine et horizons', () => {
     await creerAction(prisma, { texte: 'mar', type: 'jour', date: '2026-10-06T00:00:00+02:00' });
     await creerAction(prisma, { texte: 'jeu', type: 'datee', date: '2026-10-08T09:00:00+02:00' });
     await creerAction(prisma, { texte: 'lun+', type: 'jour', date: '2026-10-13T00:00:00+02:00' });
-    const v = await vues.semaine(MAINTENANT, PARIS);
+    const v = await vues.semaine(await compteTest(prisma), MAINTENANT, PARIS);
     expect(v.jours.map((j) => [j.jour, j.actions.map((a) => a.texte)])).toEqual([['2026-10-06', ['mar']], ['2026-10-08', ['jeu']]]);
   });
 
@@ -69,7 +69,7 @@ describe('semaine et horizons', () => {
     await creerAction(prisma, { texte: 'sapin', type: 'fenetre', fin: '2026-12-24T23:59:00+01:00', expr: 'avant Noël' });
     await creerAction(prisma, { texte: 'costume', type: 'fenetre', fin: '2026-10-31T23:59:00+01:00', expr: 'avant Halloween' });
     await creerAction(prisma, { texte: 'passée', type: 'fenetre', fin: '2026-10-01T23:59:00+02:00' });
-    const v = await vues.horizons(MAINTENANT, PARIS);
+    const v = await vues.horizons(await compteTest(prisma), MAINTENANT, PARIS);
     expect(v.bornes.map((b) => [b.libelle, b.actions.map((a) => a.texte).sort()])).toEqual([
       ['avant Halloween', ['costume']], ['avant Noël', ['cadeaux', 'sapin']],
     ]);
@@ -78,13 +78,13 @@ describe('semaine et horizons', () => {
   it('le libellé d\'une borne est la première expression non nulle du groupe', async () => {
     await creerAction(prisma, { texte: 'a', type: 'fenetre', fin: '2026-12-24T23:59:00+01:00' });
     await creerAction(prisma, { texte: 'b', type: 'fenetre', fin: '2026-12-24T23:59:00+01:00', expr: 'avant Noël' });
-    const v = await vues.horizons(MAINTENANT, PARIS);
+    const v = await vues.horizons(await compteTest(prisma), MAINTENANT, PARIS);
     expect(v.bornes.map((b) => b.libelle)).toEqual(['avant Noël']);
   });
 
   it('une vue ne dépasse jamais 20 lignes', async () => {
     for (let i = 0; i < 25; i++) await creerAction(prisma, { type: 'fenetre', fin: '2026-11-01T00:00:00+01:00' });
-    const v = await vues.horizons(MAINTENANT, PARIS);
+    const v = await vues.horizons(await compteTest(prisma), MAINTENANT, PARIS);
     expect(v.bornes.flatMap((b) => b.actions)).toHaveLength(20);
   });
 });
@@ -97,7 +97,7 @@ describe('a revoir', () => {
     await prisma.capture.create({ data: { utilisateurId: u.id, canal: 'pwa', prive: true, etat: 'privee', emisLe: new Date() } });
     const priv = await creerAction(prisma, { texte: 'ambigu privé', type: null, nature: 'ambigu' });
     await prisma.capture.update({ where: { id: priv.captureId }, data: { prive: true, etat: 'privee' } });
-    const v = await vues.aRevoir();
+    const v = await vues.aRevoir(await compteTest(prisma));
     expect(v.items.map((i) => i.texte)).toEqual(['vendredi ou samedi']);
     expect(v.captures.map((c) => c.texte)).toEqual(['inaudible']);
   });
@@ -113,7 +113,7 @@ describe('a revoir : budget commun', () => {
         data: { utilisateurId: u.id, canal: 'telegram', prive: false, etat: 'a_revoir', emisLe: new Date(`2026-10-02T08:${String(2 * i + 1).padStart(2, '0')}:00Z`), texteBrut: `c${i}` },
       });
     }
-    const v = await vues.aRevoir();
+    const v = await vues.aRevoir(await compteTest(prisma));
     expect(v.items.length + v.captures.length).toBe(20);
     const dates = [...v.items, ...v.captures].map((l) => l.emisLe).sort().reverse();
     expect(dates[0]).toBe('2026-10-02T08:29:00.000Z');

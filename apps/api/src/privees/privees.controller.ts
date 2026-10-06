@@ -61,11 +61,11 @@ export class PriveesController {
 
   @Patch(':id')
   @HttpCode(204)
-  async etiqueter(@Param('id', ParseUUIDPipe) id: string, @Body() corps: unknown): Promise<void> {
+  async etiqueter(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string, @Body() corps: unknown): Promise<void> {
     const p = schemaEtiquette.safeParse(corps);
     if (!p.success) throw new BadRequestException('Étiquette de 80 caractères au plus.');
     try {
-      await this.privees.etiqueter(id, p.data.etiquette || null);
+      await this.privees.etiqueter(req.utilisateur.id, id, p.data.etiquette || null);
     } catch (e) {
       if (!(e instanceof CapturePriveeIntrouvable)) throw e;
       throw new NotFoundException('Élément introuvable.');
@@ -75,7 +75,7 @@ export class PriveesController {
   @Get()
   async lister(@Req() req: RequeteAuthentifiee, @Query('mois') mois: string | undefined): Promise<JourPrive[]> {
     try {
-      return await this.privees.lister(mois ?? jourLocal(new Date(), req.utilisateur.fuseau).slice(0, 7), req.utilisateur.fuseau);
+      return await this.privees.lister(req.utilisateur.id, mois ?? jourLocal(new Date(), req.utilisateur.fuseau).slice(0, 7), req.utilisateur.fuseau);
     } catch (e) {
       if (!(e instanceof MoisInvalide)) throw e;
       throw new BadRequestException('Mois attendu au format AAAA-MM.');

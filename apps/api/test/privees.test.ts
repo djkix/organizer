@@ -77,8 +77,8 @@ describe('CapturesPriveesService', () => {
   it('étiquette, puis liste par jour local, les plus récents d\'abord', async () => {
     await service.enregistrer(utilisateurId, depot());
     await service.enregistrer(utilisateurId, { ...depot({ id: '4a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d' }), emisLe: new Date('2026-10-06T22:30:00Z') });
-    await service.etiqueter(ID, 'garage');
-    const mois = await service.lister('2026-10', 'Europe/Paris');
+    await service.etiqueter(utilisateurId, ID, 'garage');
+    const mois = await service.lister(utilisateurId, '2026-10', 'Europe/Paris');
     expect(mois.map((j) => j.jour)).toEqual(['2026-10-07', '2026-10-06']);
     expect(mois[1]!.captures).toEqual([{ id: ID, heure: '08:12', dureeS: 14, etiquette: 'garage', aAudio: true }]);
   });
@@ -89,7 +89,7 @@ describe('lister : indicateur d\'audio', () => {
     await prisma.capture.create({
       data: { utilisateurId, canal: 'telegram', prive: true, etat: 'privee', emisLe: new Date('2026-10-06T07:00:00Z'), texteEcrit: 'x' },
     });
-    const mois = await service.lister('2026-10', 'Europe/Paris');
+    const mois = await service.lister(utilisateurId, '2026-10', 'Europe/Paris');
     expect(mois[0]!.captures[0]).toMatchObject({ aAudio: false });
   });
 });

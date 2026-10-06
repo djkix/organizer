@@ -16,7 +16,7 @@ import { AUTH, CONFIG, ITEMS } from '../src/jetons.js';
 import { CorrectionInvalide, ItemIntrouvable, ItemsService } from '../src/items/items.service.js';
 import { VuesService } from '../src/vues/vues.service.js';
 import { demarrerAppTest } from './aides-http.js';
-import { creerAction } from './aides-items.js';
+import { compteTest, creerAction } from './aides-items.js';
 
 const prisma = creerPrisma();
 const TYPES = ['datee', 'jour', 'fenetre', 'relative', 'aucune'];
@@ -27,26 +27,26 @@ beforeEach(() => viderBase(prisma));
 describe('cocher', () => {
   it('pose faitLe une fois ; décocher l\'efface', async () => {
     const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });
-    await service.cocher(itemId);
-    await new ItemsService(prisma, TYPES, () => new Date('2026-10-06T09:00:00Z')).cocher(itemId);
+    await service.cocher(await compteTest(prisma), itemId);
+    await new ItemsService(prisma, TYPES, () => new Date('2026-10-06T09:00:00Z')).cocher(await compteTest(prisma), itemId);
     expect((await prisma.action.findUniqueOrThrow({ where: { itemId } })).faitLe?.toISOString()).toBe('2026-10-06T07:00:00.000Z');
-    await service.decocher(itemId);
+    await service.decocher(await compteTest(prisma), itemId);
     expect((await prisma.action.findUniqueOrThrow({ where: { itemId } })).faitLe).toBeNull();
   });
 
   it('refuse un item inconnu ou qui n\'est pas une action', async () => {
     const { itemId } = await creerAction(prisma, { type: null, nature: 'pensee' });
-    await expect(service.cocher('00000000-0000-4000-8000-000000000000')).rejects.toBeInstanceOf(ItemIntrouvable);
-    await expect(service.cocher(itemId)).rejects.toBeInstanceOf(ItemIntrouvable);
+    await expect(service.cocher(await compteTest(prisma), '00000000-0000-4000-8000-000000000000')).rejects.toBeInstanceOf(ItemIntrouvable);
+    await expect(service.cocher(await compteTest(prisma), itemId)).rejects.toBeInstanceOf(ItemIntrouvable);
   });
 });
 
 describe('corriger', () => {
   it('une pensée corrigée en action puis datée apparaît dans Aujourd\'hui, avec deux corrections', async () => {
     const { itemId } = await creerAction(prisma, { texte: 'rappeler', type: null, nature: 'pensee' });
-    await service.corriger(itemId, { nature: 'action' });
-    await service.corriger(itemId, { echeance: { type: 'jour', date: '2026-10-06T00:00:00+02:00' } });
-    const v = await new VuesService(prisma).aujourdhui(new Date('2026-10-06T06:00:00Z'), 'Europe/Paris');
+    await service.corriger(await compteTest(prisma), itemId, { nature: 'action' });
+    await service.corriger(await compteTest(prisma), itemId, { echeance: { type: 'jour', date: '2026-10-06T00:00:00+02:00' } });
+    const v = await new VuesService(prisma).aujourdhui(await compteTest(prisma), new Date('2026-10-06T06:00:00Z'), 'Europe/Paris');
     expect(v.actions.map((a) => a.texte)).toEqual(['rappeler']);
     const corrections = await prisma.correction.findMany({ where: { itemId } });
     expect(corrections.map((c) => c.champ).sort()).toEqual(['echeance', 'nature']);
@@ -55,8 +55,8 @@ describe('corriger', () => {
 
   it('une fenêtre exige une fin ; aucune vide les dates', async () => {
     const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });
-    await expect(service.corriger(itemId, { echeance: { type: 'fenetre' } })).rejects.toBeInstanceOf(CorrectionInvalide);
-    await service.corriger(itemId, { echeance: { type: 'aucune' } });
+    await expect(service.corriger(await compteTest(prisma), itemId, { echeance: { type: 'fenetre' } })).rejects.toBeInstanceOf(CorrectionInvalide);
+    await service.corriger(await compteTest(prisma), itemId, { echeance: { type: 'aucune' } });
     expect(await prisma.action.findUniqueOrThrow({ where: { itemId } })).toMatchObject({
       echeanceType: 'aucune', echeanceDate: null, fenetreDebut: null, fenetreFin: null,
     });
@@ -65,9 +65,9 @@ describe('corriger', () => {
   it('refuse un type absent du schéma, une échéance sur une pensée, une date sans fuseau', async () => {
     const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });
     const pensee = await creerAction(prisma, { type: null, nature: 'pensee' });
-    await expect(service.corriger(itemId, { echeance: { type: 'bientot' } })).rejects.toBeInstanceOf(CorrectionInvalide);
-    await expect(service.corriger(pensee.itemId, { echeance: { type: 'jour', date: '2026-10-07T00:00:00+02:00' } })).rejects.toBeInstanceOf(CorrectionInvalide);
-    await expect(service.corriger(itemId, { echeance: { type: 'jour', date: '2026-10-07T00:00:00' } })).rejects.toBeInstanceOf(CorrectionInvalide);
+    await expect(service.corriger(await compteTest(prisma), itemId, { echeance: { type: 'bientot' } })).rejects.toBeInstanceOf(CorrectionInvalide);
+    await expect(service.corriger(await compteTest(prisma), pensee.itemId, { echeance: { type: 'jour', date: '2026-10-07T00:00:00+02:00' } })).rejects.toBeInstanceOf(CorrectionInvalide);
+    await expect(service.corriger(await compteTest(prisma), itemId, { echeance: { type: 'jour', date: '2026-10-07T00:00:00' } })).rejects.toBeInstanceOf(CorrectionInvalide);
     expect(await prisma.correction.count()).toBe(0);
   });
 });
@@ -76,24 +76,24 @@ describe('cheminAudio', () => {
   it('renvoie le fichier et son type, ou null si l\'audio est purgé', async () => {
     const racine = mkdtempSync(join(tmpdir(), 'audio-'));
     const { captureId } = await creerAction(prisma, { type: null, nature: 'pensee' });
-    expect(await service.cheminAudio(captureId, racine)).toBeNull();
+    expect(await service.cheminAudio(await compteTest(prisma), captureId, racine)).toBeNull();
     mkdirSync(join(racine, 'ordinaire'), { recursive: true });
     writeFileSync(join(racine, 'ordinaire', 'a.oga'), 'OggS');
     await prisma.capture.update({ where: { id: captureId }, data: { audioPath: 'ordinaire/a.oga', audioMime: 'audio/ogg' } });
-    expect(await service.cheminAudio(captureId, racine)).toEqual({ chemin: 'ordinaire/a.oga', mime: 'audio/ogg' });
+    expect(await service.cheminAudio(await compteTest(prisma), captureId, racine)).toEqual({ chemin: 'ordinaire/a.oga', mime: 'audio/ogg' });
   });
 });
 
 describe('/api/items', () => {
   it('echeanceExpr est effacée par une correction d\'échéance', async () => {
     const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-08T00:00:00+02:00', expr: 'jeudi' });
-    await service.corriger(itemId, { echeance: { type: 'jour', date: '2026-10-09T00:00:00+02:00' } });
+    await service.corriger(await compteTest(prisma), itemId, { echeance: { type: 'jour', date: '2026-10-09T00:00:00+02:00' } });
     expect((await prisma.action.findUniqueOrThrow({ where: { itemId } })).echeanceExpr).toBeNull();
   });
 
   it('l\'historique d\'une correction d\'échéance garde l\'expression d\'origine', async () => {
     const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-08T00:00:00+02:00', expr: 'jeudi' });
-    await service.corriger(itemId, { echeance: { type: 'jour', date: '2026-10-09T00:00:00+02:00' } });
+    await service.corriger(await compteTest(prisma), itemId, { echeance: { type: 'jour', date: '2026-10-09T00:00:00+02:00' } });
     const c = await prisma.correction.findFirstOrThrow({ where: { itemId, champ: 'echeance' } });
     expect(c.ancienneValeur).toMatchObject({ type: 'jour', expr: 'jeudi' });
     expect(c.nouvelleValeur).toMatchObject({ type: 'jour', expr: null });
@@ -107,7 +107,7 @@ describe('/api/items', () => {
     await prisma.utilisateur.create({ data: { nom: 'l' } });
     await auth.definirMotDePasse('l', 'un mot de passe assez long');
     const s = await auth.ouvrirSession('l', 'un mot de passe assez long');
-    const { captureId } = await creerAction(prisma, { type: null, nature: 'pensee' });
+    const { captureId } = await creerAction(prisma, { type: null, nature: "pensee", compte: "l" });
     class M {}
     Module({ controllers: [ItemsController], providers: [
       { provide: ITEMS, useValue: service }, { provide: CONFIG, useValue: { audioRacine: racine } },
@@ -175,7 +175,7 @@ describe('alarme et agenda', () => {
   });
 
   it('alarme refusée sans jour et heure, ou sur une pensée', async () => {
-    const jour = await creerAction(prisma, { type: 'jour', date: '2026-10-14T00:00:00+02:00' });
+    const jour = await creerAction(prisma, { type: 'jour', date: '2026-10-14T00:00:00+02:00', compte: "l" });
     await expect(avecSignal.definirAlarme(jour.itemId, true)).rejects.toThrow("L'alarme demande un jour et une heure.");
     const pensee = await creerAction(prisma, { type: null, nature: 'pensee' });
     await expect(avecSignal.definirAlarme(pensee.itemId, true)).rejects.toBeInstanceOf(CorrectionInvalide);
@@ -185,22 +185,22 @@ describe('alarme et agenda', () => {
   it('un rendez-vous daté devenu « un jour » perd son alarme', async () => {
     const { itemId } = await creerAction(prisma, { type: 'datee', date: '2026-10-14T10:00:00+02:00' });
     await avecSignal.definirAlarme(itemId, true);
-    await avecSignal.corriger(itemId, { echeance: { type: 'jour', date: '2026-10-14T00:00:00+02:00' } });
+    await avecSignal.corriger(await compteTest(prisma), itemId, { echeance: { type: 'jour', date: '2026-10-14T00:00:00+02:00' } });
     expect((await prisma.action.findUniqueOrThrow({ where: { itemId } })).alarme).toBe(false);
   });
 
   it('un rendez-vous avec alarme devenu pensée perd son alarme', async () => {
     const { itemId } = await creerAction(prisma, { type: 'datee', date: '2026-10-14T10:00:00+02:00' });
     await avecSignal.definirAlarme(itemId, true);
-    await avecSignal.corriger(itemId, { nature: 'pensee' });
+    await avecSignal.corriger(await compteTest(prisma), itemId, { nature: 'pensee' });
     expect((await prisma.action.findUniqueOrThrow({ where: { itemId } })).alarme).toBe(false);
   });
 
   it('cocher signale avec 15 s de délai, décocher et corriger tout de suite', async () => {
     const { itemId } = await creerAction(prisma, { type: 'datee', date: '2026-10-14T10:00:00+02:00' });
-    await avecSignal.cocher(itemId);
-    await avecSignal.decocher(itemId);
-    await avecSignal.corriger(itemId, { nature: 'pensee' });
+    await avecSignal.cocher(await compteTest(prisma), itemId);
+    await avecSignal.decocher(await compteTest(prisma), itemId);
+    await avecSignal.corriger(await compteTest(prisma), itemId, { nature: 'pensee' });
     expect(signaux).toEqual([[itemId, 15_000], [itemId, undefined], [itemId, undefined]]);
   });
 
@@ -211,8 +211,8 @@ describe('alarme et agenda', () => {
     };
     const reel = new ItemsService(prisma, TYPES, undefined, new SignalAgendaFile({ add }));
     const { itemId } = await creerAction(prisma, { type: 'datee', date: '2026-10-14T10:00:00+02:00' });
-    await reel.cocher(itemId);
-    await reel.decocher(itemId);
+    await reel.cocher(await compteTest(prisma), itemId);
+    await reel.decocher(await compteTest(prisma), itemId);
     await reel.definirAlarme(itemId, true);
     expect(appels).toEqual([[itemId, 15_000], [itemId, 0], [itemId, 0]]);
   });
@@ -222,8 +222,8 @@ describe('alarme et agenda', () => {
     await prisma.utilisateur.create({ data: { nom: 'l' } });
     await auth.definirMotDePasse('l', 'un mot de passe assez long');
     const s = await auth.ouvrirSession('l', 'un mot de passe assez long');
-    const date = await creerAction(prisma, { type: 'datee', date: '2026-10-14T10:00:00+02:00' });
-    const jour = await creerAction(prisma, { type: 'jour', date: '2026-10-14T00:00:00+02:00' });
+    const date = await creerAction(prisma, { type: 'datee', date: '2026-10-14T10:00:00+02:00', compte: "l" });
+    const jour = await creerAction(prisma, { type: 'jour', date: '2026-10-14T00:00:00+02:00', compte: "l" });
     class M {}
     Module({ controllers: [ItemsController], providers: [
       { provide: ITEMS, useValue: avecSignal }, { provide: CONFIG, useValue: { audioRacine: tmpdir() } },
