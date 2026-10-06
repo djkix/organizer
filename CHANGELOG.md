@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Le plan du lot 2-C : widget Home Assistant silencieux, une liste « Local To-do » par compte tenue par le scheduler par l'API REST de Home Assistant (jeton en secret Docker, sortie par Squid vers la seule adresse locale de HA), vue Aujourd'hui bornée à 5 lignes, cochage du widget repris dans Organizer, publication en 1.4.0 (2026-10-06).
+
 ## [1.3.0] - 2026-10-06
 
 ### Corrigé
