@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
-  import { beforeNavigate, goto } from '$app/navigation';
+  import { onDestroy, onMount, tick } from 'svelte';
+  import { beforeNavigate, goto, replaceState } from '$app/navigation';
+  import { page } from '$app/state';
+  import { demarrageAuto, sansAuto } from '$lib/prive/auto';
   import Icone from '$lib/composants/Icone.svelte';
   import { CHEMINS } from '$lib/config';
   import { chrono } from '$lib/format';
@@ -137,6 +139,15 @@
   });
 
   onMount(() => {
+    // Entrée explicite (bouton, raccourci) : on démarre sans second appui. Le paramètre est retiré
+    // d'abord, pour qu'un retour ou un rechargement n'enregistre pas de nouveau. Refus du micro : message calme et bouton manuel.
+    const auto = demarrageAuto(page.url);
+    if (auto) {
+      void tick().then(() => {
+        replaceState(sansAuto(page.url), page.state);
+        if (!detruit) void commencer();
+      });
+    }
     // Écran quitté (appel, verrouillage) : on range plutôt que de risquer la perte.
     const cache = (): void => {
       if (document.visibilityState === 'hidden') void arreter();

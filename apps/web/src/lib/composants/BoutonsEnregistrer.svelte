@@ -6,12 +6,12 @@
 
 <!-- Deux entrées, deux écrans, deux routes d'API : le mode se choisit ici, jamais après coup. -->
 <div class="boutons">
-  <a class="ordinaire" href="{CHEMINS.enregistrer}" aria-label="Enregistrer, rangé tout seul">
+  <a class="ordinaire" href="{CHEMINS.enregistrer}?auto=1" aria-label="Enregistrer, rangé tout seul">
     <Icone nom="micro" taille={26} />
     <span class="titre">{MESSAGES.enregistrer}</span>
     <span class="sous">{MESSAGES.rangeToutSeulSous}</span>
   </a>
-  <a class="prive" href="{CHEMINS.enregistreur}" aria-label="Enregistrement privé">
+  <a class="prive" href="{CHEMINS.enregistreur}?auto=1" aria-label="Enregistrement privé">
     <Icone nom="cadenas" taille={26} />
     <span class="titre">{MESSAGES.priveBouton}</span>
     <span class="sous">{MESSAGES.resteSurServeur}</span>

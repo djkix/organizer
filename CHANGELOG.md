@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Modifié
+- Accueil et raccourcis Android : « Enregistrer » et « Privé » démarrent l'enregistrement dès l'arrivée sur l'écran (paramètre `?auto=1`, retiré aussitôt : retour et rechargement ne relancent rien) ; micro refusé : message calme et bouton manuel, sans boucle ; le repère privé reste visible dès la première image (2026-10-06).
 - Accueil : les boutons « Enregistrer » et « Privé » sont plus grands (92 px), pleins, avec liseré bas sobre (pas d'ombre), état appuyé et focus visibles ; nouveaux tokens `cta*` (texte sur fond : 7,46 à 9,72 en clair, 9,46 à 9,72 en sombre, AAA) et test de contraste calculé dans les deux thèmes (2026-10-06).
 - Décision 25 (remplace la décision 8) : chaque compte ne voit et ne modifie que ses données ; vues Aujourd'hui, Cette semaine, Horizons et À revoir, captures privées (liste, étiquette), audio, cochage, correction et alarme sont filtrés par le compte de la session, et l'élément d'un autre compte répond 404 ; un identifiant de capture déjà pris par un autre compte est refusé au dépôt ; tests à deux comptes sur chaque route (2026-10-06).
 
