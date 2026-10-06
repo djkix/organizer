@@ -291,6 +291,7 @@ Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.
 - [Prompts](prompts/README.md) : versions, variables, schéma de sortie.
 - [Outil de relecture](tools/relecture/README.md) : relire les captures du banc d'essai.
 - [Plans de réalisation](docs/superpowers/plans/) : un plan par lot.
+- [Spécification de la sauvegarde vers le NAS](docs/superpowers/specs/2026-10-06-sauvegarde-nas.md) : chiffrement age, rsync vers le NAS, instantanés, restauration (proposition à valider).
 - [Dossier de revue du lot 1-A](docs/revue/2026-10-03-lot1-a.md) : synthèse autonome pour un relecteur externe.
 - [Dossier de revue du lot 1-B1](docs/revue/2026-10-03-lot1-b1.md) : la suite, pour l'API de la PWA et le mode privé.
 - [Dossier de revue du lot 1-B2](docs/revue/2026-10-04-lot1-b2.md) : la PWA, l'enregistreur privé et la file hors ligne.

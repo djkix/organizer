@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- La spécification de la sauvegarde vers le NAS (décision 11), à valider : dump PostgreSQL quotidien et audio incrémental chiffrés par age sur la VM (clé privée hors du serveur), envoyés par rsync via SSH à un utilisateur NAS dédié depuis un conteneur `sauvegarde` qui passe par le proxy `sortie`, historique en instantanés côté NAS (7 quotidiens, 4 hebdomadaires, 12 mensuels) que la VM ne peut pas effacer, alertes de la veille à l'administrateur (échec, plus de 26 h sans réussite), procédures de restauration et test de livraison, questions ouvertes pour Franck (2026-10-06).
+
 ## [1.3.0] - 2026-10-06
 
 ### Corrigé
