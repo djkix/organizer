@@ -20,6 +20,11 @@ export const MESSAGES = {
   annulationRatee: "Pas pu annuler. C'est resté coché.",
   // Détail et À revoir
   pasUneAction: "Ce n'est pas une chose à faire",
+  effacerQuestion: 'Effacer cette note ?',
+  effacerBouton: 'Effacer',
+  annulerBouton: 'Annuler',
+  effaceRate: 'Pas effacé. Réessaie dans un moment.',
+  efface: 'Effacé.',
   correctionRatee: 'Pas pu corriger. Réessaie dans un moment.',
   rangeEnPensee: 'Rangé dans les pensées.',
   cestNote: "C'est noté.",

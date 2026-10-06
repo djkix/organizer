@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AuthService } from '../src/auth/auth.service.js';
 import { NOM_COOKIE } from '../src/auth/cookies.js';
 import { SessionGuard } from '../src/auth/session.guard.js';
@@ -128,10 +128,15 @@ describe('décision 25 : accès croisé en 404', () => {
     const b = await prisma.item.findUniqueOrThrow({ where: { id: B.itemId }, include: { action: true } });
     expect(b.nature).toBe('action');
     expect(b.action!.faitLe).toBeNull();
+    expect((await appel(cA, 'DELETE', `/api/items/${B.itemId}`)).status).toBe(404);
+    expect((await prisma.item.findUniqueOrThrow({ where: { id: B.itemId } })).archiveLe).toBeNull();
     expect(await prisma.correction.count()).toBe(0);
     // Le propriétaire, lui, y accède.
     expect((await appel(cB, 'POST', `/api/items/${B.itemId}/fait`)).status).toBe(204);
     expect((await appel(cB, 'PATCH', `/api/items/${B.itemId}`, { nature: 'pensee' })).status).toBe(204);
+    expect((await appel(cB, 'DELETE', `/api/items/${B.ambigu}`)).status).toBe(204);
+    expect((await appel(cB, 'DELETE', `/api/items/${B.ambigu}`)).status).toBe(204);
+    expect((await json(cB, '/api/vues/a-revoir')).items).toEqual([]);
   });
   it('audio ordinaire et privé d\'un autre compte : 404 ; le sien : 200', async () => {
     await prisma.capture.update({ where: { id: B.captureId }, data: { audioPath: 'ordinaire/b.oga' } });

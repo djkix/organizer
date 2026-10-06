@@ -7,6 +7,7 @@
   import { api } from '$lib/client';
   import { creerCocheur, type EtatCochage } from '$lib/cochage';
   import Bandeau from '$lib/composants/Bandeau.svelte';
+  import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
   import DetailItem from '$lib/composants/DetailItem.svelte';
   import LigneActionVue from '$lib/composants/LigneAction.svelte';
   import { FUSEAU } from '$lib/config';
@@ -23,6 +24,8 @@
   let declencheur: HTMLElement | null = null;
   let cochage = $state<EtatCochage>({ retires: new Set(), enCours: null, message: null });
   let numero = 0;
+  let aEffacer = $state<LigneAction | null>(null);
+  let effaces = $state<ReadonlySet<string>>(new Set());
 
   const cocheur = creerCocheur({
     cocher: (id) => api.cocher(id),
@@ -112,7 +115,26 @@
     await rendreFocus();
   }
 
-  const liste = $derived(donnees && donnees.nom === vue ? groupes(donnees, aujourdhui, FUSEAU, cochage.retires) : []);
+  const retires = $derived(new Set([...cochage.retires, ...effaces]));
+  const liste = $derived(donnees && donnees.nom === vue ? groupes(donnees, aujourdhui, FUSEAU, retires) : []);
+
+  /** Effacement : la ligne part aussitôt ; si le serveur ne répond pas, elle revient avec un mot calme. */
+  async function effacer(l: LigneAction): Promise<void> {
+    aEffacer = null;
+    if (selection) { selection = null; if (page.state.detail) history.back(); }
+    effaces = new Set([...effaces, l.itemId]);
+    try {
+      await cocheur.enfiler(() => api.effacer(l.itemId));
+      annonce = MESSAGES.efface;
+      setTimeout(() => { if (annonce === MESSAGES.efface) annonce = null; }, 6000);
+      await charger(vue);
+    } catch {
+      annonce = MESSAGES.effaceRate;
+    } finally {
+      effaces = new Set([...effaces].filter((x) => x !== l.itemId));
+    }
+    await rendreFocus();
+  }
 
   // Une ligne cochée quitte la liste à la fin du délai d'annulation : si le focus s'y trouvait,
   // il passe à la ligne suivante, sinon au titre. Jamais volé à qui est déjà ailleurs.
@@ -130,12 +152,12 @@
     if (actif && actif !== document.body && actif.isConnected) return;
     const parti = avant.findIndex((id) => !ordre.includes(id));
     const suivant = parti < 0 ? undefined : avant.slice(parti + 1).find((id) => ordre.includes(id));
-    const ligne = suivant ? document.querySelector<HTMLElement>(`[data-item="${CSS.escape(suivant)}"] button`) : null;
+    const ligne = suivant ? document.querySelector<HTMLElement>(`[data-item="${CSS.escape(suivant)}"] .case`) : null;
     (ligne ?? document.querySelector<HTMLElement>('main h1'))?.focus();
   });
 </script>
 
-<main class="ecran" inert={selection !== null}>
+<main class="ecran" inert={selection !== null || aEffacer !== null}>
   <header class="entete">
     <h1 tabindex="-1">{TITRES[vue].titre}</h1>
     <p class="sous">{TITRES[vue].sous ?? titreDuJour(aujourdhui)}</p>
@@ -163,6 +185,7 @@
             surCocher={() => cocheur.cocher(l.itemId)}
             surDecocher={() => void cocheur.annuler()}
             surOuvrir={() => ouvrir(l.source)}
+            surEffacer={() => { declencheur = document.activeElement instanceof HTMLElement ? document.activeElement : null; aEffacer = l.source; }}
           />
         {/each}
       </ul>
@@ -172,7 +195,11 @@
 
 <Bandeau enCours={cochage.enCours !== null} message={cochage.message ?? annonce} surAnnuler={() => void cocheur.annuler()} />
 {#if selection}
-  <DetailItem ligne={selection} surFermer={fermer} surCorrige={(m) => void corrige(m)} enfiler={cocheur.enfiler} />
+  <DetailItem ligne={selection} surFermer={fermer} surCorrige={(m) => void corrige(m)} enfiler={cocheur.enfiler} surEffacer={() => (aEffacer = selection)} />
+{/if}
+{#if aEffacer}
+  {@const cible = aEffacer}
+  <ConfirmerEffacer texte={cible.texte} surConfirmer={() => void effacer(cible)} surAnnuler={() => (aEffacer = null)} />
 {/if}
 
 <style>

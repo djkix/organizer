@@ -52,6 +52,12 @@ export class ItemsController {
     return traduire(() => this.items.corriger(req.utilisateur.id, id, p.data));
   }
 
+  @Delete('items/:id')
+  @HttpCode(204)
+  effacer(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return traduire(() => this.items.effacer(req.utilisateur.id, id));
+  }
+
   @Get('captures/:id/audio')
   async audio(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
     const a = await this.items.cheminAudio(req.utilisateur.id, id, this.config.audioRacine);

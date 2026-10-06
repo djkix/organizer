@@ -104,3 +104,68 @@ test('une ligne cochée qui quitte la liste : le focus passe à la suivante, sin
   await expect(page.getByText('Changer les draps')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe('H1');
 });
+
+test.describe('effacer', () => {
+  const EFFACER = `DELETE /api/items/${garage.itemId}`;
+  /** Après l'effacement, le serveur ne renvoie plus la ligne. */
+  const serveur = (): Table => {
+    let efface = false;
+    return {
+      ...table(),
+      'GET /api/vues/aujourdhui': (r) => r.fulfill({ status: 200, json: { jour: '2026-10-06', actions: efface ? [draps] : [garage, draps], suggestions: [] } }),
+      [EFFACER]: (r) => { efface = true; return r.fulfill({ status: 204 }); },
+    };
+  };
+  const ligneGarage = (page: import('@playwright/test').Page) => page.locator(`[data-item="${garage.itemId}"]`);
+  async function glisser(page: import('@playwright/test').Page): Promise<void> {
+    const b = (await ligneGarage(page).locator('.piste').boundingBox())!;
+    await page.mouse.move(b.x + b.width - 30, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width - 80, b.y + b.height / 2 + 2, { steps: 4 });
+    await page.mouse.move(b.x + b.width - 170, b.y + b.height / 2 + 3, { steps: 4 });
+    await page.mouse.up();
+  }
+
+  test('glisser, confirmer : la ligne disparaît, une seule requête', async ({ page }) => {
+    const appels = await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page);
+    await ligneGarage(page).getByRole('button', { name: /^Effacer/ }).click();
+    const dialogue = page.getByRole('alertdialog', { name: 'Effacer cette note ?' });
+    await expect(dialogue).toBeVisible();
+    await dialogue.getByRole('button', { name: 'Effacer' }).click();
+    await expect(ligneGarage(page)).toHaveCount(0);
+    await expect(page.getByText('Changer les draps')).toBeVisible();
+    expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(1);
+  });
+
+  test('glisser, annuler : la ligne reste, rien n\'est envoyé', async ({ page }) => {
+    const appels = await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page);
+    await ligneGarage(page).getByRole('button', { name: /^Effacer/ }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Annuler' }).click();
+    await expect(ligneGarage(page)).toHaveCount(1);
+    expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(0);
+  });
+
+  test('depuis le détail : même confirmation', async ({ page }) => {
+    const appels = await simuler(page, serveur());
+    await page.goto('/');
+    await page.getByText('Rappeler le garage').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Effacer' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Effacer' }).click();
+    await expect(ligneGarage(page)).toHaveCount(0);
+    expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(1);
+  });
+
+  test('le serveur ne répond pas : la ligne revient avec un mot calme', async ({ page }) => {
+    await simuler(page, { ...table(), [EFFACER]: (r) => r.abort('internetdisconnected') });
+    await page.goto('/');
+    await glisser(page);
+    await ligneGarage(page).getByRole('button', { name: /^Effacer/ }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Effacer' }).click();
+    await expect(page.getByText('Pas effacé. Réessaie dans un moment.')).toBeVisible();
+    await expect(ligneGarage(page)).toHaveCount(1);
+  });
+});

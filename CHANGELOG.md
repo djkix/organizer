@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Effacer une action : glisser la ligne vers la gauche découvre « Effacer » (aussi dans le détail), une confirmation calme et neutre (« Effacer cette note ? ») précède `DELETE /api/items/:id` ; l'item est archivé (`archiveLe`), la capture et son audio restent, l'événement Google Agenda est retiré ; propre au compte (404 sinon), idempotent ; hors réseau, la ligne revient avec un mot calme (2026-10-06).
+
 ### Modifié
 - Accueil et raccourcis Android : « Enregistrer » et « Privé » démarrent l'enregistrement dès l'arrivée sur l'écran (paramètre `?auto=1`, retiré aussitôt : retour et rechargement ne relancent rien) ; micro refusé : message calme et bouton manuel, sans boucle ; le repère privé reste visible dès la première image (2026-10-06).
 - Accueil : les boutons « Enregistrer » et « Privé » sont plus grands (92 px), pleins, avec liseré bas sobre (pas d'ombre), état appuyé et focus visibles ; nouveaux tokens `cta*` (texte sur fond : 7,46 à 9,72 en clair, 9,46 à 9,72 en sombre, AAA) et test de contraste calculé dans les deux thèmes (2026-10-06).

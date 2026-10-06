@@ -244,3 +244,30 @@ describe('alarme et agenda', () => {
     }
   });
 });
+
+describe('effacer', () => {
+  const signaux: Array<[string, number | undefined]> = [];
+  const svc = new ItemsService(prisma, TYPES, () => new Date('2026-10-06T07:00:00Z'), {
+    signaler: async (itemId, delaiMs) => { signaux.push([itemId, delaiMs]); },
+  });
+  beforeEach(() => { signaux.length = 0; });
+
+  it('archive l\'item, garde la capture, le retire des vues, signale l\'agenda, idempotent', async () => {
+    const { itemId, captureId } = await creerAction(prisma, { type: 'datee', date: '2026-10-06T10:00:00+02:00' });
+    const moi = await compteTest(prisma);
+    await svc.effacer(moi, itemId);
+    await svc.effacer(moi, itemId);
+    const it = await prisma.item.findUniqueOrThrow({ where: { id: itemId } });
+    expect(it.archiveLe).toEqual(new Date('2026-10-06T07:00:00Z'));
+    expect(await prisma.capture.count({ where: { id: captureId } })).toBe(1);
+    expect((await new VuesService(prisma).aujourdhui(moi, new Date('2026-10-06T06:00:00Z'), 'Europe/Paris')).actions).toEqual([]);
+    expect(signaux.map(([i]) => i)).toEqual([itemId, itemId]);
+  });
+
+  it('l\'item d\'un autre compte : introuvable, rien ne change, aucun signal', async () => {
+    const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00', compte: 'autre' });
+    await expect(svc.effacer(await compteTest(prisma), itemId)).rejects.toBeInstanceOf(ItemIntrouvable);
+    expect((await prisma.item.findUniqueOrThrow({ where: { id: itemId } })).archiveLe).toBeNull();
+    expect(signaux).toEqual([]);
+  });
+});

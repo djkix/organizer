@@ -56,6 +56,17 @@ export class ItemsService {
     await this.agenda.signaler(itemId);
   }
 
+  /**
+   * Efface de toutes les listes sans rien détruire : l'item est archivé (`archiveLe`), la capture reste intacte.
+   * Idempotent ; l'événement Google Agenda de l'action est retiré par la synchronisation.
+   */
+  async effacer(utilisateurId: string, itemId: string): Promise<void> {
+    const it = await this.prisma.item.findFirst({ where: { id: itemId, ...proprietaire(utilisateurId) }, select: { archiveLe: true } });
+    if (!it) throw new ItemIntrouvable(itemId);
+    if (!it.archiveLe) await this.prisma.item.updateMany({ where: { id: itemId, archiveLe: null }, data: { archiveLe: this.maintenant() } });
+    await this.agenda.signaler(itemId);
+  }
+
   /** `utilisateurId` : propriétaire exigé (404 sinon). `null` : appel interne du bot, déjà lié au compte. */
   async corriger(utilisateurId: string | null, itemId: string, c: CorrectionItem): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
