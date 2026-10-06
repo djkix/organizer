@@ -38,6 +38,7 @@ export interface ClientApi {
   cocher(itemId: string): Promise<void>;
   decocher(itemId: string): Promise<void>;
   corriger(itemId: string, c: CorpsCorrection): Promise<void>;
+  effacer(itemId: string): Promise<void>;
   privees(mois: string): Promise<JourPrive[]>;
   etiqueter(captureId: string, etiquette: string | null): Promise<void>;
   agenda(): Promise<ReponseAgenda>;
@@ -131,6 +132,7 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
     deconnecterAgenda: () => sansCorps(appeler('DELETE', '/api/agenda')),
     cocher: (itemId) => sansCorps(appeler('POST', `/api/items/${id(itemId)}/fait`)),
     decocher: (itemId) => sansCorps(appeler('DELETE', `/api/items/${id(itemId)}/fait`)),
+    effacer: (itemId) => sansCorps(appeler('DELETE', `/api/items/${id(itemId)}`)),
     corriger: (itemId, c) => sansCorps(appeler('PATCH', `/api/items/${id(itemId)}`, c)),
     privees: (mois) => json(appeler('GET', `/api/captures/privees?mois=${id(mois)}`)),
     etiqueter: (captureId, etiquette) =>

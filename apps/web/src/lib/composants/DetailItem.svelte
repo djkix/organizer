@@ -10,7 +10,8 @@
   import Icone from './Icone.svelte';
   import Lecteur from './Lecteur.svelte';
 
-  let { ligne, surFermer, surCorrige, enfiler = (travail) => travail() }: {
+  let { ligne, surFermer, surCorrige, surEffacer, enfiler = (travail) => travail() }: {
+    surEffacer: () => void;
     ligne: LigneAction;
     surFermer: () => void;
     surCorrige: (message: string | null) => void;
@@ -46,7 +47,7 @@
     echeance(choixDepuisChamp(type, (e.currentTarget as HTMLInputElement).value));
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape') surFermer(); }} />
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && !e.defaultPrevented) surFermer(); }} />
 
 <div class="panneau" role="dialog" aria-labelledby="titre-detail">
   <header><button class="bouton-icone" onclick={surFermer} aria-label="Retour"><Icone nom="retour" /></button></header>
@@ -87,6 +88,7 @@
   {/if}
 
   <div class="bas">
+    <button class="lien" onclick={surEffacer}>{MESSAGES.effacerBouton}</button>
     {#if message}<p class="discret" role="status">{message}</p>{/if}
     <button class="lien" aria-disabled={envoi} onclick={() => corriger(() => corpsNature('pensee'), MESSAGES.rangeEnPensee)}>
       {MESSAGES.pasUneAction}
