@@ -11,6 +11,13 @@
   --private-soft: #EDE9F6;
   --alarm: #B7791F;
   --line: #ECEAE6;
+  /* Grands boutons d'accueil : texte et fond choisis pour un contraste AAA. */
+  --cta: #1F5E5C;
+  --cta-text: #FFFFFF;
+  --cta-edge: #143F3D;
+  --cta-private: #4A3B78;
+  --cta-private-text: #FFFFFF;
+  --cta-private-edge: #2F2552;
 
   --radius-card: 16px;
   --radius-pill: 999px;
@@ -33,6 +40,12 @@
     --private-soft: #2A2340;
     --alarm: #D9A441;
     --line: #2C2A33;
+    --cta: #7CCFCB;
+    --cta-text: #0C1F1E;
+    --cta-edge: #4FA5A2;
+    --cta-private: #C4B8F0;
+    --cta-private-text: #1A1330;
+    --cta-private-edge: #8B7BC4;
   }
 }
 :root[data-theme="dark"] {
@@ -47,5 +60,11 @@
   --private-soft: #2A2340;
   --alarm: #D9A441;
   --line: #2C2A33;
+  --cta: #7CCFCB;
+  --cta-text: #0C1F1E;
+  --cta-edge: #4FA5A2;
+  --cta-private: #C4B8F0;
+  --cta-private-text: #1A1330;
+  --cta-private-edge: #8B7BC4;
 }
 /* Aucun token rouge n'existe : c'est volontaire. */

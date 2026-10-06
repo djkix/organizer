@@ -26,10 +26,13 @@ const TEXTES: [Token, Token][] = [
   ['bg', 'accent'], // bouton principal
   ['bg', 'private'], // écran d'enregistrement privé, bouton violet
   ['bg', 'text'], // bandeau « Fait. »
+  ['ctaText', 'cta'], // grand bouton « Enregistrer » : visé AAA (7)
+  ['ctaPrivateText', 'ctaPrivate'], // grand bouton « Privé »
 ];
 /** Icônes et bords de commandes (WCAG 1.4.11 : 3). */
 const ICONES: [Token, Token][] = [
   ['accent', 'accentSoft'], ['private', 'privateSoft'], ['private', 'bg'], ['alarm', 'surface'], ['muted', 'surface'],
+  ['cta', 'bg'], ['ctaPrivate', 'bg'],
 ];
 
 describe.each(['light', 'dark'] as const)('contrastes du thème %s', (theme) => {
@@ -39,5 +42,13 @@ describe.each(['light', 'dark'] as const)('contrastes du thème %s', (theme) => 
   });
   it.each(ICONES)('icône %s sur %s : 3 au moins', (avant, fond) => {
     expect(contraste(c[avant], c[fond])).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe.each(['light', 'dark'] as const)('grands boutons d\'accueil, thème %s : AAA (7)', (theme) => {
+  const c: Theme = tokens.color[theme];
+  it('Enregistrer et Privé', () => {
+    expect(contraste(c.ctaText, c.cta)).toBeGreaterThanOrEqual(7);
+    expect(contraste(c.ctaPrivateText, c.ctaPrivate)).toBeGreaterThanOrEqual(7);
   });
 });
