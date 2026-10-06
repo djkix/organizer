@@ -6,12 +6,12 @@
 
 <!-- Deux entrées, deux écrans, deux routes d'API : le mode se choisit ici, jamais après coup. -->
 <div class="boutons">
-  <a class="ordinaire" href={CHEMINS.enregistrer} aria-label="Enregistrer, rangé tout seul">
+  <a class="ordinaire" href="{CHEMINS.enregistrer}" aria-label="Enregistrer, rangé tout seul">
     <Icone nom="micro" taille={26} />
     <span class="titre">{MESSAGES.enregistrer}</span>
     <span class="sous">{MESSAGES.rangeToutSeulSous}</span>
   </a>
-  <a class="prive" href={CHEMINS.enregistreur} aria-label="Enregistrement privé">
+  <a class="prive" href="{CHEMINS.enregistreur}" aria-label="Enregistrement privé">
     <Icone nom="cadenas" taille={26} />
     <span class="titre">{MESSAGES.priveBouton}</span>
     <span class="sous">{MESSAGES.resteSurServeur}</span>
@@ -23,12 +23,16 @@
     position: fixed; left: 16px; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 5;
     display: flex; gap: 12px;
   }
+  /* Relief sobre : un liseré bas plus foncé (pas d'ombre). Appuyé, le bouton descend et le liseré s'amincit. */
   a {
-    flex: 1; min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; padding: 8px; border-radius: 20px; color: var(--bg); text-decoration: none; text-align: center;
+    flex: 1; min-height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 10px 8px; border-radius: 22px; text-decoration: none; text-align: center;
+    border-bottom: 5px solid transparent; transition: transform 80ms ease-out;
   }
-  .ordinaire { background: var(--accent); }
-  .prive { background: var(--private); }
-  .titre { font-weight: 600; font-size: var(--font-body, 16px); }
+  a:active { transform: translateY(3px); border-bottom-width: 2px; padding-bottom: 13px; }
+  a:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+  .ordinaire { background: var(--cta); color: var(--cta-text); border-bottom-color: var(--cta-edge); }
+  .prive { background: var(--cta-private); color: var(--cta-private-text); border-bottom-color: var(--cta-private-edge); }
+  .titre { font-weight: 700; font-size: 19px; letter-spacing: 0.01em; }
   .sous { font-size: var(--font-meta); }
 </style>
