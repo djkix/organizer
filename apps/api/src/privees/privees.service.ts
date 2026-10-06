@@ -32,9 +32,10 @@ export class CapturesPriveesService {
 
   async enregistrer(utilisateurId: string, d: DepotPrive): Promise<{ id: string; nouvelle: boolean }> {
     if (!FORMATS_ACCEPTES.includes(d.mime)) throw new FormatRefuse(d.mime);
-    const existante = await this.prisma.capture.findUnique({ where: { id: d.id }, select: { prive: true } });
+    const existante = await this.prisma.capture.findUnique({ where: { id: d.id }, select: { prive: true, utilisateurId: true } });
     if (existante) {
-      if (!existante.prive) throw new IdentifiantRefuse(d.id);
+      // Un identifiant déjà pris par un autre compte est refusé, jamais rattaché.
+      if (!existante.prive || existante.utilisateurId !== utilisateurId) throw new IdentifiantRefuse(d.id);
       return { id: d.id, nouvelle: false };
     }
     const opus = await this.reencodeur.versOpus(d.donnees);
@@ -54,17 +55,17 @@ export class CapturesPriveesService {
     }
   }
 
-  async etiqueter(id: string, etiquette: string | null): Promise<void> {
-    const r = await this.prisma.capture.updateMany({ where: { id, prive: true }, data: { etiquette } });
+  async etiqueter(utilisateurId: string, id: string, etiquette: string | null): Promise<void> {
+    const r = await this.prisma.capture.updateMany({ where: { id, utilisateurId, prive: true }, data: { etiquette } });
     if (r.count === 0) throw new CapturePriveeIntrouvable(id);
   }
 
-  async lister(mois: string, fuseau: string): Promise<JourPrive[]> {
+  async lister(utilisateurId: string, mois: string, fuseau: string): Promise<JourPrive[]> {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mois)) throw new MoisInvalide(mois);
     const premier = `${mois}-01`;
     const suivant = ajouterJours(`${mois}-28`, 4).slice(0, 7) + '-01';
     const captures = await this.prisma.capture.findMany({
-      where: { prive: true, emisLe: { gte: debutJour(premier, fuseau), lt: debutJour(suivant, fuseau) } },
+      where: { utilisateurId, prive: true, emisLe: { gte: debutJour(premier, fuseau), lt: debutJour(suivant, fuseau) } },
       orderBy: { emisLe: 'desc' },
       select: { id: true, emisLe: true, dureeS: true, etiquette: true, audioPath: true },
     });

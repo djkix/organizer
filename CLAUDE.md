@@ -25,7 +25,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 Les fichiers de ce dépôt font foi. Il n'existe aucune version ailleurs qui les
 dépasse : le document de cadrage initial est archivé et n'est plus mis à jour.
 
-- @docs/decisions.md — 24 décisions fermées. Ne pas les rouvrir sans demander.
+- @docs/decisions.md — 25 décisions fermées. Ne pas les rouvrir sans demander.
 - @docs/cahier-des-charges.md — spécification complète.
 
 Quand une décision change : mettre à jour `docs/decisions.md`, répercuter dans

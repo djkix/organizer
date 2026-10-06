@@ -11,21 +11,21 @@ export class VuesController {
 
   @Get('aujourdhui')
   aujourdhui(@Req() req: RequeteAuthentifiee): Promise<VueAujourdhui> {
-    return this.vues.aujourdhui(new Date(), req.utilisateur.fuseau);
+    return this.vues.aujourdhui(req.utilisateur.id, new Date(), req.utilisateur.fuseau);
   }
 
   @Get('semaine')
   semaine(@Req() req: RequeteAuthentifiee): Promise<VueSemaine> {
-    return this.vues.semaine(new Date(), req.utilisateur.fuseau);
+    return this.vues.semaine(req.utilisateur.id, new Date(), req.utilisateur.fuseau);
   }
 
   @Get('horizons')
   horizons(@Req() req: RequeteAuthentifiee): Promise<VueHorizons> {
-    return this.vues.horizons(new Date(), req.utilisateur.fuseau);
+    return this.vues.horizons(req.utilisateur.id, new Date(), req.utilisateur.fuseau);
   }
 
   @Get('a-revoir')
-  aRevoir(): Promise<VueARevoir> {
-    return this.vues.aRevoir();
+  aRevoir(@Req() req: RequeteAuthentifiee): Promise<VueARevoir> {
+    return this.vues.aRevoir(req.utilisateur.id);
   }
 }

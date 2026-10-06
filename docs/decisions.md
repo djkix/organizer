@@ -9,7 +9,7 @@
 | 5 | Sollicitations | Aucune par défaut, alarme comprise |
 | 6 | Activation d'une alarme | Item par item, à la voix ou par bouton |
 | 7 | Ressortir une pensée | Dans l'application seulement, jamais en notification |
-| 8 | Visibilité des pensées | Visibles aussi par Franck |
+| 8 | Visibilité des pensées | ~~Visibles aussi par Franck~~ Remplacée par la décision 25 |
 | 9 | Compte de l'API Gemini | Compte Google personnel de Franck, facturation activée |
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
 | 11 | Sauvegarde | Aucune au démarrage. Sauvegarde vers le NAS Synology au lot 2 |
@@ -32,3 +32,4 @@
 - Formulations exactes qui déclenchent l'alarme à la voix — à tirer du corpus du lot 0.
 - Le widget suffit-il à rappeler les choses sans alarme ni relance ? Test central du lot 2.
 - Basculer sur un compte Google dédié si les factures ou quotas deviennent gênants.
+| 25 | Données propres à chaque compte | Chaque compte ne voit et ne modifie que ses propres captures, items, actions, pensées, captures privées et éléments à revoir. Décidé par Franck le 6 octobre 2026 ; remplace la décision 8. |

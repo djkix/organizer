@@ -48,7 +48,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 5 | Sollicitations | Aucune par défaut, alarme comprise |
 | 6 | Activation d'une alarme | Item par item, à la voix ou par un bouton, au choix de L sur le moment |
 | 7 | Ressortir une pensée | Autorisé, mais seulement dans l'application, jamais en notification |
-| 8 | Visibilité des pensées | Visibles aussi par Franck |
+| 8 | Visibilité des pensées | ~~Visibles aussi par Franck~~ Remplacée par la décision 25 |
 | 9 | Compte de l'API Gemini | Compte Google personnel de Franck, avec facturation Cloud activée |
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
 | 11 | Sauvegarde | Aucune au démarrage, pour rester simple. Sauvegarde vers le NAS Synology au lot 2 |
@@ -716,7 +716,7 @@ Le recours à Gemini change la nature de cette section : les pensées de L trans
 5. **Mode privé par point d'entrée.** Une capture faite par le bouton privé est marquée privée avant même d'exister en base. Le code ne connaît pas de chemin qui envoie une capture privée vers Gemini.
 6. **Aucun contenu en clair dans les journaux**, même en mode debug, y compris les requêtes sortantes.
 7. **Les pensées n'apparaissent** ni dans l'agenda, ni dans les widgets, ni dans les notifications, dont le libellé reste générique.
-8. **Les deux comptes se voient.** L et Franck partagent la visibilité des pensées, par décision de L. Le mode privé concerne la sortie vers Gemini, pas la visibilité entre eux.
+8. **Chaque compte ne voit que ses données.** Captures, items, actions, pensées, captures privées, audio et éléments à revoir sont filtrés par le compte de la session ; l'accès à l'élément d'un autre compte répond 404, comme un élément introuvable (décision 25, qui remplace la décision 8).
 
 ### Les trois positions possibles
 

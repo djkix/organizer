@@ -20,9 +20,10 @@ export class CapturesOrdinairesService {
 
   async enregistrer(utilisateurId: string, d: DepotPrive): Promise<{ id: string; nouvelle: boolean }> {
     if (!FORMATS_ACCEPTES.includes(d.mime)) throw new FormatRefuse(d.mime);
-    const existante = await this.prisma.capture.findUnique({ where: { id: d.id }, select: { prive: true } });
+    const existante = await this.prisma.capture.findUnique({ where: { id: d.id }, select: { prive: true, utilisateurId: true } });
     // Un identifiant privé ne devient jamais ordinaire : ni envoi à Gemini, ni rejeu qui l'y conduirait.
-    if (existante?.prive) throw new IdentifiantRefuse(d.id);
+    // Un identifiant d'un autre compte est refusé de même.
+    if (existante && (existante.prive || existante.utilisateurId !== utilisateurId)) throw new IdentifiantRefuse(d.id);
     if (existante) {
       await this.finaliser(d.id);
       return { id: d.id, nouvelle: false };

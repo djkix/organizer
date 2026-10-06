@@ -33,6 +33,7 @@ function colonnes(e: NonNullable<CorrectionItem['echeance']>) {
   return c;
 }
 
+const proprietaire = (utilisateurId: string | null) => (utilisateurId === null ? {} : { capture: { utilisateurId } });
 const iso = (d: Date | null): string | null => d?.toISOString() ?? null;
 
 export class ItemsService {
@@ -43,21 +44,22 @@ export class ItemsService {
     private readonly agenda: SignalAgenda = SANS_AGENDA,
   ) {}
 
-  async cocher(itemId: string): Promise<void> {
-    await this.exigerAction(itemId);
+  async cocher(utilisateurId: string, itemId: string): Promise<void> {
+    await this.exigerAction(itemId, utilisateurId);
     await this.prisma.action.updateMany({ where: { itemId, faitLe: null }, data: { faitLe: this.maintenant() } });
     await this.agenda.signaler(itemId, DELAI_SYNCHRO_COCHAGE_MS);
   }
 
-  async decocher(itemId: string): Promise<void> {
-    await this.exigerAction(itemId);
+  async decocher(utilisateurId: string, itemId: string): Promise<void> {
+    await this.exigerAction(itemId, utilisateurId);
     await this.prisma.action.update({ where: { itemId }, data: { faitLe: null } });
     await this.agenda.signaler(itemId);
   }
 
-  async corriger(itemId: string, c: CorrectionItem): Promise<void> {
+  /** `utilisateurId` : propriétaire exigé (404 sinon). `null` : appel interne du bot, déjà lié au compte. */
+  async corriger(utilisateurId: string | null, itemId: string, c: CorrectionItem): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const it = await tx.item.findUnique({ where: { id: itemId }, include: { action: true, pensee: true } });
+      const it = await tx.item.findFirst({ where: { id: itemId, ...proprietaire(utilisateurId) }, include: { action: true, pensee: true } });
       if (!it) throw new ItemIntrouvable(itemId);
       const nature = c.nature ?? it.nature;
       if (c.nature && c.nature !== it.nature) {
@@ -103,19 +105,19 @@ export class ItemsService {
   }
 
   definirAlarme(itemId: string, alarme: boolean): Promise<void> {
-    return this.corriger(itemId, { alarme });
+    return this.corriger(null, itemId, { alarme });
   }
 
-  async cheminAudio(captureId: string, racine: string): Promise<{ chemin: string; mime: string } | null> {
+  async cheminAudio(utilisateurId: string, captureId: string, racine: string): Promise<{ chemin: string; mime: string } | null> {
     // `chemin` est relatif à la racine.
-    const c = await this.prisma.capture.findUnique({ where: { id: captureId }, select: { audioPath: true, audioMime: true } });
+    const c = await this.prisma.capture.findFirst({ where: { id: captureId, utilisateurId }, select: { audioPath: true, audioMime: true } });
     if (!c?.audioPath) return null;
     if (!resolve(racine, c.audioPath).startsWith(resolve(racine) + sep)) return null;
     return { chemin: c.audioPath, mime: c.audioMime ?? 'application/octet-stream' };
   }
 
-  private async exigerAction(itemId: string): Promise<void> {
-    const it = await this.prisma.item.findUnique({ where: { id: itemId }, include: { action: true } });
+  private async exigerAction(itemId: string, utilisateurId: string): Promise<void> {
+    const it = await this.prisma.item.findFirst({ where: { id: itemId, ...proprietaire(utilisateurId) }, include: { action: true } });
     if (!it || it.nature !== 'action' || !it.action) throw new ItemIntrouvable(itemId);
   }
 }
