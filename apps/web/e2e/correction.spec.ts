@@ -184,3 +184,22 @@ test('une date corrigée est annoncée d\'une phrase courte', async ({ page }) =
   await page.getByLabel('Un jour').fill('2026-10-08');
   await expect(page.getByRole('status').filter({ hasText: "C'est noté." })).toBeVisible();
 });
+
+test('détail : « Ce que tu as dit » montre la transcription ; sans elle, le lecteur seul', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
+  await simuler(page, {
+    ...CONNECTE,
+    'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [garage, draps], suggestions: [] }),
+    [`GET /api/captures/${garage.captureId}/transcription`]: json(200, { texte: 'Rappeler le garage demain à 10 heures.' }),
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Rappeler le garage/ }).click();
+  await expect(page.getByText('« Rappeler le garage demain à 10 heures. »')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Réécouter' })).toBeVisible();
+  await page.getByRole('button', { name: 'Retour' }).click();
+
+  // Ni transcription (404 du simulateur) ni audio : pas de carte du tout, aucun message d'erreur.
+  await page.getByRole('button', { name: /Changer les draps/ }).click();
+  await expect(page.getByRole('heading', { name: 'Quand' })).toBeVisible();
+  await expect(page.getByText('Ce que tu as dit')).toHaveCount(0);
+});
