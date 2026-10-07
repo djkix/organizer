@@ -2,753 +2,92 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Maquettes Organizer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palette Organizer</title>
+<style>
+  body { margin: 0; padding: 24px 20px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #F6F8F9; color: #172024; }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  p { max-width: 640px; line-height: 1.5; }
+  .colonnes { display: flex; flex-wrap: wrap; gap: 32px; }
+  table { border-collapse: collapse; }
+  td { padding: 4px 10px 4px 0; font-size: 14px; }
+  .pastille { display: inline-block; width: 28px; height: 20px; border-radius: 6px; border: 1px solid #DCE3E6; }
+</style>
 </head>
 <body>
-<style>
-  :root {
-    --bg: #FAF9F7;
-    --surface: #FFFFFF;
-    --surface-alt: #F2F0EC;
-    --text: #1C1B1F;
-    --muted: #6B6875;
-    --accent: #2F7A78;
-    --accent-soft: #E3EFEE;
-    --private: #5B4B8A;
-    --private-soft: #EDE9F6;
-    --alarm: #B7791F;
-    --line: #ECEAE6;
-    --stage: #E8E6E1;
-    --radius: 16px;
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #16151A;
-      --surface: #201F26;
-      --surface-alt: #2A2831;
-      --text: #EDEBF0;
-      --muted: #A09DAB;
-      --accent: #4FA5A2;
-      --accent-soft: #1E3634;
-      --private: #8B7BC4;
-      --private-soft: #2A2340;
-      --alarm: #D9A441;
-      --line: #2C2A33;
-      --stage: #0E0D11;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #16151A;
-    --surface: #201F26;
-    --surface-alt: #2A2831;
-    --text: #EDEBF0;
-    --muted: #A09DAB;
-    --accent: #4FA5A2;
-    --accent-soft: #1E3634;
-    --private: #8B7BC4;
-    --private-soft: #2A2340;
-    --alarm: #D9A441;
-    --line: #2C2A33;
-    --stage: #0E0D11;
-  }
-
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body {
-    margin: 0;
-    background: var(--stage);
-    font-family: var(--font);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 24px 16px;
-    gap: 14px;
-  }
-
-  .stage-head {
-    text-align: center;
-    color: var(--muted);
-    font-size: 13px;
-    line-height: 1.5;
-    max-width: 420px;
-  }
-  .stage-head strong { color: var(--text); font-size: 15px; display: block; margin-bottom: 4px; font-weight: 600; }
-  .stage-tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  .stage-btn {
-    font: inherit; font-size: 13px; color: var(--text); background: var(--surface);
-    border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer;
-  }
-  .stage-btn:hover { border-color: var(--muted); }
-
-  /* ---------- Phone frame ---------- */
-  .phone {
-    width: 412px; height: 880px; max-height: calc(100vh - 140px);
-    background: var(--bg);
-    border-radius: 44px;
-    border: 10px solid #0B0A0E;
-    box-shadow: 0 30px 60px rgba(0,0,0,.28);
-    overflow: hidden;
-    position: relative;
-    display: flex; flex-direction: column;
-  }
-  .statusbar {
-    height: 34px; flex: none; display: flex; align-items: center; justify-content: space-between;
-    padding: 0 22px; font-size: 12px; color: var(--muted); letter-spacing: .02em;
-  }
-  .viewport { flex: 1; position: relative; overflow: hidden; }
-
-  .view { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg); }
-  .view.active { display: flex; }
-
-  .vhead { flex: none; padding: 10px 20px 8px; display: flex; align-items: flex-start; gap: 12px; }
-  .vhead h1 { font-size: 24px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
-  .vhead .sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .vhead .spacer { flex: 1; }
-  .iconbtn {
-    width: 40px; height: 40px; flex: none; border-radius: 999px; border: none; background: transparent;
-    color: var(--text); cursor: pointer; display: grid; place-items: center; font-size: 18px;
-  }
-  .iconbtn:hover { background: var(--surface-alt); }
-
-  .subtabs { flex: none; display: flex; gap: 8px; padding: 2px 20px 12px; overflow-x: auto; scrollbar-width: none; }
-  .subtabs::-webkit-scrollbar { display: none; }
-  .chip {
-    font: inherit; font-size: 14px; white-space: nowrap; padding: 7px 14px; border-radius: 999px;
-    border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer;
-  }
-  .chip.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 500; }
-
-  .scroll { flex: 1; overflow-y: auto; padding: 0 16px 120px; }
-  .scroll::-webkit-scrollbar { width: 0; }
-
-  .daylabel { font-size: 13px; color: var(--muted); padding: 16px 6px 8px; font-weight: 500; }
-
-  /* ---------- Rows ---------- */
-  .row {
-    display: flex; align-items: flex-start; gap: 14px;
-    background: var(--surface); border-radius: var(--radius);
-    padding: 14px 16px; margin-bottom: 8px; cursor: pointer;
-  }
-  .box {
-    width: 24px; height: 24px; flex: none; margin-top: 1px; border-radius: 8px;
-    border: 2px solid var(--muted); background: transparent; cursor: pointer;
-    display: grid; place-items: center; padding: 0;
-  }
-  .box::after { content: ""; width: 10px; height: 6px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) scale(0); transition: transform .15s; margin-top: -3px; }
-  .row.done .box { background: var(--accent); border-color: var(--accent); }
-  .row.done .box::after { transform: rotate(-45deg) scale(1); }
-  .row.done .rtext { text-decoration: line-through; color: var(--muted); }
-  .rbody { flex: 1; min-width: 0; }
-  .rtext { font-size: 17px; line-height: 1.35; }
-  .rmeta { font-size: 14px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
-  .bell { color: var(--alarm); font-size: 13px; }
-
-  .card {
-    background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; cursor: pointer;
-  }
-  .card h3 { margin: 0 0 4px; font-size: 17px; font-weight: 600; }
-  .card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--text); }
-  .card .meta { font-size: 13px; color: var(--muted); margin-top: 8px; }
-  .echo {
-    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
-    font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px;
-  }
-
-  .empty { text-align: center; color: var(--muted); font-size: 16px; padding: 90px 30px; line-height: 1.6; }
-
-  /* ---------- Bottom nav + FAB ---------- */
-  .nav {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 68px; flex: none;
-    background: var(--surface); border-top: 1px solid var(--line);
-    display: flex; align-items: center; padding: 0 4px 6px;
-  }
-  .nav button {
-    flex: 1; background: none; border: none; font: inherit; font-size: 11px; color: var(--muted);
-    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0; cursor: pointer;
-  }
-  .nav button .ic { font-size: 19px; line-height: 1; }
-  .nav button.on { color: var(--accent); font-weight: 500; }
-  .fab {
-    position: absolute; right: 18px; bottom: 84px; width: 60px; height: 60px; border-radius: 999px;
-    background: var(--private); color: #fff; border: none; cursor: pointer;
-    display: grid; place-items: center; font-size: 24px;
-    box-shadow: 0 8px 20px rgba(91,75,138,.35);
-  }
-  .fab span { font-size: 22px; }
-
-  .undo {
-    position: absolute; left: 16px; right: 16px; bottom: 84px; background: var(--text); color: var(--bg);
-    border-radius: 14px; padding: 13px 16px; display: none; align-items: center; justify-content: space-between;
-    font-size: 14px;
-  }
-  .undo.on { display: flex; }
-  .undo button { background: none; border: none; color: var(--bg); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
-
-  /* ---------- Detail ---------- */
-  .detail-title { font-size: 22px; line-height: 1.3; padding: 4px 20px 14px; }
-  .block { background: var(--surface); border-radius: var(--radius); margin: 0 16px 10px; padding: 16px; }
-  .block .lbl { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
-  .btnrow { display: flex; gap: 8px; }
-  .btnrow button {
-    flex: 1; font: inherit; font-size: 14px; padding: 12px 6px; border-radius: 999px;
-    border: 1px solid var(--line); background: transparent; color: var(--text); cursor: pointer;
-  }
-  .btnrow button:active { background: var(--accent-soft); }
-  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .switch .t { font-size: 16px; }
-  .switch .t small { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .toggle { width: 50px; height: 30px; border-radius: 999px; background: var(--line); border: none; position: relative; cursor: pointer; flex: none; }
-  .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 999px; background: var(--surface); transition: left .18s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
-  .toggle.on { background: var(--alarm); }
-  .toggle.on::after { left: 23px; }
-  .player { display: flex; align-items: center; gap: 12px; }
-  .playbtn { width: 42px; height: 42px; border-radius: 999px; border: none; background: var(--accent-soft); color: var(--accent); font-size: 15px; cursor: pointer; flex: none; }
-  .wave { flex: 1; display: flex; align-items: center; gap: 3px; height: 28px; }
-  .wave i { flex: 1; background: var(--line); border-radius: 2px; display: block; }
-  .linkish { display: block; text-align: center; font-size: 14px; color: var(--muted); padding: 14px; text-decoration: underline; cursor: pointer; }
-
-  /* ---------- Private ---------- */
-  .view.private { background: var(--private-soft); }
-  .view.private .row, .view.private .card { background: var(--surface); }
-  .privehead { display: flex; align-items: center; gap: 8px; color: var(--private); font-size: 13px; padding: 0 20px 10px; }
-
-  .recorder { background: var(--private); color: #fff; align-items: center; justify-content: center; text-align: center; padding: 30px; }
-  .recorder .lock { font-size: 34px; opacity: .9; }
-  .recorder h2 { font-size: 22px; font-weight: 600; margin: 18px 0 6px; }
-  .recorder p { font-size: 15px; opacity: .8; margin: 0; line-height: 1.5; max-width: 260px; }
-  .recbtn { width: 108px; height: 108px; border-radius: 999px; border: 4px solid rgba(255,255,255,.5); background: #fff; color: var(--private); font-size: 34px; cursor: pointer; margin: 34px 0 14px; display: grid; place-items: center; }
-  .recbtn.rec { background: #fff; border-color: #fff; }
-  .recbtn.rec span { display: block; width: 32px; height: 32px; border-radius: 6px; background: var(--private); font-size: 0; }
-  .timer { font-size: 30px; font-variant-numeric: tabular-nums; letter-spacing: .02em; min-height: 36px; }
-  .rwave { display: flex; align-items: flex-end; gap: 4px; height: 40px; margin-top: 18px; }
-  .rwave i { width: 4px; background: rgba(255,255,255,.8); border-radius: 2px; height: 8px; }
-  .recorder .close { position: absolute; top: 12px; left: 12px; color: #fff; }
-
-  /* ---------- Settings ---------- */
-  .set { background: var(--surface); border-radius: var(--radius); margin: 0 16px 10px; overflow: hidden; }
-  .set .item { padding: 15px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 16px; cursor: pointer; }
-  .set .item:last-child { border-bottom: none; }
-  .set .item .v { color: var(--muted); font-size: 15px; }
-  .note { margin: 0 16px 10px; background: var(--accent-soft); border-radius: var(--radius); padding: 16px; font-size: 14px; line-height: 1.55; color: var(--text); }
-  .note b { display: block; margin-bottom: 6px; }
-
-  .field { margin: 0 16px 12px; background: var(--surface); border-radius: 999px; padding: 13px 18px; color: var(--muted); font-size: 16px; }
-  .sectlbl { font-size: 13px; color: var(--muted); padding: 16px 22px 8px; font-weight: 500; }
-
-  /* ---------- Widget / notif previews ---------- */
-  .os { background: linear-gradient(160deg, #3b4a6b, #1d2436); padding: 20px 16px 30px; border-radius: 0; }
-  .widget { background: var(--surface); border-radius: 22px; padding: 16px; }
-  .widget .wt { font-size: 12px; color: var(--muted); margin-bottom: 10px; letter-spacing: .04em; text-transform: uppercase; }
-  .widget .wl { font-size: 15px; padding: 5px 0; display: flex; gap: 8px; }
-  .widget .wl span { color: var(--muted); font-size: 13px; }
-  .notif { background: var(--surface); border-radius: 20px; padding: 14px 16px; margin-top: 14px; }
-  .notif .app { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
-  .notif .msg { font-size: 15px; }
-  .notif .acts { display: flex; gap: 18px; margin-top: 10px; font-size: 14px; color: var(--accent); font-weight: 500; }
-  .caption { color: rgba(255,255,255,.75); font-size: 13px; padding: 4px 4px 10px; }
-
-  .offline { background: var(--surface-alt); color: var(--muted); font-size: 13px; text-align: center; padding: 9px; }
-
-  @media (max-width: 500px) {
-    body { padding: 0; gap: 0; justify-content: flex-start; background: var(--bg); }
-    .stage-head { display: none; }
-    .stage-tools { position: fixed; bottom: 8px; left: 0; right: 0; z-index: 50; opacity: .92; }
-    .phone { width: 100%; height: 100vh; max-height: none; border: none; border-radius: 0; box-shadow: none; }
-  }
-</style>
-
-<div class="stage-head">
-  <strong>Organizer — maquettes cliquables</strong>
-  Prototype navigable. Coche, ouvre un item, appuie sur le bouton violet pour l'enregistrement privé.
+<h1>Organizer — « Sérénité affinée » (1.5.0)</h1>
+<p>Les écrans de référence vivent dans la maquette Claude Design validée le 7 octobre 2026 (privée, propriété de l'administrateur) :
+<a href="https://claude.ai/artifact/9CFZaw7oQPYcDq1GLChqK5">claude.ai/artifact/9CFZaw7oQPYcDq1GLChqK5</a>.
+La source de vérité des couleurs est <code>tokens.json</code> (contrastes testés), reprise dans <code>tokens.css</code>. Cette page la montre.</p>
+<div class="colonnes">
+<section><h2>Clair</h2><table><tr><td><span class="pastille" style="background:#F6F8F9"></span></td><td><code>bg</code></td><td><code>#F6F8F9</code></td></tr>
+<tr><td><span class="pastille" style="background:#FFFFFF"></span></td><td><code>surface</code></td><td><code>#FFFFFF</code></td></tr>
+<tr><td><span class="pastille" style="background:#E8EDEF"></span></td><td><code>surfaceAlt</code></td><td><code>#E8EDEF</code></td></tr>
+<tr><td><span class="pastille" style="background:#172024"></span></td><td><code>text</code></td><td><code>#172024</code></td></tr>
+<tr><td><span class="pastille" style="background:#4B575D"></span></td><td><code>muted</code></td><td><code>#4B575D</code></td></tr>
+<tr><td><span class="pastille" style="background:#00677D"></span></td><td><code>accent</code></td><td><code>#00677D</code></td></tr>
+<tr><td><span class="pastille" style="background:#DDEFF4"></span></td><td><code>accentSoft</code></td><td><code>#DDEFF4</code></td></tr>
+<tr><td><span class="pastille" style="background:#00515F"></span></td><td><code>accentInk</code></td><td><code>#00515F</code></td></tr>
+<tr><td><span class="pastille" style="background:#5B4B8A"></span></td><td><code>private</code></td><td><code>#5B4B8A</code></td></tr>
+<tr><td><span class="pastille" style="background:#EEEAF6"></span></td><td><code>privateSoft</code></td><td><code>#EEEAF6</code></td></tr>
+<tr><td><span class="pastille" style="background:#463874"></span></td><td><code>privateInk</code></td><td><code>#463874</code></td></tr>
+<tr><td><span class="pastille" style="background:#F7F6FA"></span></td><td><code>privateBg</code></td><td><code>#F7F6FA</code></td></tr>
+<tr><td><span class="pastille" style="background:#7D8A90"></span></td><td><code>check</code></td><td><code>#7D8A90</code></td></tr>
+<tr><td><span class="pastille" style="background:#DCE3E6"></span></td><td><code>line</code></td><td><code>#DCE3E6</code></td></tr>
+<tr><td><span class="pastille" style="background:#005A6C"></span></td><td><code>cta</code></td><td><code>#005A6C</code></td></tr>
+<tr><td><span class="pastille" style="background:#FFFFFF"></span></td><td><code>ctaText</code></td><td><code>#FFFFFF</code></td></tr>
+<tr><td><span class="pastille" style="background:#00404D"></span></td><td><code>ctaEdge</code></td><td><code>#00404D</code></td></tr>
+<tr><td><span class="pastille" style="background:#4A3B78"></span></td><td><code>ctaPrivate</code></td><td><code>#4A3B78</code></td></tr>
+<tr><td><span class="pastille" style="background:#FFFFFF"></span></td><td><code>ctaPrivateText</code></td><td><code>#FFFFFF</code></td></tr>
+<tr><td><span class="pastille" style="background:#2F2552"></span></td><td><code>ctaPrivateEdge</code></td><td><code>#2F2552</code></td></tr>
+<tr><td><span class="pastille" style="background:#E2EFEA"></span></td><td><code>tagActionBg</code></td><td><code>#E2EFEA</code></td></tr>
+<tr><td><span class="pastille" style="background:#1E5548"></span></td><td><code>tagActionText</code></td><td><code>#1E5548</code></td></tr>
+<tr><td><span class="pastille" style="background:#E3E8F4"></span></td><td><code>tagPenseeBg</code></td><td><code>#E3E8F4</code></td></tr>
+<tr><td><span class="pastille" style="background:#2C4A7A"></span></td><td><code>tagPenseeText</code></td><td><code>#2C4A7A</code></td></tr>
+<tr><td><span class="pastille" style="background:#E8EDEF"></span></td><td><code>tagInfoBg</code></td><td><code>#E8EDEF</code></td></tr>
+<tr><td><span class="pastille" style="background:#2E3A40"></span></td><td><code>tagInfoText</code></td><td><code>#2E3A40</code></td></tr>
+<tr><td><span class="pastille" style="background:#ECE9E1"></span></td><td><code>tagArevoirBg</code></td><td><code>#ECE9E1</code></td></tr>
+<tr><td><span class="pastille" style="background:#4E4630"></span></td><td><code>tagArevoirText</code></td><td><code>#4E4630</code></td></tr>
+<tr><td><span class="pastille" style="background:#CFE6EC"></span></td><td><code>tagAlarmeBg</code></td><td><code>#CFE6EC</code></td></tr>
+<tr><td><span class="pastille" style="background:#003F4B"></span></td><td><code>tagAlarmeText</code></td><td><code>#003F4B</code></td></tr>
+<tr><td><span class="pastille" style="background:#DDEFF4"></span></td><td><code>tagEcheanceBg</code></td><td><code>#DDEFF4</code></td></tr>
+<tr><td><span class="pastille" style="background:#00515F"></span></td><td><code>tagEcheanceText</code></td><td><code>#00515F</code></td></tr>
+<tr><td><span class="pastille" style="background:#EEEAF6"></span></td><td><code>tagPriveBg</code></td><td><code>#EEEAF6</code></td></tr>
+<tr><td><span class="pastille" style="background:#463874"></span></td><td><code>tagPriveText</code></td><td><code>#463874</code></td></tr></table></section>
+<section><h2>Sombre</h2><table><tr><td><span class="pastille" style="background:#0F1416"></span></td><td><code>bg</code></td><td><code>#0F1416</code></td></tr>
+<tr><td><span class="pastille" style="background:#182024"></span></td><td><code>surface</code></td><td><code>#182024</code></td></tr>
+<tr><td><span class="pastille" style="background:#1D272B"></span></td><td><code>surfaceAlt</code></td><td><code>#1D272B</code></td></tr>
+<tr><td><span class="pastille" style="background:#E7EDEF"></span></td><td><code>text</code></td><td><code>#E7EDEF</code></td></tr>
+<tr><td><span class="pastille" style="background:#A7B3B8"></span></td><td><code>muted</code></td><td><code>#A7B3B8</code></td></tr>
+<tr><td><span class="pastille" style="background:#5FC3DD"></span></td><td><code>accent</code></td><td><code>#5FC3DD</code></td></tr>
+<tr><td><span class="pastille" style="background:#12333B"></span></td><td><code>accentSoft</code></td><td><code>#12333B</code></td></tr>
+<tr><td><span class="pastille" style="background:#9ADDEE"></span></td><td><code>accentInk</code></td><td><code>#9ADDEE</code></td></tr>
+<tr><td><span class="pastille" style="background:#A797D9"></span></td><td><code>private</code></td><td><code>#A797D9</code></td></tr>
+<tr><td><span class="pastille" style="background:#2A2440"></span></td><td><code>privateSoft</code></td><td><code>#2A2440</code></td></tr>
+<tr><td><span class="pastille" style="background:#C9BDF0"></span></td><td><code>privateInk</code></td><td><code>#C9BDF0</code></td></tr>
+<tr><td><span class="pastille" style="background:#13111B"></span></td><td><code>privateBg</code></td><td><code>#13111B</code></td></tr>
+<tr><td><span class="pastille" style="background:#6F7D83"></span></td><td><code>check</code></td><td><code>#6F7D83</code></td></tr>
+<tr><td><span class="pastille" style="background:#2A3539"></span></td><td><code>line</code></td><td><code>#2A3539</code></td></tr>
+<tr><td><span class="pastille" style="background:#8AD8EC"></span></td><td><code>cta</code></td><td><code>#8AD8EC</code></td></tr>
+<tr><td><span class="pastille" style="background:#04262E"></span></td><td><code>ctaText</code></td><td><code>#04262E</code></td></tr>
+<tr><td><span class="pastille" style="background:#5FC3DD"></span></td><td><code>ctaEdge</code></td><td><code>#5FC3DD</code></td></tr>
+<tr><td><span class="pastille" style="background:#C4B8F0"></span></td><td><code>ctaPrivate</code></td><td><code>#C4B8F0</code></td></tr>
+<tr><td><span class="pastille" style="background:#1A1330"></span></td><td><code>ctaPrivateText</code></td><td><code>#1A1330</code></td></tr>
+<tr><td><span class="pastille" style="background:#8B7BC4"></span></td><td><code>ctaPrivateEdge</code></td><td><code>#8B7BC4</code></td></tr>
+<tr><td><span class="pastille" style="background:#173229"></span></td><td><code>tagActionBg</code></td><td><code>#173229</code></td></tr>
+<tr><td><span class="pastille" style="background:#9FD8C4"></span></td><td><code>tagActionText</code></td><td><code>#9FD8C4</code></td></tr>
+<tr><td><span class="pastille" style="background:#25304A"></span></td><td><code>tagPenseeBg</code></td><td><code>#25304A</code></td></tr>
+<tr><td><span class="pastille" style="background:#B6C9F0"></span></td><td><code>tagPenseeText</code></td><td><code>#B6C9F0</code></td></tr>
+<tr><td><span class="pastille" style="background:#232D31"></span></td><td><code>tagInfoBg</code></td><td><code>#232D31</code></td></tr>
+<tr><td><span class="pastille" style="background:#C9D3D7"></span></td><td><code>tagInfoText</code></td><td><code>#C9D3D7</code></td></tr>
+<tr><td><span class="pastille" style="background:#36322A"></span></td><td><code>tagArevoirBg</code></td><td><code>#36322A</code></td></tr>
+<tr><td><span class="pastille" style="background:#E0D5B8"></span></td><td><code>tagArevoirText</code></td><td><code>#E0D5B8</code></td></tr>
+<tr><td><span class="pastille" style="background:#0B3E49"></span></td><td><code>tagAlarmeBg</code></td><td><code>#0B3E49</code></td></tr>
+<tr><td><span class="pastille" style="background:#B8E9F5"></span></td><td><code>tagAlarmeText</code></td><td><code>#B8E9F5</code></td></tr>
+<tr><td><span class="pastille" style="background:#12333B"></span></td><td><code>tagEcheanceBg</code></td><td><code>#12333B</code></td></tr>
+<tr><td><span class="pastille" style="background:#9ADDEE"></span></td><td><code>tagEcheanceText</code></td><td><code>#9ADDEE</code></td></tr>
+<tr><td><span class="pastille" style="background:#2A2440"></span></td><td><code>tagPriveBg</code></td><td><code>#2A2440</code></td></tr>
+<tr><td><span class="pastille" style="background:#C9BDF0"></span></td><td><code>tagPriveText</code></td><td><code>#C9BDF0</code></td></tr></table></section>
 </div>
-
-<div class="phone">
-  <div class="statusbar"><span>9:41</span><span>Organizer</span><span>100 %</span></div>
-  <div class="viewport">
-
-    <!-- ============ À FAIRE ============ -->
-    <div class="view active" id="v-todo">
-      <div class="vhead">
-        <div>
-          <h1>Aujourd'hui</h1>
-          <div class="sub">Mardi 22 septembre</div>
-        </div>
-        <div class="spacer"></div>
-        <button class="iconbtn" onclick="go('v-search')" aria-label="Rechercher">⌕</button>
-      </div>
-      <div class="subtabs">
-        <button class="chip on" data-list="today" onclick="setList('today',this)">Aujourd'hui</button>
-        <button class="chip" data-list="week" onclick="setList('week',this)">Semaine</button>
-        <button class="chip" data-list="horizons" onclick="setList('horizons',this)">Horizons</button>
-        <button class="chip" data-list="quick" onclick="setList('quick',this)">Rapide</button>
-      </div>
-      <div class="scroll" id="list-scroll"></div>
-    </div>
-
-    <!-- ============ FILS ============ -->
-    <div class="view" id="v-fils">
-      <div class="vhead">
-        <div><h1>Fils</h1><div class="sub">Ce qui se regroupe tout seul</div></div>
-        <div class="spacer"></div>
-        <button class="iconbtn" onclick="go('v-search')" aria-label="Rechercher">⌕</button>
-      </div>
-      <div class="scroll">
-        <div class="card" onclick="go('v-fil')"><h3>Noël</h3><p class="meta">7 choses · dernière il y a 2 jours</p></div>
-        <div class="card" onclick="go('v-fil')"><h3>Halloween</h3><p class="meta">4 choses · dernière hier</p></div>
-        <div class="card" onclick="go('v-fil')"><h3>Maison</h3><p class="meta">12 choses · dernière ce matin</p></div>
-        <div class="card" onclick="go('v-fil')"><h3>Hugo</h3><p class="meta">9 pensées · dernière samedi</p></div>
-        <div class="card" onclick="go('v-fil')"><h3>Rendez-vous santé</h3><p class="meta">3 choses · dernière il y a 5 jours</p></div>
-      </div>
-    </div>
-
-    <!-- ============ PENSÉES ============ -->
-    <div class="view" id="v-pensees">
-      <div class="vhead">
-        <div><h1>Pensées</h1><div class="sub">Rien à cocher ici</div></div>
-        <div class="spacer"></div>
-        <button class="iconbtn" onclick="go('v-search')" aria-label="Rechercher">⌕</button>
-      </div>
-      <div class="subtabs">
-        <button class="chip on">Tout</button>
-        <button class="chip">Hugo</button>
-        <button class="chip">Inès</button>
-        <button class="chip">Moi</button>
-        <button class="chip">Fatigue</button>
-      </div>
-      <div class="scroll">
-        <div class="card">
-          <p>Je crois que je confonds être disponible et être utile. Ça revient souvent en ce moment.</p>
-          <div class="meta">Hier, 23:14</div>
-          <div class="echo">↺ Tu avais dit quelque chose de proche le 3 mars</div>
-        </div>
-        <div class="card">
-          <p>Avec Hugo, les discussions du soir se passent mieux quand on n'a rien à régler.</p>
-          <div class="meta">Samedi, 21:02</div>
-        </div>
-        <div class="card">
-          <p>Inès me ressemble sur ce point-là et ça me met mal à l'aise. À creuser, sans me juger.</p>
-          <div class="meta">Jeudi, 08:40</div>
-        </div>
-        <div class="card">
-          <p>Noter ne suffit pas. Ce qui me fait du bien, c'est de relire trois jours après.</p>
-          <div class="meta">12 septembre</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============ PRIVÉ ============ -->
-    <div class="view private" id="v-prive">
-      <div class="vhead">
-        <div><h1>Privé</h1><div class="sub">Par date et par heure</div></div>
-      </div>
-      <div class="privehead">🔒 Ces enregistrements ne sortent jamais de la maison</div>
-      <div class="scroll" id="prive-scroll">
-        <div class="daylabel">Hier</div>
-        <div class="row"><button class="playbtn">▶</button><div class="rbody"><div class="rtext">23:41 · 1 min 04</div><div class="rmeta">ajouter un mot</div></div></div>
-        <div class="row"><button class="playbtn">▶</button><div class="rbody"><div class="rtext">18:12 · 26 s</div><div class="rmeta">après le coup de fil</div></div></div>
-        <div class="daylabel">Dimanche 20 septembre</div>
-        <div class="row"><button class="playbtn">▶</button><div class="rbody"><div class="rtext">09:55 · 2 min 18</div><div class="rmeta">ajouter un mot</div></div></div>
-        <div class="daylabel">Vendredi 18 septembre</div>
-        <div class="row"><button class="playbtn">▶</button><div class="rbody"><div class="rtext">22:30 · 47 s</div><div class="rmeta">ajouter un mot</div></div></div>
-      </div>
-    </div>
-
-    <!-- ============ RÉGLAGES ============ -->
-    <div class="view" id="v-reglages">
-      <div class="vhead"><div><h1>Réglages</h1></div></div>
-      <div class="scroll">
-        <div class="sectlbl">Quand tu parles</div>
-        <div class="set">
-          <div class="item"><span>Je te préviens après</span><span class="v">60 s</span></div>
-          <div class="item"><span>Je découpe après</span><span class="v">3 min</span></div>
-          <div class="item"><span>Limites désactivées</span><span class="v">Non</span></div>
-        </div>
-        <div class="sectlbl">Affichage</div>
-        <div class="set">
-          <div class="item" onclick="cycleTheme()"><span>Thème</span><span class="v" id="theme-val">Système</span></div>
-          <div class="item" onclick="toggleEmpty()"><span>Aperçu listes vides</span><span class="v" id="empty-val">Non</span></div>
-        </div>
-        <div class="sectlbl">Comptes</div>
-        <div class="set">
-          <div class="item"><span>Telegram</span><span class="v">@organizer_lud_bot</span></div>
-          <div class="item"><span>Agenda Google</span><span class="v">Connecté</span></div>
-          <div class="item"><span>Partagé avec</span><span class="v">Franck</span></div>
-        </div>
-        <div class="note">
-          <b>Ce qui sort de la maison</b>
-          Pour ranger tes vocaux, ils passent par une IA. Rien n'est revendu ni utilisé pour entraîner quoi que ce soit.
-          Tout ce que tu enregistres avec le bouton violet ne sort jamais : ça reste sur le serveur à la maison.
-        </div>
-        <div class="set"><div class="item" onclick="go('v-extras')"><span>Aperçu écran d'accueil et notifications</span><span class="v">›</span></div></div>
-        <div class="set"><div class="item"><span>Exporter tout</span><span class="v">›</span></div></div>
-        <div class="set"><div class="item" onclick="go('v-revoir')"><span>À revoir</span><span class="v">2 ›</span></div></div>
-      </div>
-    </div>
-
-    <!-- ============ DÉTAIL ITEM ============ -->
-    <div class="view" id="v-detail" data-full>
-      <div class="vhead">
-        <button class="iconbtn" onclick="back()" aria-label="Retour">←</button>
-        <div class="spacer"></div>
-      </div>
-      <div class="scroll" style="padding-bottom:30px">
-        <div class="detail-title" id="d-title">Prendre rendez-vous chez le dermato</div>
-        <div class="block">
-          <div class="lbl" id="d-when">Mardi 22 septembre, 10:00</div>
-          <div class="switch">
-            <div class="t">Me réveiller pour ça<small>Sinon, ça reste silencieux</small></div>
-            <button class="toggle" id="d-alarm" onclick="this.classList.toggle('on')"></button>
-          </div>
-        </div>
-        <div class="block">
-          <div class="lbl">Repousser</div>
-          <div class="btnrow">
-            <button onclick="back()">Demain</button>
-            <button onclick="back()">La semaine prochaine</button>
-            <button onclick="back()">Plus tard</button>
-          </div>
-        </div>
-        <div class="block">
-          <div class="lbl">Ce que tu as dit, mardi à 8:12</div>
-          <div class="player">
-            <button class="playbtn">▶</button>
-            <div class="wave" id="d-wave"></div>
-            <span style="font-size:13px;color:var(--muted)">0:14</span>
-          </div>
-        </div>
-        <div class="block">
-          <div class="lbl">Rangé dans</div>
-          <div style="font-size:16px">Rendez-vous santé</div>
-        </div>
-        <span class="linkish" onclick="back()">Ce n'est pas une chose à faire</span>
-      </div>
-    </div>
-
-    <!-- ============ FIL ============ -->
-    <div class="view" id="v-fil" data-full>
-      <div class="vhead">
-        <button class="iconbtn" onclick="back()" aria-label="Retour">←</button>
-        <div><h1>Noël</h1><div class="sub">7 choses</div></div>
-      </div>
-      <div class="scroll">
-        <div class="daylabel">À faire</div>
-        <div class="row" onclick="openDetail('Commander le cadeau d’Inès','Avant le 15 décembre')"><button class="box" onclick="tick(event,this)"></button><div class="rbody"><div class="rtext">Commander le cadeau d’Inès</div><div class="rmeta">Avant le 15 décembre</div></div></div>
-        <div class="row" onclick="openDetail('Demander à Hugo ce qui lui ferait plaisir','Avant Noël')"><button class="box" onclick="tick(event,this)"></button><div class="rbody"><div class="rtext">Demander à Hugo ce qui lui ferait plaisir</div><div class="rmeta">Avant Noël</div></div></div>
-        <div class="row" onclick="openDetail('Réserver le repas du 24','Avant le 1er décembre')"><button class="box" onclick="tick(event,this)"></button><div class="rbody"><div class="rtext">Réserver le repas du 24</div><div class="rmeta">Avant le 1er décembre</div></div></div>
-        <div class="daylabel">Pensées liées</div>
-        <div class="card"><p>Cette année j'aimerais que ce soit plus simple. Moins de courses, plus de temps.</p><div class="meta">8 septembre</div></div>
-      </div>
-    </div>
-
-    <!-- ============ RECHERCHE ============ -->
-    <div class="view" id="v-search" data-full>
-      <div class="vhead">
-        <button class="iconbtn" onclick="back()" aria-label="Retour">←</button>
-        <div class="spacer"></div>
-      </div>
-      <div class="field">dermato</div>
-      <div class="scroll">
-        <div class="daylabel">À faire</div>
-        <div class="row" onclick="openDetail('Prendre rendez-vous chez le dermato','Mardi 22 septembre, 10:00')"><button class="box" onclick="tick(event,this)"></button><div class="rbody"><div class="rtext">Prendre rendez-vous chez le dermato</div><div class="rmeta">Aujourd'hui, 10:00</div></div></div>
-        <div class="daylabel">Pensées</div>
-        <div class="card"><p>J'ai encore repoussé le dermato. Je remets toujours ce qui me concerne moi.</p><div class="meta">2 septembre</div></div>
-        <div class="empty" style="padding:30px 20px;font-size:14px">Les enregistrements privés ne sont pas cherchables.</div>
-      </div>
-    </div>
-
-    <!-- ============ À REVOIR ============ -->
-    <div class="view" id="v-revoir" data-full>
-      <div class="vhead">
-        <button class="iconbtn" onclick="back()" aria-label="Retour">←</button>
-        <div><h1>À revoir</h1><div class="sub">Quand tu veux, rien ne presse</div></div>
-      </div>
-      <div class="scroll">
-        <div class="card">
-          <p>« … enfin bref, le truc de la semaine dernière, faudrait que j'y repense »</p>
-          <div class="player" style="margin-top:12px"><button class="playbtn">▶</button><div class="wave" id="r-wave"></div><span style="font-size:13px;color:var(--muted)">0:09</span></div>
-          <div class="btnrow" style="margin-top:14px"><button>C'est à faire</button><button>C'est une pensée</button></div>
-        </div>
-        <div class="card">
-          <p>« vendredi ou samedi, je sais plus »</p>
-          <div class="player" style="margin-top:12px"><button class="playbtn">▶</button><div class="wave" id="r-wave2"></div><span style="font-size:13px;color:var(--muted)">0:04</span></div>
-          <div class="btnrow" style="margin-top:14px"><button>C'est à faire</button><button>C'est une pensée</button></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============ ENREGISTREUR PRIVÉ ============ -->
-    <div class="view recorder" id="v-rec" data-full>
-      <button class="iconbtn close" onclick="stopRec(true)" aria-label="Fermer">✕</button>
-      <div class="lock">🔒</div>
-      <h2 id="rec-title">Enregistrement privé</h2>
-      <p id="rec-sub">Ça reste à la maison. Rien n'est envoyé, rien n'est lu, rien n'est trié.</p>
-      <button class="recbtn" id="recbtn" onclick="toggleRec()">●</button>
-      <div class="timer" id="rec-timer"></div>
-      <div class="rwave" id="rec-wave"></div>
-    </div>
-
-    <!-- ============ APERÇUS SYSTÈME ============ -->
-    <div class="view" id="v-extras" data-full>
-      <div class="vhead">
-        <button class="iconbtn" onclick="back()" aria-label="Retour">←</button>
-        <div><h1>Aperçus</h1><div class="sub">Écran d'accueil et notifications</div></div>
-      </div>
-      <div class="scroll" style="padding:0">
-        <div class="os">
-          <div class="caption">Widget sur l'écran d'accueil — silencieux, jamais plus de 4 lignes</div>
-          <div class="widget">
-            <div class="wt">Organizer</div>
-            <div class="wl">Dermato <span>10:00</span></div>
-            <div class="wl">Colis au point relais <span>avant 19h</span></div>
-            <div class="wl">Renvoyer les chaussures <span>vendredi</span></div>
-            <div class="wl">Décorations Halloween <span>avant le 25/10</span></div>
-          </div>
-          <div class="caption" style="padding-top:22px">Notification d'alarme — uniquement si elle l'a demandée sur cet item</div>
-          <div class="notif">
-            <div class="app">Organizer · maintenant</div>
-            <div class="msg">Dermato, dans 10 minutes</div>
-            <div class="acts"><span>Fait</span><span>Demain</span></div>
-          </div>
-          <div class="caption" style="padding-top:22px">Notification silencieuse — pas de son, pas de vibration</div>
-          <div class="notif">
-            <div class="app">Organizer · 8:00</div>
-            <div class="msg">3 choses aujourd'hui</div>
-            <div class="acts"><span>Voir</span></div>
-          </div>
-          <div class="caption" style="padding-top:22px">Accusé de réception dans Telegram</div>
-          <div class="notif">
-            <div class="app">@organizer_lud_bot · maintenant</div>
-            <div class="msg">C'est noté. Rendez-vous dermato mardi 22 à 10h.</div>
-            <div class="acts"><span>Avec alarme</span><span>Pas de date</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- nav + fab + undo -->
-    <div class="undo" id="undo"><span>Fait</span><button onclick="undo()">Annuler</button></div>
-    <button class="fab" id="fab" onclick="openRec()" aria-label="Enregistrement privé"><span>🔒</span></button>
-    <div class="nav" id="nav">
-      <button class="on" data-tab="v-todo" onclick="tab('v-todo',this)"><span class="ic">☑</span>À faire</button>
-      <button data-tab="v-fils" onclick="tab('v-fils',this)"><span class="ic">◍</span>Fils</button>
-      <button data-tab="v-pensees" onclick="tab('v-pensees',this)"><span class="ic">◌</span>Pensées</button>
-      <button data-tab="v-reglages" onclick="tab('v-reglages',this)"><span class="ic">⚙</span>Réglages</button>
-    </div>
-  </div>
-</div>
-
-<div class="stage-tools">
-  <button class="stage-btn" onclick="cycleTheme()">Thème : <span id="theme-btn">système</span></button>
-  <button class="stage-btn" onclick="toggleEmpty()">Listes vides</button>
-  <button class="stage-btn" onclick="tab('v-todo',document.querySelector('.nav button'))">Revenir à l'accueil</button>
-</div>
-
-<script>
-  var DATA = {
-    today: [
-      { g: null, t: "Prendre rendez-vous chez le dermato", m: "10:00", bell: true },
-      { g: null, t: "Récupérer le colis au point relais", m: "avant 19h" },
-      { g: null, t: "Renvoyer les chaussures", m: "avant vendredi" },
-      { g: null, t: "Commander les décorations d'Halloween", m: "avant le 25 octobre" },
-      { g: null, t: "Changer les draps", m: "5 min" }
-    ],
-    week: [
-      { g: "Mercredi 23", t: "Appeler le garage", m: "matin" },
-      { g: null, t: "Sortir les poubelles", m: "soir" },
-      { g: "Jeudi 24", t: "Rendez-vous école d’Inès", m: "17:30", bell: true },
-      { g: "Vendredi 25", t: "Renvoyer les chaussures", m: "dernier jour" },
-      { g: null, t: "Faire les courses du week-end", m: "" }
-    ],
-    horizons: [
-      { g: "Avant le 25 octobre", t: "Commander les décorations d'Halloween", m: "" },
-      { g: null, t: "Trouver un déguisement pour Inès", m: "" },
-      { g: "Avant Noël", t: "Commander le cadeau d’Inès", m: "" },
-      { g: null, t: "Demander à Hugo ce qui lui ferait plaisir", m: "" },
-      { g: null, t: "Réserver le repas du 24", m: "" },
-      { g: "Avant mars", t: "Reprendre rendez-vous chez le dentiste", m: "" },
-      { g: null, t: "Trier les affaires d'hiver", m: "" }
-    ],
-    quick: [
-      { g: null, t: "Changer les draps", m: "5 min" },
-      { g: null, t: "Répondre à Maman", m: "2 min" },
-      { g: null, t: "Sortir les poubelles", m: "2 min" },
-      { g: null, t: "Noter le code du portail", m: "1 min" },
-      { g: null, t: "Arroser les plantes", m: "3 min" }
-    ]
-  };
-  var TITLES = {
-    today: ["Aujourd'hui", "Mardi 22 septembre"],
-    week: ["Cette semaine", "Les 7 prochains jours"],
-    horizons: ["Horizons", "Sans date précise"],
-    quick: ["Rapide", "Moins de 5 minutes"]
-  };
-  var EMPTIES = {
-    today: "Rien pour aujourd'hui.",
-    week: "Rien cette semaine.",
-    horizons: "Rien en attente.",
-    quick: "Rien de court sous la main."
-  };
-
-  var state = { list: "today", empty: false, theme: "system", stack: [], view: "v-todo" };
-
-  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;"); }
-
-  function renderList() {
-    var wrap = document.getElementById("list-scroll");
-    var h = document.querySelector("#v-todo h1");
-    var s = document.querySelector("#v-todo .sub");
-    h.textContent = TITLES[state.list][0];
-    s.textContent = TITLES[state.list][1];
-    if (state.empty) { wrap.innerHTML = '<div class="empty">' + EMPTIES[state.list] + "</div>"; return; }
-    var out = "";
-    DATA[state.list].forEach(function (it) {
-      if (it.g) out += '<div class="daylabel">' + esc(it.g) + "</div>";
-      out += '<div class="row" onclick="openDetail(\'' + esc(it.t).replace(/'/g, "\\'") + "','" + esc(it.m || "Sans date").replace(/'/g, "\\'") + '\')">' +
-        '<button class="box" onclick="tick(event,this)"></button><div class="rbody"><div class="rtext">' + esc(it.t) + "</div>" +
-        (it.m || it.bell ? '<div class="rmeta">' + (it.bell ? '<span class="bell">◔</span>' : "") + esc(it.m) + "</div>" : "") +
-        "</div></div>";
-    });
-    wrap.innerHTML = out;
-  }
-
-  function setList(name, el) {
-    state.list = name;
-    [].forEach.call(document.querySelectorAll("#v-todo .chip"), function (c) { c.classList.remove("on"); });
-    el.classList.add("on");
-    renderList();
-  }
-
-  function show(id) {
-    [].forEach.call(document.querySelectorAll(".view"), function (v) { v.classList.remove("active"); });
-    var v = document.getElementById(id);
-    v.classList.add("active");
-    state.view = id;
-    var full = v.hasAttribute("data-full");
-    document.getElementById("nav").style.display = full ? "none" : "flex";
-    document.getElementById("fab").style.display = (full || id === "v-prive") ? "none" : "grid";
-    var sc = v.querySelector(".scroll");
-    if (sc) sc.scrollTop = 0;
-  }
-
-  function tab(id, el) {
-    state.stack = [];
-    show(id);
-    [].forEach.call(document.querySelectorAll(".nav button"), function (b) { b.classList.remove("on"); });
-    if (el) el.classList.add("on");
-  }
-  function go(id) { state.stack.push(state.view); show(id); }
-  function back() { var p = state.stack.pop() || "v-todo"; show(p); }
-
-  function openDetail(title, when) {
-    document.getElementById("d-title").textContent = title;
-    document.getElementById("d-when").textContent = when;
-    document.getElementById("d-alarm").classList.toggle("on", /10:00|17:30/.test(when));
-    go("v-detail");
-  }
-
-  var pending = null;
-  function tick(e, el) {
-    e.stopPropagation();
-    var row = el.closest(".row");
-    row.classList.toggle("done");
-    if (row.classList.contains("done")) {
-      pending = row;
-      var u = document.getElementById("undo");
-      u.classList.add("on");
-      clearTimeout(pending.timer);
-      pending.timer = setTimeout(function () { u.classList.remove("on"); if (pending) { pending.style.display = "none"; pending = null; } }, 4000);
-    }
-  }
-  function undo() {
-    if (pending) { pending.classList.remove("done"); clearTimeout(pending.timer); pending = null; }
-    document.getElementById("undo").classList.remove("on");
-  }
-
-  /* ---- Recorder ---- */
-  var rec = { on: false, t: 0, int: null, anim: null };
-  function openRec() { go("v-rec"); resetRec(); }
-  function resetRec() {
-    rec.on = false; rec.t = 0;
-    document.getElementById("rec-timer").textContent = "";
-    document.getElementById("recbtn").classList.remove("rec");
-    document.getElementById("recbtn").innerHTML = "●";
-    document.getElementById("rec-title").textContent = "Enregistrement privé";
-    document.getElementById("rec-sub").textContent = "Ça reste à la maison. Rien n'est envoyé, rien n'est lu, rien n'est trié.";
-    [].forEach.call(document.querySelectorAll("#rec-wave i"), function (b) { b.style.height = "8px"; });
-  }
-  function toggleRec() { rec.on ? stopRec(false) : startRec(); }
-  function startRec() {
-    rec.on = true; rec.t = 0;
-    var b = document.getElementById("recbtn");
-    b.classList.add("rec"); b.innerHTML = "<span></span>";
-    document.getElementById("rec-title").textContent = "J'écoute";
-    document.getElementById("rec-sub").textContent = "Appuie sur le carré quand tu as fini.";
-    rec.int = setInterval(function () {
-      rec.t++;
-      var m = Math.floor(rec.t / 60), s = rec.t % 60;
-      document.getElementById("rec-timer").textContent = m + ":" + (s < 10 ? "0" : "") + s;
-    }, 1000);
-    rec.anim = setInterval(function () {
-      [].forEach.call(document.querySelectorAll("#rec-wave i"), function (bar) {
-        bar.style.height = (6 + Math.random() * 34) + "px";
-      });
-    }, 130);
-  }
-  function stopRec(close) {
-    clearInterval(rec.int); clearInterval(rec.anim);
-    if (rec.on && !close && rec.t > 0) {
-      var m = Math.floor(rec.t / 60), s = rec.t % 60;
-      var dur = m > 0 ? (m + " min " + (s < 10 ? "0" : "") + s) : (s + " s");
-      var now = new Date();
-      var hh = ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2);
-      var sc = document.getElementById("prive-scroll");
-      var div = document.createElement("div");
-      div.innerHTML = '<div class="daylabel">Aujourd\'hui</div><div class="row"><button class="playbtn">▶</button>' +
-        '<div class="rbody"><div class="rtext">' + hh + " · " + dur + '</div><div class="rmeta">ajouter un mot</div></div></div>';
-      sc.insertBefore(div, sc.firstChild);
-    }
-    rec.on = false;
-    state.stack = [];
-    show("v-prive");
-    [].forEach.call(document.querySelectorAll(".nav button"), function (b) { b.classList.remove("on"); });
-    resetRec();
-  }
-
-  /* ---- Theme / empty ---- */
-  function cycleTheme() {
-    var order = ["system", "light", "dark"];
-    state.theme = order[(order.indexOf(state.theme) + 1) % 3];
-    if (state.theme === "system") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", state.theme);
-    var label = { system: "système", light: "clair", dark: "sombre" }[state.theme];
-    document.getElementById("theme-btn").textContent = label;
-    document.getElementById("theme-val").textContent = label.charAt(0).toUpperCase() + label.slice(1);
-  }
-  function toggleEmpty() {
-    state.empty = !state.empty;
-    document.getElementById("empty-val").textContent = state.empty ? "Oui" : "Non";
-    renderList();
-  }
-
-  /* ---- init ---- */
-  ["d-wave", "r-wave", "r-wave2"].forEach(function (id) {
-    var w = document.getElementById(id);
-    if (!w) return;
-    for (var i = 0; i < 34; i++) {
-      var b = document.createElement("i");
-      b.style.height = (4 + Math.abs(Math.sin(i * 1.1)) * 20) + "px";
-      w.appendChild(b);
-    }
-  });
-  var rw = document.getElementById("rec-wave");
-  for (var i = 0; i < 28; i++) rw.appendChild(document.createElement("i"));
-
-  renderList();
-  show("v-todo");
-</script>
 </body>
 </html>

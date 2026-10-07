@@ -869,6 +869,7 @@ Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo p
 | Mode sombre | Suivi du réglage système Android |
 | Langue | Français uniquement, y compris les messages du bot |
 | Lisibilité | Corps de texte à 16 px minimum, phrases courtes |
+| Typographie | Plus Jakarta Sans, auto-hébergée ; palette « Sérénité affinée » (`design/tokens.json`, contrastes testés dans les deux thèmes) |
 
 ### Maintenabilité
 
