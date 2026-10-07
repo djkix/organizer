@@ -38,7 +38,7 @@ Hors du lot (refusés ou reportés pendant l'exploration) :
 
 ## Direction visuelle
 
-Une seule police : **Plus Jakarta Sans** (400, 500, 600, 700), **auto-hébergée** en woff2 dans `apps/web/static/` (la
+Une seule police : **Plus Jakarta Sans** (400, 500, 600, 700), **auto-hébergée** (paquet `@fontsource-variable/plus-jakarta-sans`, woff2 servis par la PWA ; la
 CSP de Caddy ne doit pas s'ouvrir à Google Fonts), repli `system-ui, sans-serif`.
 
 Formes : cartes à 14–16 px d'arrondi, filet de 1 px, pas d'ombre portée hors la très légère ombre de l'onglet actif ;
