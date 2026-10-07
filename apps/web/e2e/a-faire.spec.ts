@@ -69,6 +69,12 @@ test('les onglets Semaine et Horizons, et un état vide neutre', async ({ page }
   await page.getByRole('link', { name: 'Semaine' }).click();
   await expect(page.getByRole('heading', { name: 'Cette semaine' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Demain' })).toBeVisible();
+  const jours = page.getByRole('navigation', { name: 'Jours' });
+  await expect(jours.locator('.jour')).toHaveCount(7);
+  await expect(jours.locator('[aria-current="date"]')).toHaveCount(1);
+  const lien = jours.getByRole('link').first();
+  const cible = (await lien.getAttribute('href'))!;
+  await expect(page.locator(cible)).toHaveCount(1);
   await page.getByRole('link', { name: 'Horizons' }).click();
   await expect(page.getByText('Rien en attente.')).toBeVisible();
 });
