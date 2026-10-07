@@ -87,7 +87,7 @@ async function gemini(model, system, parts) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: 'user', parts }],
-      generationConfig: { temperature: 0.2, responseMimeType: 'application/json', responseSchema: SCHEMA },
+      generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA },
     }),
   });
   const j = await r.json().catch(() => ({}));

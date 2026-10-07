@@ -44,7 +44,7 @@ describe('GeminiProvider.classer', () => {
     expect([r.tokensEntree, r.tokensSortie]).toEqual([100, 20]);
   });
 
-  it('envoie l\'audio en ligne, le schéma, la température 0,2 et la clé en en-tête', async () => {
+  it('envoie l\'audio en ligne, le schéma sans paramètre d\'échantillonnage et la clé en en-tête', async () => {
     const { fetch, appels } = faux([{ status: 200, texte: JSON.stringify(sortieExemple()) }]);
     await provider(fetch).classer({ systeme: 'S', audio });
     const a = appels[0]!;
@@ -52,7 +52,7 @@ describe('GeminiProvider.classer', () => {
     expect(a.url).not.toContain('cle-test');
     expect(a.entetes['x-goog-api-key']).toBe('cle-test');
     const gen = a.corps.generationConfig as Record<string, unknown>;
-    expect(gen.temperature).toBe(0.2);
+    for (const p of ['temperature', 'topP', 'topK']) expect(gen).not.toHaveProperty(p);
     expect(gen.responseMimeType).toBe('application/json');
     expect(gen.responseSchema).toEqual(prompt.responseSchema);
     expect(JSON.stringify(a.corps.contents)).toContain(audio.donnees.toString('base64'));

@@ -103,7 +103,7 @@ export class GeminiProvider implements ClassificationProvider {
     }
     if (e.texte) parts.push({ text: `Message écrit, pas de vocal. Ce texte est la transcription :\n${e.texte}` });
     const generationConfig: Record<string, unknown> = {
-      temperature: 0.2, responseMimeType: 'application/json', responseSchema: this.o.prompt.responseSchema,
+      responseMimeType: 'application/json', responseSchema: this.o.prompt.responseSchema,
     };
     if (this.o.niveauReflexion) generationConfig.thinkingConfig = { thinkingLevel: this.o.niveauReflexion };
 
