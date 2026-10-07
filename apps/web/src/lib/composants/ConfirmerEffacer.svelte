@@ -22,10 +22,14 @@
 </div>
 
 <style>
-  .voile { position: fixed; inset: 0; z-index: 20; display: grid; place-items: end center; background: color-mix(in srgb, var(--text) 45%, transparent); padding: 16px; }
-  .boite { width: 100%; max-width: 420px; background: var(--surface); border-radius: var(--radius-card); padding: 20px; margin-bottom: env(safe-area-inset-bottom); }
-  h2 { font-size: 20px; font-weight: 600; }
-  .discret { margin: 8px 0 16px; overflow-wrap: anywhere; }
-  .rangee { display: flex; gap: 12px; justify-content: flex-end; }
+  /* Feuille basse : la question monte du bas de l'écran, à portée du pouce. */
+  .voile { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; background: color-mix(in srgb, var(--text) 35%, transparent); }
+  .boite {
+    width: 100%; background: var(--surface); border-radius: 24px 24px 0 0;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+  h2 { font-size: 20px; font-weight: 700; }
+  .discret { margin: 8px 0 20px; overflow-wrap: anywhere; }
+  .rangee { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .plein { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
 </style>

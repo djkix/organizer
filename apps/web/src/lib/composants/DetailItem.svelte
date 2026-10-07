@@ -24,6 +24,16 @@
 
   onMount(() => titre?.focus());
 
+  // Ce qui a été dit : chargé à l'ouverture ; absent ou en échec, la carte garde le lecteur seul.
+  let transcription = $state<string | null>(null);
+  let toutLire = $state(false);
+  $effect(() => {
+    const id = ligne.captureId;
+    let actif = true;
+    void api.transcription(id).then((t) => { if (actif) transcription = t?.trim() || null; });
+    return () => { actif = false; };
+  });
+
   async function corriger(construire: () => CorpsCorrection, apres: string | null): Promise<void> {
     if (envoi) return;
     envoi = true;
@@ -76,10 +86,14 @@
     </section>
   {/if}
 
-  {#if ligne.aAudio}
+  {#if ligne.aAudio || transcription}
     <section class="carte lecteur">
       <h3 class="etiquette">Ce que tu as dit</h3>
-      <Lecteur src={urlAudio(ligne.captureId)} />
+      {#if transcription}
+        <blockquote class="dit" class:replie={!toutLire && transcription.length > 280}>« {transcription} »</blockquote>
+        {#if !toutLire && transcription.length > 280}<button class="lien lire" onclick={() => (toutLire = true)}>Lire tout</button>{/if}
+      {/if}
+      {#if ligne.aAudio}<Lecteur src={urlAudio(ligne.captureId)} />{/if}
     </section>
   {/if}
 
@@ -87,8 +101,8 @@
     <section class="carte"><h3 class="etiquette">Rangé dans</h3><p>{ligne.theme}</p></section>
   {/if}
 
-  <div class="bas">
-    <button class="lien" onclick={surEffacer}>{MESSAGES.effacerBouton}</button>
+  <div class="bas actions">
+    <button class="bouton" onclick={surEffacer}>{MESSAGES.effacerBouton}</button>
     {#if message}<p class="discret" role="status">{message}</p>{/if}
     <button class="lien" aria-disabled={envoi} onclick={() => corriger(() => corpsNature('pensee'), MESSAGES.rangeEnPensee)}>
       {MESSAGES.pasUneAction}
@@ -99,28 +113,39 @@
 <style>
   .panneau {
     position: fixed; inset: 0; z-index: 10; overflow-y: auto; display: flex; flex-direction: column;
-    background: var(--bg); padding: 8px 0 env(safe-area-inset-bottom);
+    background: var(--bg); padding: 12px 0 env(safe-area-inset-bottom);
   }
-  header { padding: 0 8px; }
+  header { padding: 0 12px; }
   .titre:focus { outline: none; }
-  .titre { font-size: 22px; font-weight: 400; line-height: 1.3; padding: 4px 20px 14px; }
-  .etiquette { font-size: var(--font-meta); font-weight: 400; color: var(--muted); margin-bottom: 8px; }
-  .quand { margin-bottom: 12px; }
+  .titre { font-size: 24px; font-weight: 700; line-height: 32px; letter-spacing: -0.01em; padding: 4px 20px 16px; overflow-wrap: anywhere; }
+  .etiquette { font-size: var(--font-meta); font-weight: 600; color: var(--muted); margin-bottom: 10px; }
+  .quand { font-size: 18px; font-weight: 600; line-height: 26px; margin-bottom: 12px; }
   .choix { display: grid; gap: 8px; }
   .champ { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--touch-min); }
   .champ input {
-    min-height: var(--touch-min); padding: 0 10px; border: 1px solid var(--muted); border-radius: 12px;
-    background: var(--surface); color: var(--text);
+    min-height: var(--touch-min); padding: 0 10px; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--bg); color: var(--text);
   }
+  .champ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
   .interrupteur {
     display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px;
-    min-height: var(--touch-min); padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left;
+    min-height: var(--touch-min); padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 600; text-align: left;
   }
-  .curseur { position: relative; flex: none; width: 44px; height: 26px; border-radius: var(--radius-pill); background: var(--muted); }
+  .curseur { position: relative; flex: none; width: 52px; height: 32px; border-radius: var(--radius-pill); background: var(--check); }
   .curseur::after {
-    content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+    content: ''; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px;
     border-radius: var(--radius-pill); background: var(--surface); transition: transform 0.15s;
   }
   .interrupteur[aria-checked='true'] .curseur { background: var(--accent); }
-  .interrupteur[aria-checked='true'] .curseur::after { transform: translateX(18px); }
+  .interrupteur[aria-checked='true'] .curseur::after { transform: translateX(20px); }
+  .lecteur { display: flex; flex-direction: column; gap: 12px; }
+  .lecteur .etiquette { margin-bottom: 0; }
+  .dit {
+    margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--bg); color: var(--text);
+    font-style: italic; line-height: 24px; overflow-wrap: anywhere; white-space: pre-line;
+  }
+  .replie { display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+  .lire { align-self: flex-start; padding: 0; }
+  .actions { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; padding-bottom: 28px; }
+  .actions .discret { flex-basis: 100%; order: -1; }
 </style>
