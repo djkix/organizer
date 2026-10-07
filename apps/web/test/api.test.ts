@@ -18,6 +18,19 @@ const vide = (status = 204) => new Response(null, { status });
 const entetes = (init: RequestInit) => new Headers(init.headers);
 
 describe('client API', () => {
+  it('transcription : le texte sur 200, null sur 404 ou coupure, sans renvoyer vers la connexion', async () => {
+    const { f, appels } = fauxFetch([
+      new Response(JSON.stringify({ texte: 'Appeler le garage.' }), { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response(JSON.stringify({ message: 'Élément introuvable.' }), { status: 404, headers: { 'content-type': 'application/json' } }),
+      new TypeError('réseau'),
+    ]);
+    const api = creerClientApi({ fetch: f });
+    expect(await api.transcription('c 1')).toBe('Appeler le garage.');
+    expect(appels[0]!.url).toBe('/api/captures/c%201/transcription');
+    expect(await api.transcription('c2')).toBeNull();
+    expect(await api.transcription('c3')).toBeNull();
+  });
+
   it('connecter envoie le corps JSON, sur la même origine', async () => {
     const { f, appels } = fauxFetch([vide()]);
     await creerClientApi({ fetch: f }).connecter({ nom: 'test', motDePasse: 'un mot de passe assez long' });

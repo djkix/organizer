@@ -280,3 +280,27 @@ describe('effacer', () => {
     expect(signaux).toEqual([]);
   });
 });
+
+describe('transcription', () => {
+  it('rend texte_brut, sinon texte_ecrit, sinon null', async () => {
+    const { captureId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });
+    const moi = await compteTest(prisma);
+    await prisma.capture.update({ where: { id: captureId }, data: { texteBrut: 'Appeler le garage jeudi.', texteEcrit: 'écrit' } });
+    expect(await service.transcription(moi, captureId)).toBe('Appeler le garage jeudi.');
+    await prisma.capture.update({ where: { id: captureId }, data: { texteBrut: null } });
+    expect(await service.transcription(moi, captureId)).toBe('écrit');
+    await prisma.capture.update({ where: { id: captureId }, data: { texteEcrit: null } });
+    expect(await service.transcription(moi, captureId)).toBeNull();
+  });
+
+  it('ne rend jamais une capture privée, inconnue ou d\'un autre compte', async () => {
+    const { captureId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });
+    const moi = await compteTest(prisma);
+    // Une capture privée n'a jamais de texte (garde-fou SQL) : la route la refuse quand même.
+    const privee = await prisma.capture.create({ data: { utilisateurId: moi, canal: 'pwa', prive: true, etat: 'privee', emisLe: new Date() } });
+    expect(await service.transcription(moi, privee.id)).toBeUndefined();
+    const autre = (await prisma.utilisateur.create({ data: { nom: 'autre-compte' } })).id;
+    expect(await service.transcription(autre, captureId)).toBeUndefined();
+    expect(await service.transcription(moi, '00000000-0000-4000-8000-000000000000')).toBeUndefined();
+  });
+});

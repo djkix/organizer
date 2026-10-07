@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- `GET /api/captures/:id/transcription` : ce qui a été dit, pour le détail d'une action ; réservé au propriétaire, 404 pour une capture privée (jamais transcrite) ; le texte n'apparaît dans aucun journal (2026-10-07).
 - Vue Semaine : une bande des sept jours sous les onglets ; le jour courant en accent, toucher un jour qui a des actions fait défiler jusqu'à son groupe. Onglets Aujourd'hui, Semaine, Horizons en piste segmentée (2026-10-07).
 
 ### Modifié
