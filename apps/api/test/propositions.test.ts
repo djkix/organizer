@@ -115,6 +115,16 @@ describe('Alarmes.definir', () => {
   });
 });
 
+describe('Alarmes.definir : action effacée', () => {
+  it('refuse une action archivée, sans poser d\'alarme', async () => {
+    const r = await rendezVous({});
+    await prisma.item.update({ where: { id: r.itemId }, data: { archiveLe: MAINTENANT } });
+    const items = new ItemsService(prisma, TYPES, () => MAINTENANT);
+    expect(await new Alarmes(prisma, items, () => MAINTENANT).definir(r.uid, r.itemId, true)).toBeNull();
+    expect((await prisma.action.findUniqueOrThrow({ where: { itemId: r.itemId } })).alarme).toBe(false);
+  });
+});
+
 describe('bouton du bot', () => {
   const appui = (id: number, data: string) => ({
     update_id: id,

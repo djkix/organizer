@@ -70,7 +70,7 @@ export class ItemsService {
   /** `utilisateurId` : propriétaire exigé (404 sinon). `null` : appel interne du bot, déjà lié au compte. */
   async corriger(utilisateurId: string | null, itemId: string, c: CorrectionItem): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const it = await tx.item.findFirst({ where: { id: itemId, ...proprietaire(utilisateurId) }, include: { action: true, pensee: true } });
+      const it = await tx.item.findFirst({ where: { id: itemId, archiveLe: null, ...proprietaire(utilisateurId) }, include: { action: true, pensee: true } });
       if (!it) throw new ItemIntrouvable(itemId);
       const nature = c.nature ?? it.nature;
       if (c.nature && c.nature !== it.nature) {
@@ -128,7 +128,7 @@ export class ItemsService {
   }
 
   private async exigerAction(itemId: string, utilisateurId: string): Promise<void> {
-    const it = await this.prisma.item.findFirst({ where: { id: itemId, ...proprietaire(utilisateurId) }, include: { action: true } });
+    const it = await this.prisma.item.findFirst({ where: { id: itemId, archiveLe: null, ...proprietaire(utilisateurId) }, include: { action: true } });
     if (!it || it.nature !== 'action' || !it.action) throw new ItemIntrouvable(itemId);
   }
 }

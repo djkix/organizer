@@ -264,6 +264,15 @@ describe('effacer', () => {
     expect(signaux.map(([i]) => i)).toEqual([itemId, itemId]);
   });
 
+  it('une action effacée refuse cocher et corriger (introuvable)', async () => {
+    const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });
+    const moi = await compteTest(prisma);
+    await svc.effacer(moi, itemId);
+    await expect(svc.cocher(moi, itemId)).rejects.toBeInstanceOf(ItemIntrouvable);
+    await expect(svc.corriger(moi, itemId, { nature: 'pensee' })).rejects.toBeInstanceOf(ItemIntrouvable);
+    await expect(svc.definirAlarme(itemId, false)).rejects.toBeInstanceOf(ItemIntrouvable);
+  });
+
   it('l\'item d\'un autre compte : introuvable, rien ne change, aucun signal', async () => {
     const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00', compte: 'autre' });
     await expect(svc.effacer(await compteTest(prisma), itemId)).rejects.toBeInstanceOf(ItemIntrouvable);

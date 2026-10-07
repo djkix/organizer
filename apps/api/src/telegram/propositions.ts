@@ -72,7 +72,7 @@ export class Alarmes {
   async definir(utilisateurId: string, itemId: string, alarme: boolean): Promise<{ texte: string; alarme: boolean } | null> {
     const it = await this.prisma.item.findUnique({ where: { id: itemId }, include: { action: true, capture: { include: { utilisateur: true } } } });
     const a = it?.action;
-    if (!it || it.capture.utilisateurId !== utilisateurId || it.nature !== 'action' || !a || it.capture.prive) return null;
+    if (!it || it.capture.utilisateurId !== utilisateurId || it.nature !== 'action' || !a || it.capture.prive || it.archiveLe) return null;
     if (a.echeanceType !== 'datee' || !a.echeanceDate || a.faitLe || a.echeanceDate.getTime() <= this.maintenant().getTime()) return null;
     await this.items.definirAlarme(itemId, alarme);
     return { texte: texteRendezVous(it.texte, a.echeanceDate, it.capture.utilisateur.fuseau, alarme), alarme };
