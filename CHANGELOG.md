@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Modifié
+- Nouvelle palette « Sérénité affinée » en clair et en sombre : fond `#F6F8F9`, accent bleu-vert `#00677D`, Privé violet, pastilles recalculées ; le jeton d'alarme ocre disparaît (la cloche suffit) ; corps, métadonnées à 16 px et titres à 28 px ; icônes et couleur de la PWA alignées ; contrastes testés dans les deux thèmes (2026-10-07).
+
 ### Ajouté
 - Spec de la refonte de l'interface (direction « Sérénité affinée », maquette validée le 2026-10-07) : `docs/superpowers/specs/2026-10-07-refonte-interface-design.md` (2026-10-07).
 - Plan d'implémentation de la refonte : `docs/superpowers/plans/2026-10-07-refonte-interface.md` (2026-10-07).

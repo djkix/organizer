@@ -28,10 +28,12 @@ const TEXTES: [Token, Token][] = [
   ['bg', 'text'], // bandeau « Fait. »
   ['ctaText', 'cta'], // grand bouton « Enregistrer » : visé AAA (7)
   ['ctaPrivateText', 'ctaPrivate'], // grand bouton « Privé »
+  ['accentInk', 'accentSoft'], ['accentInk', 'surface'], ['accentInk', 'surfaceAlt'], ['muted', 'surfaceAlt'], // onglets, liens
+  ['privateInk', 'privateSoft'], ['privateInk', 'privateBg'], ['text', 'privateBg'], ['muted', 'privateBg'], // écran Privé
 ];
 /** Icônes et bords de commandes (WCAG 1.4.11 : 3). */
 const ICONES: [Token, Token][] = [
-  ['accent', 'accentSoft'], ['private', 'privateSoft'], ['private', 'bg'], ['alarm', 'surface'], ['muted', 'surface'],
+  ['accent', 'accentSoft'], ['private', 'privateSoft'], ['private', 'bg'], ['muted', 'surface'], ['check', 'surface'], ['private', 'privateBg'],
   ['cta', 'bg'], ['ctaPrivate', 'bg'],
 ];
 
@@ -42,6 +44,13 @@ describe.each(['light', 'dark'] as const)('contrastes du thème %s', (theme) => 
   });
   it.each(ICONES)('icône %s sur %s : 3 au moins', (avant, fond) => {
     expect(contraste(c[avant], c[fond])).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('jetons', () => {
+  it('aucun jeton d\'alarme chaude : l\'alarme se dit par la cloche', () => {
+    expect(Object.keys(tokens.color.light)).not.toContain('alarm');
+    expect(Object.keys(tokens.color.dark)).not.toContain('alarm');
   });
 });
 
