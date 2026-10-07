@@ -15,6 +15,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Listes : lignes en cartes, pastilles de 16 px (l'échéance « Jour » devient « Dans la journée », l'alarme a un contour et sa cloche) ; boutons Enregistrer et Privé de 64 px côte à côte (2/3, 1/3), sans sous-titre ; barre du bas avec pastille autour de l'icône active (2026-10-07).
 - Détail d'une action : titre plus lisible, cartes, interrupteur d'alarme plus grand, « Ce que tu as dit » avec la transcription entre guillemets (repliée au-delà de six lignes, « Lire tout ») au-dessus du lecteur ; la confirmation d'effacement monte en feuille basse (2026-10-07).
 - Écran d'enregistrement clair : pastille micro (bleu-vert) ou cadenas (violet, fond teinté), onde animée pendant l'écoute (immobile si les animations sont réduites), minuteur, bouton rond de 96 px ; textes et comportement inchangés (2026-10-07).
+- Écran Privé : fond teinté, lignes en cartes avec lecteur violet ; le mot d'un enregistrement s'affiche en titre, un crayon le change, « Ajouter un mot » sinon ; la pastille Privé redondante quitte les lignes (2026-10-07).
 
 ### Ajouté
 - Spec de la refonte de l'interface (direction « Sérénité affinée », maquette validée le 2026-10-07) : `docs/superpowers/specs/2026-10-07-refonte-interface-design.md` (2026-10-07).

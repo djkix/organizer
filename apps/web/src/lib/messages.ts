@@ -65,7 +65,7 @@ export const MESSAGES = {
   partiraApresConnexion: 'Il partira après ta connexion.',
   enregistrementRefuse: "Un enregistrement n'a pas pu partir.",
   noteEcrite: 'Note écrite, gardée sur le serveur.',
-  ajouterUnMot: 'ajouter un mot',
+  ajouterUnMot: 'Ajouter un mot',
   motRate: 'Pas pu garder le mot. Réessaie.',
   videPrive: 'Rien ce mois-ci.',
   // Empreinte (WebAuthn)
