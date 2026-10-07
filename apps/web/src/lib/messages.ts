@@ -55,9 +55,7 @@ export const MESSAGES = {
   envoyeAuTri: 'Envoyé au tri.',
   rangeToutSeul: 'Ce sera rangé tout seul.',
   enregistrer: 'Enregistrer',
-  rangeToutSeulSous: 'Rangé tout seul',
   priveBouton: 'Privé',
-  resteSurServeur: 'Reste sur le serveur',
   recu: 'Reçu.',
   // Vue Privé
   priveSous: 'Par date et par heure',

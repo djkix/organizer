@@ -15,7 +15,7 @@ describe('pastilles d\'une action', () => {
     expect(p[1]!.icone).toBe('cloche');
   });
   it('jour, fenêtre, sans date', () => {
-    expect(libelles(ligne({ echeanceType: 'jour', echeanceDate: '2026-10-05T22:00:00.000Z' }))).toEqual(['Jour']);
+    expect(libelles(ligne({ echeanceType: 'jour', echeanceDate: '2026-10-05T22:00:00.000Z' }))).toEqual(['Dans la journée']);
     expect(libelles(ligne({ echeanceType: 'fenetre', fenetreFin: '2026-10-24T22:00:00.000Z' }))).toEqual(['Fenêtre']);
     expect(libelles(ligne({ echeanceType: 'aucune' }))).toEqual([]);
   });

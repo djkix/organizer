@@ -94,8 +94,8 @@
 </li>
 
 <style>
-  .ligne { position: relative; overflow: hidden; background: var(--surface-alt); border-radius: var(--radius-card); margin-bottom: 8px; }
-  .piste { display: flex; align-items: stretch; background: var(--surface); border-radius: var(--radius-card); touch-action: pan-y; transition: transform 0.18s ease-out; }
+  .ligne { position: relative; overflow: hidden; background: var(--surface-alt); border: 1px solid var(--line); border-radius: 14px; }
+  .piste { display: flex; align-items: center; min-height: 64px; background: var(--surface); border-radius: 13px; touch-action: pan-y; transition: transform 0.18s ease-out; }
   .piste.glisse { transition: none; }
   /* Sans rouge, même pour effacer : le bouton reste neutre, lisible par son libellé. */
   .effacer {
@@ -103,14 +103,14 @@
     font-weight: 600; font-size: var(--font-meta);
   }
 
-  .case { width: var(--touch-min); min-height: var(--touch-min); flex: none; display: grid; place-items: center; padding: 0 0 0 8px; background: none; border: none; }
-  .boite { width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid var(--muted); border-radius: 8px; color: var(--bg); }
+  .case { width: var(--touch-min); min-height: var(--touch-min); flex: none; display: grid; place-items: center; padding: 0 0 0 4px; background: none; border: none; }
+  .boite { width: 22px; height: 22px; display: grid; place-items: center; border: 2px solid var(--check); border-radius: 7px; color: var(--bg); }
   .coche .boite { background: var(--accent); border-color: var(--accent); }
   .corps {
-    flex: 1; min-height: var(--touch-min); display: flex; flex-direction: column; gap: 2px;
-    padding: 12px 16px 12px 6px; text-align: left; background: none; border: none;
+    flex: 1; min-width: 0; min-height: var(--touch-min); display: flex; flex-direction: column; gap: 6px;
+    padding: 12px 14px 12px 4px; text-align: left; background: none; border: none;
   }
-  .texte { font-size: var(--font-body); line-height: 1.35; }
+  .texte { font-size: var(--font-body); line-height: 22px; font-weight: 500; overflow-wrap: anywhere; }
   .coche .texte { text-decoration: line-through; color: var(--muted); }
-  .meta { display: flex; align-items: center; gap: 6px; font-size: var(--font-meta); color: var(--muted); }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--font-meta); color: var(--muted); }
 </style>
