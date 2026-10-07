@@ -59,8 +59,10 @@ describe.each(['light', 'dark'] as const)('pastilles, thème %s', (theme) => {
   it.each(TAGS)('pastille %s : texte sur fond, 4,5 au moins', (t) => {
     expect(contraste(c[`tag${t}Text`]!, c[`tag${t}Bg`]!)).toBeGreaterThanOrEqual(4.5);
   });
-  it('les fonds se distinguent deux à deux du fond de carte et entre eux', () => {
-    const fonds = TAGS.map((t) => c[`tag${t}Bg`]!);
-    expect(new Set(fonds).size).toBe(TAGS.length);
+  it('chaque fond de pastille se distingue du fond de carte (écart de luminance)', () => {
+    for (const t of TAGS) expect(Math.abs(luminance(c[`tag${t}Bg`]!) - luminance(c.surface!))).toBeGreaterThan(0.005);
+  });
+  it('les sept fonds sont deux à deux différents', () => {
+    expect(new Set(TAGS.map((t) => c[`tag${t}Bg`]!)).size).toBe(TAGS.length);
   });
 });

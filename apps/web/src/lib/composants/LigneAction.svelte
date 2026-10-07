@@ -25,7 +25,16 @@
   // Ligne ouverte : un appui ailleurs ou un défilement la referme.
   $effect(() => {
     if (!decouvert) return;
-    const appui = (e: Event): void => ouverture.dehors((e.target as Element | null)?.closest?.('[data-item]')?.getAttribute('data-item') ?? null);
+    const appui = (e: Event): void => {
+      const id = (e.target as Element | null)?.closest?.('[data-item]')?.getAttribute('data-item') ?? null;
+      if (id === ligne.itemId || (e.target as Element | null)?.closest?.('[role="alertdialog"], [role="dialog"]')) return;
+      ouverture.dehors(id);
+      // Le premier appui ailleurs ne fait que refermer : le clic qui suit est avalé (une fois, 500 ms au plus).
+      const avaler = (c: Event): void => { c.preventDefault(); c.stopPropagation(); fin(); };
+      const fin = (): void => { clearTimeout(t); window.removeEventListener('click', avaler, true); };
+      const t = setTimeout(fin, 500);
+      window.addEventListener('click', avaler, true);
+    };
     const defile = (): void => ouverture.dehors(null);
     window.addEventListener('pointerdown', appui, true);
     window.addEventListener('scroll', defile, true);
@@ -74,7 +83,7 @@
   </button>
   <button class="corps" onclick={corps}>
     <span class="texte">{ligne.texte}</span>
-    {#if ligne.meta || ligne.pastilles.length}
+    {#if ligne.pastilles.length || (ligne.meta && ligne.source.echeanceType !== 'datee')}
       <span class="meta">
         {#each ligne.pastilles as p (p.type)}<Pastille {p} />{/each}
         {#if ligne.meta && ligne.source.echeanceType !== 'datee'}{ligne.meta}{/if}
