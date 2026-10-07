@@ -295,8 +295,8 @@ L'API regarde par quel point d'entrée la capture est arrivée. Privée : elle e
 - Entrée : l'audio d'origine, sans réencodage préalable, plus un prompt système versionné.
 - Sortie : JSON contraint par `responseSchema`, contenant la transcription intégrale et la liste des items classés.
 - Contexte injecté : date du jour, fuseau `Europe/Paris`, thèmes connus, prénoms connus, dix exemples de corrections passées.
-- `thinkingBudget` réduit au minimum : la tâche est une extraction, pas un raisonnement.
-- Température à 0,2 pour stabiliser les libellés de thèmes d'une capture à l'autre.
+- Réflexion réduite au minimum (`thinkingLevel`, réglé par `GEMINI_THINKING_LEVEL`) : la tâche est une extraction, pas un raisonnement.
+- Aucun paramètre d'échantillonnage (`temperature`, `top_p`, `top_k`) : sans effet sur les modèles récents et bientôt refusés par l'API (1.4.2).
 
 La transcription reste stockée séparément des items, pour qu'une erreur de classement n'oblige jamais à retranscrire.
 
