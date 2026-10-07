@@ -7,13 +7,14 @@
   import { api } from '$lib/client';
   import { creerCocheur, type EtatCochage } from '$lib/cochage';
   import Bandeau from '$lib/composants/Bandeau.svelte';
+  import BandeJours from '$lib/composants/BandeJours.svelte';
   import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
   import DetailItem from '$lib/composants/DetailItem.svelte';
   import LigneActionVue from '$lib/composants/LigneAction.svelte';
   import { FUSEAU } from '$lib/config';
   import { titreDuJour } from '$lib/format';
   import { MESSAGES } from '$lib/messages';
-  import { groupes, NOMS_VUES, nomVue, TITRES, VIDES, type DonneesVue, type NomVue } from '$lib/vues';
+  import { bandeJours, groupes, NOMS_VUES, nomVue, TITRES, VIDES, type DonneesVue, type NomVue } from '$lib/vues';
 
   let aujourdhui = $state(jourLocal(new Date(), FUSEAU));
   const vue: NomVue = $derived(nomVue(page.url.searchParams.get('vue')));
@@ -169,6 +170,7 @@
       </a>
     {/each}
   </nav>
+  {#if donnees && donnees.nom === 'semaine' && vue === 'semaine'}<BandeJours jours={bandeJours(donnees.vue, aujourdhui)} />{/if}
 
   {#if erreur}
     <p class="vide">{MESSAGES.listeIndisponible}</p>
@@ -176,7 +178,7 @@
     <p class="vide">{VIDES[vue]}</p>
   {:else}
     {#each liste as g, i (i)}
-      {#if g.titre}<h2 class="groupe">{g.titre}</h2>{/if}
+      {#if g.titre}<h2 class="groupe" id={g.ancre}>{g.titre}</h2>{/if}
       <ul class="liste">
         {#each g.lignes as l (l.itemId)}
           <LigneActionVue
@@ -204,10 +206,14 @@
 
 <style>
   h1:focus { outline: none; }
-  .onglets { display: flex; gap: 8px; padding: 4px 20px 12px; overflow-x: auto; scrollbar-width: none; }
-  .puce {
-    min-height: var(--touch-min); display: inline-flex; align-items: center; padding: 0 16px; white-space: nowrap;
-    border: 1px solid var(--line); border-radius: var(--radius-pill); color: var(--muted); text-decoration: none; font-size: var(--font-meta);
+  .onglets {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; margin: 4px 20px 16px;
+    background: var(--surface-alt); border-radius: 12px;
   }
-  .puce[aria-current='page'] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
+  .puce {
+    min-height: var(--touch-min); display: flex; align-items: center; justify-content: center; padding: 0 6px; white-space: nowrap;
+    border-radius: 9px; color: var(--muted); text-decoration: none; font-size: var(--font-meta); font-weight: 500;
+  }
+  .puce[aria-current='page'] { background: var(--surface); color: var(--accent-ink); font-weight: 600; outline: 1px solid var(--line); }
+  .groupe { scroll-margin-top: 16px; }
 </style>

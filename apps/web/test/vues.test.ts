@@ -1,6 +1,6 @@
 import type { LigneAction } from '@organizer/shared/api';
 import { describe, expect, it } from 'vitest';
-import { groupes, nomVue } from '../src/lib/vues.js';
+import { bandeJours, groupes, nomVue } from '../src/lib/vues.js';
 
 const F = 'Europe/Paris';
 const AUJ = '2026-10-06';
@@ -59,5 +59,28 @@ describe('nomVue', () => {
     expect(nomVue('semaine')).toBe('semaine');
     expect(nomVue('horizons')).toBe('horizons');
     expect(nomVue('rapide')).toBe('aujourdhui');
+  });
+});
+
+describe('bandeJours', () => {
+  it('sept jours à partir d\'aujourd\'hui, jour courant marqué, ancres sur les jours non vides', () => {
+    const vue = { jours: [{ jour: '2026-10-08', actions: [l('Appeler le garage')] }, { jour: '2026-10-12', actions: [l('Réunion')] }] };
+    const b = bandeJours(vue, '2026-10-07');
+    expect(b.map((j) => `${j.abrege} ${j.numero}`)).toEqual(['Mer 7', 'Jeu 8', 'Ven 9', 'Sam 10', 'Dim 11', 'Lun 12', 'Mar 13']);
+    expect(b[0]).toMatchObject({ jour: '2026-10-07', courant: true, ancre: null });
+    expect(b[1]!.ancre).toBe('jour-2026-10-08');
+    expect(b[2]!.ancre).toBeNull();
+    expect(b[5]!.ancre).toBe('jour-2026-10-12');
+  });
+
+  it('jour courant avec actions : ancre et marque à la fois ; passage de mois', () => {
+    const b = bandeJours({ jours: [{ jour: '2026-10-30', actions: [l('x')] }] }, '2026-10-30');
+    expect(b[0]).toMatchObject({ courant: true, ancre: 'jour-2026-10-30' });
+    expect(b.map((j) => j.numero)).toEqual([30, 31, 1, 2, 3, 4, 5]);
+  });
+
+  it('les groupes de la semaine portent l\'ancre de leur jour', () => {
+    const g = groupes({ nom: 'semaine', vue: { jours: [{ jour: AUJ, actions: [l('a')] }] } }, AUJ, F, aucun);
+    expect(g[0]!.ancre).toBe(`jour-${AUJ}`);
   });
 });

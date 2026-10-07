@@ -22,7 +22,7 @@ export const VIDES: Record<NomVue, string> = {
 };
 
 export interface LigneAffichee { itemId: string; texte: string; meta: string; alarme: boolean; pastilles: Pastille[]; source: LigneAction }
-export interface Groupe { titre: string | null; lignes: LigneAffichee[] }
+export interface Groupe { titre: string | null; lignes: LigneAffichee[]; ancre?: string }
 export type DonneesVue =
   | { nom: 'aujourdhui'; vue: VueAujourdhui }
   | { nom: 'semaine'; vue: VueSemaine }
@@ -38,7 +38,24 @@ export function groupes(d: DonneesVue, aujourdhui: string, fuseau: string, retir
     d.nom === 'aujourdhui'
       ? [{ titre: null, lignes: lignes(d.vue.actions) }, { titre: MESSAGES.bientot, lignes: lignes(d.vue.suggestions) }]
       : d.nom === 'semaine'
-        ? d.vue.jours.map((j) => ({ titre: libelleJour(j.jour, aujourdhui), lignes: lignes(j.actions) }))
+        ? d.vue.jours.map((j) => ({ titre: libelleJour(j.jour, aujourdhui), lignes: lignes(j.actions), ancre: ancreJour(j.jour) }))
         : d.vue.bornes.map((b) => ({ titre: libelleBorne(b.fin, b.libelle, fuseau), lignes: lignes(b.actions, false) }));
   return tous.filter((g) => g.lignes.length > 0);
+}
+
+export interface JourBande { jour: string; abrege: string; numero: number; courant: boolean; ancre: string | null }
+
+const ABREGES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'] as const;
+const ancreJour = (jour: string): string => `jour-${jour}`;
+
+/** Les sept jours de la vue Semaine à partir d'aujourd'hui ; seuls les jours qui ont des actions ont une ancre. */
+export function bandeJours(vue: VueSemaine, aujourdhui: string): JourBande[] {
+  const pleins = new Set(vue.jours.filter((j) => j.actions.length > 0).map((j) => j.jour));
+  // Midi UTC : aucun changement d'heure ne fait glisser le jour.
+  const depart = Date.parse(`${aujourdhui}T12:00:00Z`);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(depart + i * 86_400_000);
+    const jour = d.toISOString().slice(0, 10);
+    return { jour, abrege: ABREGES[d.getUTCDay()]!, numero: d.getUTCDate(), courant: i === 0, ancre: pleins.has(jour) ? ancreJour(jour) : null };
+  });
 }

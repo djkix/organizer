@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Vue Semaine : une bande des sept jours sous les onglets ; le jour courant en accent, toucher un jour qui a des actions fait défiler jusqu'à son groupe. Onglets Aujourd'hui, Semaine, Horizons en piste segmentée (2026-10-07).
+
 ### Modifié
 - Nouvelle palette « Sérénité affinée » en clair et en sombre : fond `#F6F8F9`, accent bleu-vert `#00677D`, Privé violet, pastilles recalculées ; le jeton d'alarme ocre disparaît (la cloche suffit) ; corps, métadonnées à 16 px et titres à 28 px ; icônes et couleur de la PWA alignées ; contrastes testés dans les deux thèmes (2026-10-07).
 - Police Plus Jakarta Sans, auto-hébergée (sous-ensemble latin) ; la CSP gagne `font-src 'self'` ; cartes bordées, boutons et liens au nouveau style (2026-10-07).
