@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Corrigé
+- Une ligne glissée (« Effacer » découvert) se referme d'un glissement vers la droite, d'un appui ailleurs (autre ligne, fond de page) ou d'un défilement ; une seule ligne reste ouverte à la fois ; la zone morte verticale est inchangée (2026-10-07).
+
 ## [1.4.0] - 2026-10-06
 
 ### Ajouté

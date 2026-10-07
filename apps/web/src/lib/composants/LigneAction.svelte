@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { LigneAffichee } from '$lib/vues';
-  import { creerGlisseur, estGlissement } from '$lib/glisser';
+  import { creerGlisseur, estGlissement, ouverture } from '$lib/glisser';
   import { MESSAGES } from '$lib/messages';
   import Icone from './Icone.svelte';
 
@@ -19,10 +19,21 @@
   let glisse = $state(false);
   let avale = false;
 
+  function refermer(): void { decouvert = false; decalage = 0; ouverture.liberer(ligne.itemId); }
+  function ouvrir(): void { decouvert = true; ouverture.ouvrir(ligne.itemId, () => { decouvert = false; decalage = 0; }); }
+  // Ligne ouverte : un appui ailleurs ou un défilement la referme.
+  $effect(() => {
+    if (!decouvert) return;
+    const appui = (e: Event): void => ouverture.dehors((e.target as Element | null)?.closest?.('[data-item]')?.getAttribute('data-item') ?? null);
+    const defile = (): void => ouverture.dehors(null);
+    window.addEventListener('pointerdown', appui, true);
+    window.addEventListener('scroll', defile, true);
+    return () => { window.removeEventListener('pointerdown', appui, true); window.removeEventListener('scroll', defile, true); };
+  });
   function bas(e: PointerEvent): void {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     avale = false;
-    glisseur.debut(e.clientX, e.clientY);
+    glisseur.debut(e.clientX, e.clientY, decouvert);
   }
   function bouge(e: PointerEvent): void {
     const dx = glisseur.deplacer(e.clientX, e.clientY);
@@ -32,14 +43,15 @@
     decalage = decouvert ? Math.min(0, dx - 88) : dx;
   }
   function lache(): void {
-    if (glisseur.fin() === 'ouvrir') decouvert = true;
-    else if (glisse) decouvert = decouvert && decalage <= -44;
+    const issue = glisseur.fin();
+    if (issue === 'ouvrir') ouvrir();
+    else if (issue === 'fermer' || (glisse && decouvert)) refermer();
     glisse = false;
     decalage = decouvert ? -88 : 0;
   }
   function corps(): void {
     if (avale) { avale = false; return; }
-    if (decouvert) { decouvert = false; decalage = 0; return; }
+    if (decouvert) { refermer(); return; }
     surOuvrir();
   }
 </script>

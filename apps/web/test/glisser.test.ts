@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creerGlisseur, DISTANCE_MAX, SEUIL_OUVERTURE } from '../src/lib/glisser';
+import { creerGlisseur, creerOuverture, DISTANCE_MAX, SEUIL_OUVERTURE } from '../src/lib/glisser';
 
 function geste(points: [number, number][]): { dx: (number | null)[]; issue: string } {
   const g = creerGlisseur();
@@ -35,5 +35,45 @@ describe('glisser vers la gauche', () => {
     g.deplacer(150, 100);
     g.annuler();
     expect(g.fin()).toBe('refermer');
+  });
+});
+
+describe('ligne ouverte', () => {
+  it('ouverte, un glissement vers la droite assez long la referme', () => {
+    const g = creerGlisseur();
+    g.debut(100, 100, true);
+    g.deplacer(150, 102);
+    g.deplacer(190, 102);
+    expect(g.fin()).toBe('fermer');
+  });
+  it('ouverte, un geste trop court ou vertical la laisse ouverte', () => {
+    const g = creerGlisseur();
+    g.debut(100, 100, true);
+    g.deplacer(120, 100);
+    expect(g.fin()).toBe('ouvrir');
+    g.debut(100, 100, true);
+    expect(g.deplacer(110, 160)).toBeNull();
+    expect(g.fin()).toBe('ouvrir');
+  });
+});
+
+describe('une seule ligne ouverte', () => {
+  it('un appui ailleurs referme la ligne ouverte, pas un appui sur elle', () => {
+    const o = creerOuverture();
+    let fermee = 0;
+    o.ouvrir('a', () => fermee++);
+    o.dehors('a');
+    expect(fermee).toBe(0);
+    o.dehors('b');
+    expect(fermee).toBe(1);
+    o.dehors(null);
+    expect(fermee).toBe(1);
+  });
+  it('ouvrir B referme A', () => {
+    const o = creerOuverture();
+    const f: string[] = [];
+    o.ouvrir('a', () => f.push('a'));
+    o.ouvrir('b', () => f.push('b'));
+    expect(f).toEqual(['a']);
   });
 });
