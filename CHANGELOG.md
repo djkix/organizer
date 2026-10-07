@@ -5,6 +5,12 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Spec de la refonte de l'interface (direction « Sérénité affinée », maquette validée le 2026-10-07) : `docs/superpowers/specs/2026-10-07-refonte-interface-design.md` (2026-10-07).
+
+### Corrigé
+- Cahier des charges : la réflexion passe par `thinkingLevel` et plus aucune température n'est envoyée à Gemini, comme le code depuis la 1.4.2 (2026-10-07).
+
 ## [1.4.2] - 2026-10-07
 
 ### Corrigé
