@@ -73,7 +73,7 @@ test('les onglets Semaine et Horizons, et un état vide neutre', async ({ page }
   await expect(page.getByText('Rien en attente.')).toBeVisible();
 });
 
-test('cibles de 48 px, texte de 17 px, actions principales dans le tiers bas', async ({ page }) => {
+test('cibles de 48 px, texte de 16 px, actions principales dans le tiers bas', async ({ page }) => {
   await simuler(page, table());
   await page.goto('/');
   await expect(page.getByText('Rappeler le garage')).toBeVisible();
@@ -82,7 +82,7 @@ test('cibles de 48 px, texte de 17 px, actions principales dans le tiers bas', a
     expect(b.width).toBeGreaterThanOrEqual(48);
     expect(b.height).toBeGreaterThanOrEqual(48);
   }
-  expect(await page.locator('.texte').first().evaluate((e) => getComputedStyle(e).fontSize)).toBe('17px');
+  expect(await page.locator('.texte').first().evaluate((e) => getComputedStyle(e).fontSize)).toBe('16px');
   const hauteur = page.viewportSize()!.height;
   expect((await page.getByRole('link', { name: 'Enregistrement privé' }).boundingBox())!.y).toBeGreaterThan((hauteur * 2) / 3);
   await page.getByRole('checkbox', { name: 'Cocher : Rappeler le garage' }).click();

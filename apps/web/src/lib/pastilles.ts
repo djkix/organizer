@@ -21,7 +21,7 @@ export function pastillesAction(l: LigneAction, fuseau: string): Pastille[] {
   const p: Pastille[] = [];
   if (l.echeanceType === 'datee' && l.echeanceDate) p.push({ type: 'echeance', libelle: heureLocale(l.echeanceDate, fuseau) });
   else if (l.echeanceType === 'fenetre') p.push({ type: 'echeance', libelle: 'Fenêtre' });
-  else if (l.echeanceType === 'jour') p.push({ type: 'echeance', libelle: 'Jour' });
+  else if (l.echeanceType === 'jour') p.push({ type: 'echeance', libelle: 'Dans la journée' });
   if (l.alarme) p.push({ type: 'alarme', libelle: 'Alarme', icone: 'cloche' });
   return p;
 }

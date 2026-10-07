@@ -10,9 +10,10 @@
 
 <style>
   .fab {
-    position: fixed; right: 18px; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 5;
-    width: 64px; height: 64px; border-radius: var(--radius-pill);
-    background: var(--private); color: var(--bg); display: grid; place-items: center;
+    position: fixed; right: 20px; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 5;
+    width: 64px; height: 64px; border-radius: 18px; border-bottom: 3px solid var(--cta-private-edge);
+    background: var(--cta-private); color: var(--cta-private-text); display: grid; place-items: center;
   }
+  .fab:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
   .bas { bottom: calc(24px + env(safe-area-inset-bottom)); }
 </style>

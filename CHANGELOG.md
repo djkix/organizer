@@ -8,6 +8,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ### Modifié
 - Nouvelle palette « Sérénité affinée » en clair et en sombre : fond `#F6F8F9`, accent bleu-vert `#00677D`, Privé violet, pastilles recalculées ; le jeton d'alarme ocre disparaît (la cloche suffit) ; corps, métadonnées à 16 px et titres à 28 px ; icônes et couleur de la PWA alignées ; contrastes testés dans les deux thèmes (2026-10-07).
 - Police Plus Jakarta Sans, auto-hébergée (sous-ensemble latin) ; la CSP gagne `font-src 'self'` ; cartes bordées, boutons et liens au nouveau style (2026-10-07).
+- Listes : lignes en cartes, pastilles de 16 px (l'échéance « Jour » devient « Dans la journée », l'alarme a un contour et sa cloche) ; boutons Enregistrer et Privé de 64 px côte à côte (2/3, 1/3), sans sous-titre ; barre du bas avec pastille autour de l'icône active (2026-10-07).
 
 ### Ajouté
 - Spec de la refonte de l'interface (direction « Sérénité affinée », maquette validée le 2026-10-07) : `docs/superpowers/specs/2026-10-07-refonte-interface-design.md` (2026-10-07).
