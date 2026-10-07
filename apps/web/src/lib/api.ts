@@ -41,6 +41,8 @@ export interface ClientApi {
   effacer(itemId: string): Promise<void>;
   privees(mois: string): Promise<JourPrive[]>;
   etiqueter(captureId: string, etiquette: string | null): Promise<void>;
+  /** Ce qui a été dit, pour le détail ; null s'il n'y a rien ou en cas d'échec (le détail garde le lecteur seul). */
+  transcription(captureId: string): Promise<string | null>;
   agenda(): Promise<ReponseAgenda>;
   connecterAgenda(): Promise<ReponseConnexionAgenda>;
   deconnecterAgenda(): Promise<void>;
@@ -137,5 +139,7 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
     privees: (mois) => json(appeler('GET', `/api/captures/privees?mois=${id(mois)}`)),
     etiqueter: (captureId, etiquette) =>
       sansCorps(appeler('PATCH', `/api/captures/privees/${id(captureId)}`, { etiquette } satisfies CorpsEtiquette)),
+    transcription: (captureId) =>
+      json<{ texte: string | null }>(appeler('GET', `/api/captures/${id(captureId)}/transcription`)).then((r) => r.texte, () => null),
   };
 }

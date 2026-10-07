@@ -58,6 +58,13 @@ export class ItemsController {
     return traduire(() => this.items.effacer(req.utilisateur.id, id));
   }
 
+  @Get('captures/:id/transcription')
+  async transcription(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string): Promise<{ texte: string | null }> {
+    const texte = await this.items.transcription(req.utilisateur.id, id);
+    if (texte === undefined) throw new NotFoundException('Élément introuvable.');
+    return { texte };
+  }
+
   @Get('captures/:id/audio')
   async audio(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
     const a = await this.items.cheminAudio(req.utilisateur.id, id, this.config.audioRacine);

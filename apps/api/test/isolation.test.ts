@@ -147,6 +147,12 @@ describe('décision 25 : accès croisé en 404', () => {
     expect((await appel(cB, 'GET', `/api/captures/${B.priveeId}/audio`)).status).toBe(200);
     expect((await appel(cA, 'GET', `/api/captures/${A.captureId}/audio`)).status).toBe(200);
   });
+  it('transcription d\'un autre compte ou d\'une capture privée : 404 ; la sienne : 200', async () => {
+    await prisma.capture.update({ where: { id: A.captureId }, data: { texteBrut: 'Appeler le garage jeudi.' } });
+    expect((await appel(cB, 'GET', `/api/captures/${A.captureId}/transcription`)).status).toBe(404);
+    expect((await appel(cB, 'GET', `/api/captures/${B.priveeId}/transcription`)).status).toBe(404);
+    expect(await json(cA, `/api/captures/${A.captureId}/transcription`)).toEqual({ texte: 'Appeler le garage jeudi.' });
+  });
   it('étiqueter la capture privée d\'un autre compte : 404, étiquette intacte', async () => {
     expect((await appel(cA, 'PATCH', `/api/captures/privees/${B.priveeId}`, { etiquette: 'piratée' })).status).toBe(404);
     expect((await prisma.capture.findUniqueOrThrow({ where: { id: B.priveeId } })).etiquette).toBeNull();

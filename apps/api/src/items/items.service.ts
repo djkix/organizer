@@ -119,6 +119,13 @@ export class ItemsService {
     return this.corriger(null, itemId, { alarme });
   }
 
+  /** Ce qui a été dit : jamais pour une capture privée (aucune transcription n'existe), jamais pour un autre compte. */
+  async transcription(utilisateurId: string, captureId: string): Promise<string | null | undefined> {
+    const c = await this.prisma.capture.findFirst({ where: { id: captureId, utilisateurId, prive: false }, select: { texteBrut: true, texteEcrit: true } });
+    if (!c) return undefined;
+    return c.texteBrut ?? c.texteEcrit ?? null;
+  }
+
   async cheminAudio(utilisateurId: string, captureId: string, racine: string): Promise<{ chemin: string; mime: string } | null> {
     // `chemin` est relatif à la racine.
     const c = await this.prisma.capture.findFirst({ where: { id: captureId, utilisateurId }, select: { audioPath: true, audioMime: true } });
