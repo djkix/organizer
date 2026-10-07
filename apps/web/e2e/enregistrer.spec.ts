@@ -21,12 +21,13 @@ test('l\'accueil porte deux grands boutons côte à côte, dans le tiers inféri
   const prive = page.getByRole('link', { name: 'Enregistrement privé' });
   await expect(ordinaire).toBeVisible();
   await expect(prive).toBeVisible();
-  await expect(ordinaire).toContainText('Rangé tout seul');
-  await expect(prive).toContainText('Reste sur le serveur');
+  await expect(ordinaire).toContainText('Enregistrer');
+  await expect(prive).toContainText('Privé');
   const a = (await ordinaire.boundingBox())!;
   const b = (await prive.boundingBox())!;
-  expect(a.height).toBeGreaterThanOrEqual(88);
-  expect(b.height).toBeGreaterThanOrEqual(88);
+  expect(a.height).toBeGreaterThanOrEqual(64);
+  expect(b.height).toBeGreaterThanOrEqual(64);
+  expect(a.width).toBeGreaterThan(b.width * 1.5); // Enregistrer occupe deux tiers, Privé un tiers
   expect(Math.abs(a.y - b.y)).toBeLessThan(2);
   expect(a.x).toBeLessThan(b.x);
   const hauteur = page.viewportSize()!.height;

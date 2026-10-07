@@ -167,16 +167,20 @@
 <main class="enregistreur" class:ordinaire={!prive}>
   <button class="bouton-icone fermer" onclick={fermer} aria-label="Fermer"><Icone nom="fermer" /></button>
   {#if prive}
-    <span class="cadenas"><Icone nom="cadenas" taille={40} etiquette="Mode privé" /></span>
+    <span class="pastille-mode"><Icone nom="cadenas" taille={40} etiquette="Mode privé" /></span>
     <h1>{etat === 'ecoute' ? MESSAGES.ecoute : MESSAGES.enregistrementPrive}</h1>
     <p class="maison">{MESSAGES.resteALaMaison}</p>
     <p class="consigne">{etat === 'ecoute' ? MESSAGES.finirEnregistrement : MESSAGES.rienNestTrie}</p>
   {:else}
-    <span class="cadenas"><Icone nom="micro" taille={40} etiquette="Enregistrement ordinaire" /></span>
+    <span class="pastille-mode"><Icone nom="micro" taille={40} etiquette="Enregistrement ordinaire" /></span>
     <h1>{etat === 'ecoute' ? MESSAGES.ecoute : MESSAGES.enregistrementOrdinaire}</h1>
     <p class="maison">{MESSAGES.envoyeAuTri}</p>
     <p class="consigne">{etat === 'ecoute' ? MESSAGES.finirEnregistrement : MESSAGES.rangeToutSeul}</p>
   {/if}
+  <!-- Onde décorative : elle bouge pendant l'écoute, jamais sous « réduire les animations ». -->
+  <div class="onde" class:active={etat === 'ecoute'} aria-hidden="true">
+    {#each { length: 16 } as _, i (i)}<span></span>{/each}
+  </div>
   <div role="status" aria-live="polite">
     <span class="sr">{statut}</span>
     {#if message}<p class="consigne">{message}</p>{/if}
@@ -202,22 +206,51 @@
 </main>
 
 <style>
+  /* Écran clair et calme ; le mode se lit à la teinte (violet privé, bleu-vert ordinaire), au pictogramme et aux mots. */
   .enregistreur {
     position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; text-align: center;
-    padding: 72px 24px calc(48px + env(safe-area-inset-bottom)); background: var(--private); color: var(--bg);
+    padding: 96px 32px calc(48px + env(safe-area-inset-bottom)); background: var(--private-bg); color: var(--text);
+    --teinte: var(--private); --teinte-douce: var(--private-soft); --encre: var(--private-ink);
   }
-  .ordinaire { background: var(--accent); }
-  .fermer { position: absolute; top: 12px; left: 12px; color: var(--bg); }
-  .cadenas { display: inline-flex; }
-  h1 { font-size: var(--font-title); font-weight: 600; margin-top: 20px; }
-  .maison { font-weight: 600; margin-top: 8px; }
-  .consigne { max-width: 300px; margin-top: 8px; }
-  .commandes { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  .minuteur { font-size: 30px; font-variant-numeric: tabular-nums; min-height: 40px; }
-  .enreg { width: 108px; height: 108px; display: grid; place-items: center; border: none; border-radius: var(--radius-pill); background: var(--bg); }
-  .rond { width: 40px; height: 40px; border-radius: var(--radius-pill); background: var(--private); }
-  .ordinaire .rond, .ordinaire .carre { background: var(--accent); }
-  .carre { width: 34px; height: 34px; border-radius: 6px; background: var(--private); }
+  .ordinaire { background: var(--bg); --teinte: var(--accent); --teinte-douce: var(--accent-soft); --encre: var(--accent-ink); }
+  .fermer { position: absolute; top: 12px; left: 12px; color: var(--text); }
+  .pastille-mode {
+    width: 88px; height: 88px; display: grid; place-items: center; border-radius: var(--radius-pill);
+    background: var(--teinte-douce); color: var(--teinte);
+  }
+  h1 { font-size: var(--font-title); font-weight: 700; line-height: 36px; margin-top: 16px; }
+  .maison { font-size: 18px; font-weight: 600; color: var(--encre); margin-top: 12px; }
+  .consigne { max-width: 300px; margin-top: 8px; color: var(--muted); }
+  .onde { height: 72px; margin-top: 48px; display: flex; align-items: center; gap: 4px; }
+  .onde span { width: 4px; border-radius: 3px; background: var(--teinte); opacity: 0.85; transform-origin: center; transform: scaleY(0.35); }
+  .onde.active span { animation: onde 900ms ease-in-out infinite alternate; }
+  .onde span:nth-child(1) { height: 20%; animation-delay: -0ms; }
+  .onde span:nth-child(2) { height: 36%; animation-delay: -137ms; }
+  .onde span:nth-child(3) { height: 56%; animation-delay: -274ms; }
+  .onde span:nth-child(4) { height: 80%; animation-delay: -411ms; }
+  .onde span:nth-child(5) { height: 48%; animation-delay: -548ms; }
+  .onde span:nth-child(6) { height: 92%; animation-delay: -685ms; }
+  .onde span:nth-child(7) { height: 66%; animation-delay: -822ms; }
+  .onde span:nth-child(8) { height: 40%; animation-delay: -59ms; }
+  .onde span:nth-child(9) { height: 76%; animation-delay: -196ms; }
+  .onde span:nth-child(10) { height: 100%; animation-delay: -333ms; }
+  .onde span:nth-child(11) { height: 58%; animation-delay: -470ms; }
+  .onde span:nth-child(12) { height: 34%; animation-delay: -607ms; }
+  .onde span:nth-child(13) { height: 70%; animation-delay: -744ms; }
+  .onde span:nth-child(14) { height: 50%; animation-delay: -881ms; }
+  .onde span:nth-child(15) { height: 28%; animation-delay: -118ms; }
+  .onde span:nth-child(16) { height: 18%; animation-delay: -255ms; }
+  @keyframes onde { from { transform: scaleY(0.3); } to { transform: scaleY(1); } }
+  @media (prefers-reduced-motion: reduce) { .onde.active span { animation: none; transform: scaleY(0.7); } }
+  .commandes { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  .minuteur { font-size: 32px; font-weight: 600; line-height: 40px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; min-height: 40px; }
+  .enreg {
+    width: 96px; height: 96px; display: grid; place-items: center; border: none; border-radius: var(--radius-pill);
+    background: var(--teinte); outline: 10px solid var(--teinte-douce);
+  }
+  .enreg:focus-visible { outline: 3px solid var(--text); outline-offset: 12px; }
+  .rond { width: 36px; height: 36px; border-radius: var(--radius-pill); background: var(--bg); }
+  .carre { width: 32px; height: 32px; border-radius: 8px; background: var(--bg); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .reessayer { border-color: var(--bg); color: var(--bg); }
+  .reessayer { border-color: var(--teinte); color: var(--encre); }
 </style>
