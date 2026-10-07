@@ -5,9 +5,13 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.5.0] - 2026-10-07
+
 ### Ajouté
 - `GET /api/captures/:id/transcription` : ce qui a été dit, pour le détail d'une action ; réservé au propriétaire, 404 pour une capture privée (jamais transcrite) ; le texte n'apparaît dans aucun journal (2026-10-07).
 - Vue Semaine : une bande des sept jours sous les onglets ; le jour courant en accent, toucher un jour qui a des actions fait défiler jusqu'à son groupe. Onglets Aujourd'hui, Semaine, Horizons en piste segmentée (2026-10-07).
+- Spec de la refonte de l'interface (direction « Sérénité affinée », maquette validée le 2026-10-07) : `docs/superpowers/specs/2026-10-07-refonte-interface-design.md` (2026-10-07).
+- Plan d'implémentation de la refonte : `docs/superpowers/plans/2026-10-07-refonte-interface.md` (2026-10-07).
 
 ### Modifié
 - Nouvelle palette « Sérénité affinée » en clair et en sombre : fond `#F6F8F9`, accent bleu-vert `#00677D`, Privé violet, pastilles recalculées ; le jeton d'alarme ocre disparaît (la cloche suffit) ; corps, métadonnées à 16 px et titres à 28 px ; icônes et couleur de la PWA alignées ; contrastes testés dans les deux thèmes (2026-10-07).
@@ -18,10 +22,6 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Écran Privé : fond teinté, lignes en cartes avec lecteur violet ; le mot d'un enregistrement s'affiche en titre, un crayon le change, « Ajouter un mot » sinon ; la pastille Privé redondante quitte les lignes (2026-10-07).
 - Connexion, Réglages et À revoir au même style : champs de 52 px, cartes bordées, titres plus nets (2026-10-07).
 - `design/maquettes.html` montre la palette des deux thèmes et renvoie à la maquette de référence ; contrôle e2e de l'apparence à 360 et 390 px, en clair et en sombre (aucun débordement, cibles de 44 px au moins) (2026-10-07).
-
-### Ajouté
-- Spec de la refonte de l'interface (direction « Sérénité affinée », maquette validée le 2026-10-07) : `docs/superpowers/specs/2026-10-07-refonte-interface-design.md` (2026-10-07).
-- Plan d'implémentation de la refonte : `docs/superpowers/plans/2026-10-07-refonte-interface.md` (2026-10-07).
 
 ### Corrigé
 - Cahier des charges : la réflexion passe par `thinkingLevel` et plus aucune température n'est envoyée à Gemini, comme le code depuis la 1.4.2 (2026-10-07).
