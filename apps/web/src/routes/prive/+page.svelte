@@ -9,8 +9,6 @@
   import Lecteur from '$lib/composants/Lecteur.svelte';
   import { FUSEAU } from '$lib/config';
   import { duree, heureLocale, libelleJour, libelleMois, moisVoisin } from '$lib/format';
-  import Pastille from '$lib/composants/Pastille.svelte';
-  import { PRIVE } from '$lib/pastilles';
   import { MESSAGES } from '$lib/messages';
   import { filePrivee, videur } from '$lib/prive/demarrage';
   import { plusRecentesDAbord, type BilanVidage, type CapturePrivee } from '$lib/prive/file';
@@ -112,9 +110,9 @@
       <ul class="liste">
         {#each j.captures as c (c.id)}
           <li class="ligne">
-            {#if c.aAudio}<Lecteur src={urlAudio(c.id)} libelle="Écouter, {c.heure}" />{/if}
+            {#if c.aAudio}<Lecteur src={urlAudio(c.id)} libelle="Écouter, {c.heure}" teinte="prive" />{/if}
             <div class="corps">
-              <span>{c.heure}{c.dureeS !== null ? ` · ${duree(c.dureeS)}` : ''} <Pastille p={PRIVE} /></span>
+              <span class="quand">{c.heure}{c.dureeS !== null ? ` · ${duree(c.dureeS)}` : ''}</span>
               {#if !c.aAudio}<span class="discret">{MESSAGES.noteEcrite}</span>{/if}
               <Etiquette id={c.id} valeur={c.etiquette} />
             </div>
@@ -126,13 +124,20 @@
 </main>
 
 <style>
-  .prive { background: var(--private-soft); }
-  .garde { display: flex; align-items: center; gap: 8px; padding: 0 20px 10px; font-size: var(--font-meta); color: var(--text); }
-  .cadenas { display: inline-flex; color: var(--private); }
-  .mois { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; }
-  .ligne {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 8px; padding: 8px 12px;
-    background: var(--surface); border-radius: var(--radius-card);
+  .prive { background: var(--private-bg); }
+  .garde {
+    display: flex; align-items: flex-start; gap: 10px; margin: 4px 20px 16px; padding: 12px 14px; border-radius: 14px;
+    background: var(--private-soft); color: var(--private-ink); font-size: var(--font-meta);
   }
-  .corps { flex: 1; display: flex; flex-direction: column; }
+  .cadenas { display: inline-flex; color: var(--private-ink); margin-top: 2px; }
+  .mois { display: flex; align-items: center; justify-content: space-between; padding: 0 20px 4px; font-size: 18px; font-weight: 600; }
+  .mois :global(.bouton-icone) { border: 1px solid var(--line); background: var(--surface); }
+  .mois :global(.bouton-icone:disabled) { background: transparent; }
+  .ligne {
+    display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 8px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  }
+  .corps { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .quand { color: var(--muted); }
+  :global(.prive .groupe:first-of-type) { color: var(--private-ink); }
 </style>

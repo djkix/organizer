@@ -96,11 +96,18 @@ test('la vue Privé : par jour, lecteur ou note écrite, étiquette facultative'
   await expect(page.getByText('Note écrite, gardée sur le serveur.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mois suivant' })).toBeDisabled();
 
-  await page.getByRole('button', { name: 'ajouter un mot' }).click();
+  // Un mot existant s'affiche en titre, avec un crayon pour le changer.
+  await expect(page.getByText('après le coup de fil')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Changer le mot : après le coup de fil' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Ajouter un mot' }).click();
   await page.getByLabel("Un mot pour t'y retrouver").fill('au réveil');
   await page.getByRole('button', { name: 'Garder' }).click();
-  await expect(page.getByRole('button', { name: 'au réveil' })).toBeVisible();
+  await expect(page.getByText('au réveil')).toBeVisible();
   expect(appels.some((a) => a.cle === `PATCH /api/captures/privees/${id}`)).toBe(true);
+  await page.getByRole('button', { name: 'Changer le mot : au réveil' }).click();
+  await expect(page.getByLabel("Un mot pour t'y retrouver")).toHaveValue('au réveil');
+  for (const b of await page.locator('main button:visible').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
 
 test('un refus définitif du serveur est dit calmement, la copie reste', async ({ page }) => {
