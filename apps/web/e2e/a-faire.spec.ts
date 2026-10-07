@@ -149,6 +149,32 @@ test.describe('effacer', () => {
     expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(0);
   });
 
+  test('ouverte, un appui ailleurs la referme sans confirmation', async ({ page }) => {
+    const appels = await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page);
+    await expect(ligneGarage(page).getByRole('button', { name: /^Effacer/ })).toBeVisible();
+    await page.getByRole('heading').first().click();
+    await expect(ligneGarage(page).getByRole('button', { name: /^Effacer/ })).toHaveCount(0);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(0);
+  });
+
+  test('ouverte, un glissement vers la droite la referme', async ({ page }) => {
+    await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page);
+    const b = (await ligneGarage(page).locator('.piste').boundingBox())!;
+    const y = b.y + b.height / 2;
+    await page.mouse.move(b.x + 100, y);
+    await page.mouse.down();
+    await page.mouse.move(b.x + 150, y + 2, { steps: 4 });
+    await page.mouse.move(b.x + 230, y + 3, { steps: 4 });
+    await page.mouse.up();
+    await expect(ligneGarage(page).getByRole('button', { name: /^Effacer/ })).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
   test('depuis le détail : même confirmation', async ({ page }) => {
     const appels = await simuler(page, serveur());
     await page.goto('/');
