@@ -185,6 +185,7 @@
   .activer { margin: 0 16px 10px; }
   .message { padding: 0 22px 10px; }
   .agenda { display: grid; gap: 4px; }
-  .note { background: var(--accent-soft); font-size: var(--font-meta); line-height: 1.55; display: grid; gap: 6px; }
-  .note h2 { font-size: var(--font-meta); font-weight: 600; }
+  .note { background: var(--accent-soft); border-color: transparent; font-size: var(--font-meta); line-height: 1.55; display: grid; gap: 6px; }
+  .note h2 { font-size: var(--font-meta); font-weight: 700; color: var(--accent-ink); }
+  .reglage { font-weight: 500; }
 </style>
