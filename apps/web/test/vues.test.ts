@@ -84,3 +84,11 @@ describe('bandeJours', () => {
     expect(g[0]!.ancre).toBe(`jour-${AUJ}`);
   });
 });
+
+describe('bandeJours après un cochage', () => {
+  it('un jour dont toutes les actions sont retirées perd son ancre', () => {
+    const a = l('Seule action de jeudi');
+    const b = bandeJours({ jours: [{ jour: '2026-10-08', actions: [a] }] }, '2026-10-07', new Set([a.itemId]));
+    expect(b[1]!.ancre).toBeNull();
+  });
+});

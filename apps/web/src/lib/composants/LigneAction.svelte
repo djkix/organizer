@@ -103,7 +103,7 @@
     font-weight: 600; font-size: var(--font-meta);
   }
 
-  .case { width: var(--touch-min); min-height: var(--touch-min); flex: none; display: grid; place-items: center; padding: 0 0 0 4px; background: none; border: none; }
+  .case { width: var(--touch-min); min-height: var(--touch-min); flex: none; align-self: stretch; display: grid; place-items: center; padding: 0 0 0 4px; background: none; border: none; }
   .boite { width: 22px; height: 22px; display: grid; place-items: center; border: 2px solid var(--check); border-radius: 7px; color: var(--bg); }
   .coche .boite { background: var(--accent); border-color: var(--accent); }
   .corps {

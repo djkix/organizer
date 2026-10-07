@@ -170,7 +170,7 @@
       </a>
     {/each}
   </nav>
-  {#if donnees && donnees.nom === 'semaine' && vue === 'semaine'}<BandeJours jours={bandeJours(donnees.vue, aujourdhui)} />{/if}
+  {#if donnees && donnees.nom === 'semaine' && vue === 'semaine'}<BandeJours jours={bandeJours(donnees.vue, aujourdhui, retires)} />{/if}
 
   {#if erreur}
     <p class="vide">{MESSAGES.listeIndisponible}</p>
@@ -215,5 +215,7 @@
     border-radius: 9px; color: var(--muted); text-decoration: none; font-size: var(--font-meta); font-weight: 500;
   }
   .puce[aria-current='page'] { background: var(--surface); color: var(--accent-ink); font-weight: 600; outline: 1px solid var(--line); }
+  /* Le filet de l'onglet actif ne doit jamais masquer l'anneau de focus. */
+  .puce:focus-visible, .puce[aria-current='page']:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .groupe { scroll-margin-top: 16px; }
 </style>
