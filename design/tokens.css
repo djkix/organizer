@@ -18,6 +18,21 @@
   --cta-private: #4A3B78;
   --cta-private-text: #FFFFFF;
   --cta-private-edge: #2F2552;
+  /* Pastilles : teintes calmes et distinctes, jamais de rouge ni d'orange ; le texte porte toujours le sens. */
+  --tag-action-bg: #DCEBEA;
+  --tag-action-text: #1B4F4D;
+  --tag-pensee-bg: #DFE7F5;
+  --tag-pensee-text: #2C4A7A;
+  --tag-info-bg: #E4EDD9;
+  --tag-info-text: #3F5A2A;
+  --tag-arevoir-bg: #E9E4D6;
+  --tag-arevoir-text: #5A4E2C;
+  --tag-alarme-bg: #F0E4F0;
+  --tag-alarme-text: #6A3A6A;
+  --tag-echeance-bg: #E3E6EA;
+  --tag-echeance-text: #3A4150;
+  --tag-prive-bg: #E4DDF3;
+  --tag-prive-text: #3F3270;
 
   --radius-card: 16px;
   --radius-pill: 999px;
@@ -46,6 +61,20 @@
     --cta-private: #C4B8F0;
     --cta-private-text: #1A1330;
     --cta-private-edge: #8B7BC4;
+    --tag-action-bg: #1E3A39;
+    --tag-action-text: #A9E0DC;
+    --tag-pensee-bg: #25304A;
+    --tag-pensee-text: #B6C9F0;
+    --tag-info-bg: #2B3622;
+    --tag-info-text: #C3DDA8;
+    --tag-arevoir-bg: #3A3526;
+    --tag-arevoir-text: #E0D5A8;
+    --tag-alarme-bg: #3D2A3D;
+    --tag-alarme-text: #E8C4E8;
+    --tag-echeance-bg: #2E323B;
+    --tag-echeance-text: #C9CFDA;
+    --tag-prive-bg: #2F2749;
+    --tag-prive-text: #D0C6F2;
   }
 }
 :root[data-theme="dark"] {
@@ -66,5 +95,19 @@
   --cta-private: #C4B8F0;
   --cta-private-text: #1A1330;
   --cta-private-edge: #8B7BC4;
+  --tag-action-bg: #1E3A39;
+  --tag-action-text: #A9E0DC;
+  --tag-pensee-bg: #25304A;
+  --tag-pensee-text: #B6C9F0;
+  --tag-info-bg: #2B3622;
+  --tag-info-text: #C3DDA8;
+  --tag-arevoir-bg: #3A3526;
+  --tag-arevoir-text: #E0D5A8;
+  --tag-alarme-bg: #3D2A3D;
+  --tag-alarme-text: #E8C4E8;
+  --tag-echeance-bg: #2E323B;
+  --tag-echeance-text: #C9CFDA;
+  --tag-prive-bg: #2F2749;
+  --tag-prive-text: #D0C6F2;
 }
 /* Aucun token rouge n'existe : c'est volontaire. */

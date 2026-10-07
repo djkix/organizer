@@ -3,6 +3,7 @@
   import { creerGlisseur, estGlissement, ouverture } from '$lib/glisser';
   import { MESSAGES } from '$lib/messages';
   import Icone from './Icone.svelte';
+  import Pastille from './Pastille.svelte';
 
   let { ligne, coche, surCocher, surDecocher, surOuvrir, surEffacer }: {
     ligne: LigneAffichee;
@@ -73,10 +74,10 @@
   </button>
   <button class="corps" onclick={corps}>
     <span class="texte">{ligne.texte}</span>
-    {#if ligne.meta || ligne.alarme}
+    {#if ligne.meta || ligne.pastilles.length}
       <span class="meta">
-        {#if ligne.alarme}<span class="cloche"><Icone nom="cloche" taille={14} etiquette="Alarme" /></span>{/if}
-        {ligne.meta}
+        {#each ligne.pastilles as p (p.type)}<Pastille {p} />{/each}
+        {#if ligne.meta && ligne.source.echeanceType !== 'datee'}{ligne.meta}{/if}
       </span>
     {/if}
   </button>
@@ -103,5 +104,4 @@
   .texte { font-size: var(--font-body); line-height: 1.35; }
   .coche .texte { text-decoration: line-through; color: var(--muted); }
   .meta { display: flex; align-items: center; gap: 6px; font-size: var(--font-meta); color: var(--muted); }
-  .cloche { display: inline-flex; color: var(--alarm); }
 </style>

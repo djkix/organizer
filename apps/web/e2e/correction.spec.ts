@@ -44,6 +44,25 @@ test('À revoir : trancher un item ambigu ; une capture seule reste en lecture',
   await expect(page.getByRole('button', { name: "C'est à faire" })).toHaveCount(0);
 });
 
+test('pastilles : alarme dans la liste, « À revoir » sur une pensée ambiguë', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
+  await simuler(page, {
+    ...CONNECTE,
+    'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [{ ...garage, alarme: true }, draps], suggestions: [] }),
+    'GET /api/vues/a-revoir': json(200, {
+      items: [{ itemId: draps.itemId, captureId: draps.captureId, texte: 'peut-être une idée', emisLe: '2026-10-06T06:12:00.000Z', aAudio: false }],
+      captures: [],
+    }),
+  });
+  await page.goto('/');
+  const l = page.locator(`[data-item="${garage.itemId}"]`);
+  await expect(l.getByText('Alarme', { exact: true })).toBeVisible();
+  await expect(l.getByText('10:00', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Rappeler le garage.*Alarme/ })).toBeVisible();
+  await page.goto('/a-revoir');
+  await expect(page.locator('article').filter({ hasText: 'peut-être une idée' }).getByText('À revoir', { exact: true })).toBeVisible();
+});
+
 test('À revoir : effacer un item après confirmation, une seule requête', async ({ page }) => {
   const appels = await simuler(page, {
     ...CONNECTE,

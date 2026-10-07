@@ -1,6 +1,7 @@
 import type { LigneAction, VueAujourdhui, VueHorizons, VueSemaine } from '@organizer/shared/api';
 import { libelleBorne, libelleJour, metaLigne } from './format.js';
 import { MESSAGES } from './messages.js';
+import { pastillesAction, type Pastille } from './pastilles.js';
 
 export const NOMS_VUES = ['aujourdhui', 'semaine', 'horizons'] as const;
 export type NomVue = (typeof NOMS_VUES)[number];
@@ -20,7 +21,7 @@ export const VIDES: Record<NomVue, string> = {
   horizons: MESSAGES.videHorizons,
 };
 
-export interface LigneAffichee { itemId: string; texte: string; meta: string; alarme: boolean; source: LigneAction }
+export interface LigneAffichee { itemId: string; texte: string; meta: string; alarme: boolean; pastilles: Pastille[]; source: LigneAction }
 export interface Groupe { titre: string | null; lignes: LigneAffichee[] }
 export type DonneesVue =
   | { nom: 'aujourdhui'; vue: VueAujourdhui }
@@ -31,7 +32,7 @@ export type DonneesVue =
 export function groupes(d: DonneesVue, aujourdhui: string, fuseau: string, retires: ReadonlySet<string>): Groupe[] {
   const lignes = (ls: LigneAction[], avecMeta = true): LigneAffichee[] =>
     ls.filter((x) => !retires.has(x.itemId)).map((x) => ({
-      itemId: x.itemId, texte: x.texte, meta: avecMeta ? metaLigne(x, fuseau) : '', alarme: x.alarme, source: x,
+      itemId: x.itemId, texte: x.texte, meta: avecMeta ? metaLigne(x, fuseau) : '', alarme: x.alarme, pastilles: pastillesAction(x, fuseau), source: x,
     }));
   const tous: Groupe[] =
     d.nom === 'aujourdhui'

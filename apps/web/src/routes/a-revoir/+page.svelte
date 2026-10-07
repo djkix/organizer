@@ -8,6 +8,8 @@
   import { FUSEAU } from '$lib/config';
   import { corpsNature } from '$lib/correction';
   import { momentEnClair } from '$lib/format';
+  import Pastille from '$lib/composants/Pastille.svelte';
+  import { A_REVOIR } from '$lib/pastilles';
   import { MESSAGES } from '$lib/messages';
 
   let vue = $state<VueARevoir | null>(null);
@@ -57,7 +59,7 @@
     {#each vue.items as i (i.itemId)}
       <article class="carte">
         <p>« {i.texte} »</p>
-        <p class="discret">{momentEnClair(i.emisLe, FUSEAU)}</p>
+        <p class="discret"><Pastille p={A_REVOIR} /> {momentEnClair(i.emisLe, FUSEAU)}</p>
         {#if i.aAudio}<Lecteur src={urlAudio(i.captureId)} />{/if}
         <div class="rangee">
           <button class="bouton" onclick={() => trancher(i.itemId, 'action')}>{MESSAGES.cestAFaire}</button>
@@ -69,7 +71,7 @@
     {#each vue.captures as c (c.captureId)}
       <article class="carte">
         <p>{c.texte ? `« ${c.texte} »` : MESSAGES.vocalSansTexte}</p>
-        <p class="discret">{momentEnClair(c.emisLe, FUSEAU)}</p>
+        <p class="discret"><Pastille p={A_REVOIR} /> {momentEnClair(c.emisLe, FUSEAU)}</p>
         {#if c.aAudio}<Lecteur src={urlAudio(c.captureId)} />{/if}
       </article>
     {/each}

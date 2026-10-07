@@ -9,6 +9,8 @@
   import Lecteur from '$lib/composants/Lecteur.svelte';
   import { FUSEAU } from '$lib/config';
   import { duree, heureLocale, libelleJour, libelleMois, moisVoisin } from '$lib/format';
+  import Pastille from '$lib/composants/Pastille.svelte';
+  import { PRIVE } from '$lib/pastilles';
   import { MESSAGES } from '$lib/messages';
   import { filePrivee, videur } from '$lib/prive/demarrage';
   import { plusRecentesDAbord, type BilanVidage, type CapturePrivee } from '$lib/prive/file';
@@ -112,7 +114,7 @@
           <li class="ligne">
             {#if c.aAudio}<Lecteur src={urlAudio(c.id)} libelle="Écouter, {c.heure}" />{/if}
             <div class="corps">
-              <span>{c.heure}{c.dureeS !== null ? ` · ${duree(c.dureeS)}` : ''}</span>
+              <span>{c.heure}{c.dureeS !== null ? ` · ${duree(c.dureeS)}` : ''} <Pastille p={PRIVE} /></span>
               {#if !c.aAudio}<span class="discret">{MESSAGES.noteEcrite}</span>{/if}
               <Etiquette id={c.id} valeur={c.etiquette} />
             </div>
