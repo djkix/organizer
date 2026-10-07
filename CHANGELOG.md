@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Pastilles de couleur calmes pour reconnaître chaque élément d'un coup d'œil : échéance (« 10:00 », « Jour », « Fenêtre ») et « Alarme » (avec la cloche) dans les listes d'actions, « À revoir » dans la vue du même nom, « Privé » (avec le cadenas) dans l'écran Privé ; sept paires de jetons `tag-*` clairs et sombres, ni rouge ni orange, texte toujours présent, contraste d'au moins 4,5 testé dans les deux thèmes (2026-10-07).
+
 ### Modifié
 - La vue « À revoir » permet d'effacer un item (bouton « Effacer » et même confirmation calme que dans les listes d'actions) (2026-10-07).
 

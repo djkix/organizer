@@ -52,3 +52,15 @@ describe.each(['light', 'dark'] as const)('grands boutons d\'accueil, thème %s 
     expect(contraste(c.ctaPrivateText, c.ctaPrivate)).toBeGreaterThanOrEqual(7);
   });
 });
+
+const TAGS = ['Action', 'Pensee', 'Info', 'Arevoir', 'Alarme', 'Echeance', 'Prive'] as const;
+describe.each(['light', 'dark'] as const)('pastilles, thème %s', (theme) => {
+  const c = tokens.color[theme] as Record<string, string>;
+  it.each(TAGS)('pastille %s : texte sur fond, 4,5 au moins', (t) => {
+    expect(contraste(c[`tag${t}Text`]!, c[`tag${t}Bg`]!)).toBeGreaterThanOrEqual(4.5);
+  });
+  it('les fonds se distinguent deux à deux du fond de carte et entre eux', () => {
+    const fonds = TAGS.map((t) => c[`tag${t}Bg`]!);
+    expect(new Set(fonds).size).toBe(TAGS.length);
+  });
+});
