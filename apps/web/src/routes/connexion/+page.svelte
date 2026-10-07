@@ -84,11 +84,12 @@
     min-height: 100dvh; display: flex; flex-direction: column; justify-content: flex-end; gap: 24px;
     padding: 24px 20px calc(120px + env(safe-area-inset-bottom));
   }
-  h1 { font-size: var(--font-title); font-weight: 600; }
+  h1 { font-size: var(--font-title); font-weight: 700; line-height: 36px; letter-spacing: -0.02em; }
   form { display: flex; flex-direction: column; gap: 16px; }
-  label { display: flex; flex-direction: column; gap: 6px; font-size: var(--font-meta); color: var(--muted); }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: var(--font-meta); font-weight: 600; color: var(--muted); }
   input {
-    min-height: var(--touch-min); padding: 0 14px; border: 1px solid var(--muted); border-radius: 12px;
-    background: var(--surface); color: var(--text); font-size: var(--font-body);
+    min-height: 52px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--surface); color: var(--text); font-size: var(--font-body); font-weight: 400;
   }
+  input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
 </style>

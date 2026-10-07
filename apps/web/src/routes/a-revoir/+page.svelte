@@ -81,3 +81,10 @@
   {@const cible = aEffacer}
   <ConfirmerEffacer texte={cible.texte} surConfirmer={() => void effacer(cible.itemId)} surAnnuler={() => (aEffacer = null)} />
 {/if}
+
+<style>
+  .carte { display: flex; flex-direction: column; gap: 10px; }
+  .carte > p:first-child { font-weight: 500; overflow-wrap: anywhere; }
+  .carte .discret { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .rangee { margin-top: 2px; }
+</style>
