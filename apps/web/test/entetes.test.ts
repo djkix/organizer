@@ -15,7 +15,7 @@ describe('en-têtes de la coquille', () => {
   it('CSP stricte : rien hors de l\'origine, pas de cadre, pas de style en ligne', () => {
     const csp = politiqueCsp(["'sha256-abc'"]);
     expect(csp).toBe([
-      "default-src 'none'", "script-src 'self' 'sha256-abc'", "style-src 'self'", "img-src 'self'", "media-src 'self'",
+      "default-src 'none'", "script-src 'self' 'sha256-abc'", "style-src 'self'", "img-src 'self'", "font-src 'self'", "media-src 'self'",
       "connect-src 'self'", "worker-src 'self'", "manifest-src 'self'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
     ].join('; '));
     expect(csp).not.toContain('unsafe');
