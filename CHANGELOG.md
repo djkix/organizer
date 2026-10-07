@@ -5,6 +5,11 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.4.2] - 2026-10-07
+
+### Corrigé
+- Les appels à Gemini n'envoient plus `temperature` : Google annonce que les paramètres d'échantillonnage (`temperature`, `top_p`, `top_k`) seront refusés (HTTP 400) par ses prochains modèles, et ils sont déjà sans effet ; la réflexion passe déjà par `thinkingLevel` (2026-10-07).
+
 ## [1.4.1] - 2026-10-07
 
 ### Ajouté
