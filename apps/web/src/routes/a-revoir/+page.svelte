@@ -3,6 +3,7 @@
   import type { VueARevoir } from '@organizer/shared/api';
   import { urlAudio } from '$lib/api';
   import { api } from '$lib/client';
+  import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
   import Lecteur from '$lib/composants/Lecteur.svelte';
   import { FUSEAU } from '$lib/config';
   import { corpsNature } from '$lib/correction';
@@ -12,6 +13,7 @@
   let vue = $state<VueARevoir | null>(null);
   let erreur = $state(false);
   let message = $state<string | null>(null);
+  let aEffacer = $state<{ itemId: string; texte: string } | null>(null);
 
   onMount(async () => {
     try {
@@ -30,9 +32,21 @@
       message = MESSAGES.correctionRatee;
     }
   }
+
+  async function effacer(itemId: string): Promise<void> {
+    aEffacer = null;
+    message = null;
+    try {
+      await api.effacer(itemId);
+      if (vue) vue = { ...vue, items: vue.items.filter((i) => i.itemId !== itemId) };
+      message = MESSAGES.efface;
+    } catch {
+      message = MESSAGES.effaceRate;
+    }
+  }
 </script>
 
-<main class="ecran">
+<main class="ecran" inert={aEffacer !== null}>
   <header class="entete"><h1>À revoir</h1><p class="sous">{MESSAGES.aRevoirSous}</p></header>
   {#if message}<p class="discret" role="status">{message}</p>{/if}
   {#if erreur}
@@ -48,6 +62,7 @@
         <div class="rangee">
           <button class="bouton" onclick={() => trancher(i.itemId, 'action')}>{MESSAGES.cestAFaire}</button>
           <button class="bouton" onclick={() => trancher(i.itemId, 'pensee')}>{MESSAGES.cestUnePensee}</button>
+          <button class="bouton" onclick={() => (aEffacer = { itemId: i.itemId, texte: i.texte })}>{MESSAGES.effacerBouton}</button>
         </div>
       </article>
     {/each}
@@ -60,3 +75,7 @@
     {/each}
   {/if}
 </main>
+{#if aEffacer}
+  {@const cible = aEffacer}
+  <ConfirmerEffacer texte={cible.texte} surConfirmer={() => void effacer(cible.itemId)} surAnnuler={() => (aEffacer = null)} />
+{/if}
