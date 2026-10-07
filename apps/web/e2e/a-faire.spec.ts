@@ -160,6 +160,18 @@ test.describe('effacer', () => {
     expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(0);
   });
 
+  test('ouverte, le premier appui sur la case d\'une autre ligne ne fait que refermer', async ({ page }) => {
+    await simuler(page, { ...serveur(), [`POST /api/items/${draps.itemId}/fait`]: (r) => r.fulfill({ status: 204 }) });
+    await page.goto('/');
+    await glisser(page);
+    const caseDraps = page.getByRole('checkbox', { name: 'Cocher : Changer les draps' });
+    await caseDraps.click();
+    await expect(ligneGarage(page).getByRole('button', { name: /^Effacer/ })).toHaveCount(0);
+    await expect(caseDraps).toHaveAttribute('aria-checked', 'false');
+    await caseDraps.click();
+    await expect(caseDraps).toHaveAttribute('aria-checked', 'true');
+  });
+
   test('ouverte, un glissement vers la droite la referme', async ({ page }) => {
     await simuler(page, serveur());
     await page.goto('/');
