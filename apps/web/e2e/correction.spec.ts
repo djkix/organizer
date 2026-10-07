@@ -44,6 +44,27 @@ test('À revoir : trancher un item ambigu ; une capture seule reste en lecture',
   await expect(page.getByRole('button', { name: "C'est à faire" })).toHaveCount(0);
 });
 
+test('À revoir : effacer un item après confirmation, une seule requête', async ({ page }) => {
+  const appels = await simuler(page, {
+    ...CONNECTE,
+    'GET /api/vues/a-revoir': json(200, {
+      items: [{ itemId: garage.itemId, captureId: garage.captureId, texte: 'vendredi ou samedi', emisLe: '2026-10-06T06:12:00.000Z', aAudio: false }],
+      captures: [],
+    }),
+    [`DELETE /api/items/${garage.itemId}`]: json(204),
+  });
+  await page.goto('/a-revoir');
+  await page.getByRole('button', { name: 'Effacer' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Annuler' }).click();
+  await expect(page.getByText('« vendredi ou samedi »')).toBeVisible();
+  expect(appels.filter((a) => a.cle === `DELETE /api/items/${garage.itemId}`)).toHaveLength(0);
+  await page.getByRole('button', { name: 'Effacer' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Effacer' }).click();
+  await expect(page.getByText('« vendredi ou samedi »')).toHaveCount(0);
+  await expect(page.getByText('Effacé.')).toBeVisible();
+  expect(appels.filter((a) => a.cle === `DELETE /api/items/${garage.itemId}`)).toHaveLength(1);
+});
+
 test.describe('focus et retour du détail', () => {
   const montage = async (page: import('@playwright/test').Page) => {
     await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });

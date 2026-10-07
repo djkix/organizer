@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Modifié
+- La vue « À revoir » permet d'effacer un item (bouton « Effacer » et même confirmation calme que dans les listes d'actions) (2026-10-07).
+
 ### Corrigé
 - Une ligne glissée (« Effacer » découvert) se referme d'un glissement vers la droite, d'un appui ailleurs (autre ligne, fond de page) ou d'un défilement ; une seule ligne reste ouverte à la fois ; la zone morte verticale est inchangée (2026-10-07).
 - Une action effacée refuse les gestes tardifs : un ancien bouton d'alarme Telegram ne pose plus d'alarme (réponse calme comme pour les autres refus), cocher et corriger répondent 404 comme pour un item inconnu (2026-10-07).
