@@ -48,9 +48,12 @@ export interface JourBande { jour: string; abrege: string; numero: number; coura
 const ABREGES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'] as const;
 const ancreJour = (jour: string): string => `jour-${jour}`;
 
-/** Les sept jours de la vue Semaine à partir d'aujourd'hui ; seuls les jours qui ont des actions ont une ancre. */
-export function bandeJours(vue: VueSemaine, aujourdhui: string): JourBande[] {
-  const pleins = new Set(vue.jours.filter((j) => j.actions.length > 0).map((j) => j.jour));
+/**
+ * Les sept jours de la vue Semaine à partir d'aujourd'hui ; seuls les jours qui ont encore des actions affichées
+ * ont une ancre (les lignes cochées ou effacées, `retires`, ne comptent plus : leur groupe a disparu).
+ */
+export function bandeJours(vue: VueSemaine, aujourdhui: string, retires: ReadonlySet<string> = new Set()): JourBande[] {
+  const pleins = new Set(vue.jours.filter((j) => j.actions.some((a) => !retires.has(a.itemId))).map((j) => j.jour));
   // Midi UTC : aucun changement d'heure ne fait glisser le jour.
   const depart = Date.parse(`${aujourdhui}T12:00:00Z`);
   return Array.from({ length: 7 }, (_, i) => {

@@ -213,3 +213,26 @@ test.describe('effacer', () => {
     await expect(ligneGarage(page)).toHaveCount(1);
   });
 });
+
+test('focus clavier visible sur l\'onglet actif', async ({ page }) => {
+  await simuler(page, table());
+  await page.goto('/');
+  const actif = page.getByRole('link', { name: "Aujourd'hui" }).first();
+  await actif.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  const style = await actif.evaluate((e) => { const s = getComputedStyle(e); return `${s.outlineStyle} ${s.outlineWidth} ${s.outlineColor}`; });
+  expect(style).toBe('solid 2px rgb(0, 103, 125)');
+});
+
+test('sur une carte haute, la case à cocher occupe toute la hauteur', async ({ page }) => {
+  const longue = ligne(9, 'Penser à rappeler la mutuelle pour le remboursement des lunettes et demander le formulaire de prise en charge avant la fin du mois', {
+    echeanceType: 'datee', echeanceDate: '2026-10-06T13:00:00.000Z', alarme: true,
+  });
+  await simuler(page, { ...table(), 'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [longue], suggestions: [] }) });
+  await page.goto('/');
+  const carte = page.locator('li.ligne').first();
+  const caseB = (await carte.getByRole('checkbox').boundingBox())!;
+  const carteB = (await carte.boundingBox())!;
+  expect(caseB.height).toBeGreaterThan(carteB.height - 8);
+});
