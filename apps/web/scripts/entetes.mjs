@@ -29,6 +29,7 @@ export function politiqueCsp(empreintes) {
     `script-src 'self' ${empreintes.join(' ')}`.trim(),
     "style-src 'self'",
     "img-src 'self'",
+    "font-src 'self'",
     "media-src 'self'",
     "connect-src 'self'",
     "worker-src 'self'",

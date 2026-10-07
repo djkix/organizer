@@ -13,6 +13,7 @@
     "budget": "vite build && node scripts/budget.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@organizer/shared": "workspace:*",
     "@simplewebauthn/browser": "^14.0.0",
     "idb": "^8.0.3"
