@@ -117,3 +117,8 @@ export function debutTexte(texte: string | null, max = 140): string | null {
 // Alertes techniques (1.7.0), pour l'administrateur seul.
 export interface AlerteTechnique { id: string; message: string; creeLe: string; vue: boolean }
 export interface ReponseAlertes { alertes: AlerteTechnique[]; nonVues: boolean }
+
+// Vue Pensées (1.7.0) : pensées non effacées du compte, jamais privées, jamais cochables.
+export interface PenseeListe { itemId: string; captureId: string; texte: string; heure: string; theme: string | null; personnes: string[]; aAudio: boolean }
+export interface JourPensees { jour: string; pensees: PenseeListe[] }
+export interface VuePensees { jours: JourPensees[]; themes: string[]; personnes: string[] }
