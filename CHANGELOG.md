@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.6.0] - 2026-10-08
+
 ### Ajouté
 - Contrôle e2e de l'apparence étendu à l'Historique et à son détail (360 et 390 px, clair et sombre) ; le cahier des charges décrit la vue Historique et l'effacement en deux temps (2026-10-08).
 - Effacer en deux temps : glisser une action vers la gauche ouvre tout de suite la confirmation en bas ; après « Effacer », le bandeau « Effacé. Annuler » laisse 5 secondes pour revenir en arrière, et la requête ne part qu'ensuite (aussitôt si l'on quitte l'écran ; jamais si l'on ferme l'app pendant le délai). Même règle depuis le détail et dans À revoir. Le bouton découvert derrière la ligne disparaît (2026-10-08).
@@ -14,6 +16,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ### Modifié
 - La base de test `organizer-dev` n'existe plus que le temps des tests : `infra/dev/tunnel.sh` la crée hors de `/opt/stacks` et la supprime à la fermeture ; la mise à jour retire le conteneur `migrate` terminé ; `docs/exploitation.md` explique ce que `prune` peut et ne doit jamais faire (2026-10-08).
+
+### Corrigé
+- Détail d'un envoi : la barre du bas et le bouton privé sont inertes sous le panneau, qui est modal (2026-10-08).
 
 ## [1.5.1] - 2026-10-08
 
