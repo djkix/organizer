@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { etatAlertes } from '$lib/alertes.svelte';
   import { CHEMINS } from '$lib/config';
   import BoutonPrive from './BoutonPrive.svelte';
   import BoutonsEnregistrer from './BoutonsEnregistrer.svelte';
@@ -19,7 +20,10 @@
 {#if page.url.pathname === CHEMINS.accueil}<BoutonsEnregistrer />{:else}<BoutonPrive />{/if}
 <nav aria-label="Navigation">
   {#each ONGLETS as o (o.href)}
-    <a href={o.href} class:prive={o.icone === 'cadenas'} aria-current={actif(o.href) ? 'page' : undefined}><Icone nom={o.icone} />{o.libelle}</a>
+    {@const point = o.href === CHEMINS.reglages && etatAlertes.nonVues}
+    <a href={o.href} class:prive={o.icone === 'cadenas'} aria-current={actif(o.href) ? 'page' : undefined} aria-label={point ? `${o.libelle}, alerte technique à voir` : undefined}>
+      <span class="icone"><Icone nom={o.icone} />{#if point}<span class="point" aria-hidden="true"></span>{/if}</span>{o.libelle}
+    </a>
   {/each}
 </nav>
 
@@ -37,4 +41,10 @@
   nav a[aria-current='page'] :global(svg) { background: var(--accent-soft); }
   nav a.prive[aria-current='page'] { color: var(--private-ink); }
   nav a.prive[aria-current='page'] :global(svg) { background: var(--private-soft); }
+  .icone { position: relative; display: inline-flex; }
+  /* Alerte technique (admin seulement) : un point discret, jamais un chiffre. */
+  .point {
+    position: absolute; top: 0; right: 10px; width: 10px; height: 10px; border-radius: var(--radius-pill);
+    background: var(--accent); border: 2px solid var(--surface);
+  }
 </style>
