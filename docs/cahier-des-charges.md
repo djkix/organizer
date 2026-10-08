@@ -422,7 +422,7 @@ Décision 12 : la stack ne dépasse pas 50 Go, avec des volumes Docker ordinaire
 
 | Règle | Valeur |
 | --- | --- |
-| Exécution | Job quotidien du scheduler à 4h. Idempotent |
+| Exécution | Passage horaire de l'API (seule à monter le volume audio en écriture). Idempotent : sans effet sous 40 Go |
 | Déclenchement | Taille du dossier audio au-delà de 40 Go |
 | Cible | Purger jusqu'à repasser sous 35 Go |
 | Ordre | Du plus ancien au plus récent, selon `emis_le` |
@@ -450,6 +450,7 @@ La règle de restitution est de montrer peu. Une vue qui dépasse cinq lignes su
 | Pensées | Journal antichronologique, filtres par personne et par thème ; rapprochements proposés à la lecture, jamais en notification | Jamais de case à cocher |
 | Privé | Captures privées, groupées par jour, heure et durée, lecteur audio | Aucune recherche texte, navigation par calendrier |
 | À revoir | Items non classifiables | Aucune notification associée |
+| Pensées (onglet) | Pensées non effacées, par mois et par jour, filtres par thème ou par personne ; détail : ce qui a été dit, « C'est une chose à faire », effacer | Jamais de case à cocher |
 | Historique | Envois non privés, par mois et par jour : heure, source, durée, début du texte, natures produites ; détail en lecture seule (texte, audio, éléments et leur état) | Jamais de capture privée ; aucun nombre ni compteur |
 | Recherche | Texte intégral et similarité sémantique, hors captures privées | — |
 
@@ -790,12 +791,12 @@ Objectifs de reprise, à partir du lot 2 : RPO de 24 heures, RTO de 4 heures. Un
 
 | Sonde | Seuil d'alerte | Canal |
 | --- | --- | --- |
-| Disponibilité de `organizer.djkix.ovh` | 2 échecs consécutifs | Uptime Kuma vers Telegram admin |
-| Profondeur de la file | Plus de 50 jobs en attente | Telegram admin |
-| Jobs en échec | Plus de 3 par heure | Telegram admin |
-| Taille de la stack | Audio au-dessus de 30 Go tant que la rotation n'est pas livrée (40 Go ensuite), ou base au-dessus de 8 Go | Telegram admin |
-| Latence de classification | Moyenne supérieure à 120 s sur 1 heure | Telegram admin |
-| Crédit Gemini épuisé | Première réponse HTTP 402 | Telegram admin |
+| Disponibilité de `organizer.djkix.ovh` | 2 échecs consécutifs | Uptime Kuma |
+| Profondeur de la file | Plus de 50 jobs en attente | Réglages › Alertes techniques (admin) |
+| Jobs en échec | Plus de 3 par heure | Réglages › Alertes techniques (admin) |
+| Taille de la stack | Audio au-dessus de 40 Go malgré la rotation, ou base au-dessus de 8 Go | Réglages › Alertes techniques (admin) |
+| Latence de classification | Moyenne supérieure à 120 s sur 1 heure | Réglages › Alertes techniques (admin) |
+| Crédit Gemini épuisé | Première réponse HTTP 402 | Réglages › Alertes techniques (admin) |
 | Aucune capture reçue | 10 jours | Information, sans alerte |
 
 La dernière ligne est volontairement passive : l'absence d'usage n'est pas un incident et ne doit jamais être signalée à L.
