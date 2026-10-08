@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { creerEffaceur, DELAI_EFFACEMENT_MS, type EtatEffacement } from '../src/lib/effacement.js';
+import { creerEffaceur, DELAI_EFFACEMENT_MS, effacementsEnVol, type EtatEffacement } from '../src/lib/effacement.js';
 
 function monter(effacer: (id: string) => Promise<void> = async () => {}) {
   const envoyes: string[] = [];
@@ -71,5 +71,16 @@ describe('effaceur différé', () => {
     e.planifier('a');
     await vi.advanceTimersByTimeAsync(DELAI_EFFACEMENT_MS);
     expect(echecs).toEqual(['a']);
+  });
+
+  it('un effacement envoyé reste connu de toute l\'app jusqu\'à la réponse (aller-retour d\'écran)', async () => {
+    let finir: () => void = () => {};
+    const { e } = monter(() => new Promise<void>((r) => { finir = r; }));
+    e.planifier('a');
+    expect(effacementsEnVol.has('a')).toBe(false);
+    e.vider();
+    expect(effacementsEnVol.has('a')).toBe(true);
+    finir();
+    await vi.waitFor(() => expect(effacementsEnVol.has('a')).toBe(false));
   });
 });

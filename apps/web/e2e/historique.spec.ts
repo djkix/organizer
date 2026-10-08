@@ -78,3 +78,12 @@ test('détail d\'un envoi : texte entier, lecteur, ce qui en est sorti ; Retour'
   await expect(page.locator('nav[aria-label="Navigation"]')).not.toHaveAttribute('inert', '');
   await expect(page.getByRole('button', { name: /12:05/ })).toBeFocused();
 });
+
+test('l\'Historique laissé ouvert se recharge quand on revient sur l\'app', async ({ page }) => {
+  const appels = await simuler(page, { ...CONNECTE, 'GET /api/historique': json(200, MOIS) });
+  await page.goto('/historique');
+  await expect(page.getByRole('button', { name: /12:05/ })).toBeVisible();
+  const avant = appels.filter((a) => a.cle === 'GET /api/historique').length;
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect.poll(() => appels.filter((a) => a.cle === 'GET /api/historique').length).toBeGreaterThan(avant);
+});

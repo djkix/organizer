@@ -13,9 +13,9 @@
   import { libelleSource, pastillesEnvoi } from '$lib/historique';
   import { MESSAGES } from '$lib/messages';
 
-  const aujourdhui = jourLocal(new Date(), FUSEAU);
-  const moisCourant = aujourdhui.slice(0, 7);
-  let mois = $state(moisCourant);
+  let aujourdhui = $state(jourLocal(new Date(), FUSEAU));
+  const moisCourant = $derived(aujourdhui.slice(0, 7));
+  let mois = $state(jourLocal(new Date(), FUSEAU).slice(0, 7));
   let jours = $state<JourHistorique[] | null>(null);
   let erreur = $state(false);
   let selection = $state<string | null>(null);
@@ -37,6 +37,17 @@
   }
 
   $effect(() => { void charger(mois); });
+
+  // Laissé ouvert une nuit : au retour sur l'app, le bon jour et la liste à jour.
+  $effect(() => {
+    const retour = (): void => {
+      if (document.visibilityState !== 'visible') return;
+      aujourdhui = jourLocal(new Date(), FUSEAU);
+      void charger(mois);
+    };
+    document.addEventListener('visibilitychange', retour);
+    return () => document.removeEventListener('visibilitychange', retour);
+  });
 
   function ouvrir(id: string): void {
     declencheur = document.activeElement instanceof HTMLElement ? document.activeElement : null;

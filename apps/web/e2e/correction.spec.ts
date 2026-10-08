@@ -85,6 +85,7 @@ test('À revoir : effacer après confirmation, cinq secondes pour annuler, puis 
   await expect(page.getByRole('status').filter({ hasText: 'Effacé.' })).toBeVisible();
   await page.getByRole('button', { name: 'Annuler' }).click();
   await expect(page.getByText('« vendredi ou samedi »')).toBeVisible();
+  await expect(page.locator(`[data-item="${garage.itemId}"] button`).first()).toBeFocused();
   await page.clock.fastForward(10_000);
   expect(requetes()).toBe(0);
 

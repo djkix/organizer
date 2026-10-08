@@ -6,7 +6,7 @@
   import type { LigneAction } from '@organizer/shared/api';
   import { api } from '$lib/client';
   import { creerCocheur, type EtatCochage } from '$lib/cochage';
-  import { creerEffaceur } from '$lib/effacement';
+  import { creerEffaceur, effacementsEnVol } from '$lib/effacement';
   import Bandeau from '$lib/composants/Bandeau.svelte';
   import BandeJours from '$lib/composants/BandeJours.svelte';
   import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
@@ -27,7 +27,7 @@
   let cochage = $state<EtatCochage>({ retires: new Set(), enCours: null, message: null });
   let numero = 0;
   let aEffacer = $state<LigneAction | null>(null);
-  let effaces = $state<ReadonlySet<string>>(new Set());
+  let effaces = $state<ReadonlySet<string>>(new Set(effacementsEnVol));
 
   const cocheur = creerCocheur({
     cocher: (id) => api.cocher(id),
@@ -146,17 +146,36 @@
     await rendreFocus();
   }
 
+  /** Le focus revient sur la case de la ligne rendue par « Annuler ». */
+  async function focusLigne(id: string | null): Promise<void> {
+    if (!id) return;
+    await tick();
+    document.querySelector<HTMLElement>(`[data-item="${CSS.escape(id)}"] .case`)?.focus();
+  }
+
   function annulerEffacement(): void {
     const id = effaceur.annuler();
     if (id) sansEfface(id);
+    void focusLigne(id);
   }
 
+  async function annulerCochage(): Promise<void> {
+    const id = cochage.enCours;
+    await cocheur.annuler();
+    await focusLigne(id);
+  }
+
+  // Un échec se dit toujours, même si un autre geste attend. Sinon, seul le geste le plus récent a un bandeau :
+  // une fois clos (annulé ou échu), il ne cède pas la place à l'autre.
+  const echec = $derived(cochage.message ?? (annonce === MESSAGES.effaceRate ? annonce : null));
   const bandeau = $derived(
-    enAttente && (dernierGeste === 'effacement' || cochage.enCours === null)
-      ? { texte: MESSAGES.efface, annulable: true, annuler: annulerEffacement }
-      : cochage.enCours !== null
-        ? { texte: MESSAGES.fait, annulable: true, annuler: () => void cocheur.annuler() }
-        : { texte: cochage.message ?? annonce, annulable: false, annuler: () => {} },
+    echec
+      ? { texte: echec, annulable: false, annuler: () => {} }
+      : dernierGeste === 'effacement' && enAttente
+        ? { texte: MESSAGES.efface, annulable: true, annuler: annulerEffacement }
+        : dernierGeste === 'cochage' && cochage.enCours !== null
+          ? { texte: MESSAGES.fait, annulable: true, annuler: () => void annulerCochage() }
+          : { texte: annonce, annulable: false, annuler: () => {} },
   );
 
   // Une ligne cochée quitte la liste à la fin du délai d'annulation : si le focus s'y trouvait,

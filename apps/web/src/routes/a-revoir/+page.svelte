@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import type { VueARevoir } from '@organizer/shared/api';
   import { urlAudio } from '$lib/api';
   import { api } from '$lib/client';
   import Bandeau from '$lib/composants/Bandeau.svelte';
   import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
-  import { creerEffaceur } from '$lib/effacement';
+  import { creerEffaceur, effacementsEnVol } from '$lib/effacement';
   import Lecteur from '$lib/composants/Lecteur.svelte';
   import { FUSEAU } from '$lib/config';
   import { corpsNature } from '$lib/correction';
@@ -38,7 +38,7 @@
   }
 
   // Effacer en deux temps, comme dans les listes : l'item part aussitôt, la requête cinq secondes plus tard.
-  let effaces = $state<ReadonlySet<string>>(new Set());
+  let effaces = $state<ReadonlySet<string>>(new Set(effacementsEnVol));
   let enAttente = $state<string | null>(null);
   const sansEfface = (id: string): void => { effaces = new Set([...effaces].filter((x) => x !== id)); };
   const effaceur = creerEffaceur({
@@ -55,9 +55,12 @@
     effaceur.planifier(itemId);
   }
 
-  function annulerEffacement(): void {
+  async function annulerEffacement(): Promise<void> {
     const id = effaceur.annuler();
-    if (id) sansEfface(id);
+    if (!id) return;
+    sansEfface(id);
+    await tick();
+    document.querySelector<HTMLElement>(`[data-item="${CSS.escape(id)}"] button`)?.focus();
   }
 
   const items = $derived(vue ? vue.items.filter((i) => !effaces.has(i.itemId)) : []);
@@ -72,7 +75,7 @@
     <p class="vide">{MESSAGES.videARevoir}</p>
   {:else if vue}
     {#each items as i (i.itemId)}
-      <article class="carte">
+      <article class="carte" data-item={i.itemId}>
         <p>« {i.texte} »</p>
         <p class="discret"><Pastille p={A_REVOIR} /> {momentEnClair(i.emisLe, FUSEAU)}</p>
         {#if i.aAudio}<Lecteur src={urlAudio(i.captureId)} />{/if}
@@ -92,7 +95,7 @@
     {/each}
   {/if}
 </main>
-<Bandeau texte={enAttente ? MESSAGES.efface : null} annulable={enAttente !== null} surAnnuler={annulerEffacement} />
+<Bandeau texte={enAttente ? MESSAGES.efface : null} annulable={enAttente !== null} surAnnuler={() => void annulerEffacement()} />
 {#if aEffacer}
   {@const cible = aEffacer}
   <ConfirmerEffacer texte={cible.texte} surConfirmer={() => void effacer(cible.itemId)} surAnnuler={() => (aEffacer = null)} />

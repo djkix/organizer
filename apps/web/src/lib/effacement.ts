@@ -1,6 +1,12 @@
 /** Effacer en deux temps : la ligne quitte la liste tout de suite, la requête ne part qu'au bout du délai. */
 export const DELAI_EFFACEMENT_MS = 5_000;
 
+/**
+ * Effacements envoyés dont la réponse n'est pas encore arrivée, connus de toute l'application : un écran remonté
+ * entre-temps (aller-retour d'onglet) les masque aussi, au lieu de les montrer le temps que le serveur réponde.
+ */
+export const effacementsEnVol = new Set<string>();
+
 export interface EtatEffacement {
   /** L'effacement que « Annuler » peut encore retenir. */
   enAttente: string | null;
@@ -32,7 +38,8 @@ export function creerEffaceur(d: DepsEffaceur, delaiMs = DELAI_EFFACEMENT_MS): E
     d.surChangement({ enAttente: id });
   };
   const envoyer = (id: string): void => {
-    d.effacer(id).catch(() => d.surEchec(id));
+    effacementsEnVol.add(id);
+    d.effacer(id).catch(() => d.surEchec(id)).finally(() => effacementsEnVol.delete(id));
   };
   const partir = (): void => {
     clearTimeout(minuterie);

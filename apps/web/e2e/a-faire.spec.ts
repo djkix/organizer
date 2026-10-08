@@ -223,6 +223,59 @@ test.describe('effacer', () => {
     await expect(page.getByText('Pas effacé. Réessaie dans un moment.')).toBeVisible();
     await expect(ligneGarage(page)).toHaveCount(1);
   });
+
+  test('annuler un cochage ne fait pas revenir le bandeau d\'un effacement en attente', async ({ page }) => {
+    await simuler(page, { ...serveur(), [`POST /api/items/${draps.itemId}/fait`]: json(204), [`DELETE /api/items/${draps.itemId}/fait`]: json(204) });
+    await page.goto('/');
+    await glisser(page);
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    await page.getByRole('checkbox', { name: 'Cocher : Changer les draps' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Fait.' })).toBeVisible();
+    await page.getByRole('button', { name: 'Annuler' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Effacé.' })).toHaveCount(0);
+    await expect(ligneGarage(page)).toHaveCount(0);
+  });
+
+  test('un échec reste visible même si un autre effacement attend', async ({ page }) => {
+    await simuler(page, { ...table(), [EFFACER]: (r) => r.abort('internetdisconnected'), [`DELETE /api/items/${draps.itemId}`]: json(204) });
+    await page.goto('/');
+    await glisser(page);
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    const lDraps = page.locator(`[data-item="${draps.itemId}"]`);
+    const b = (await lDraps.locator('.piste').boundingBox())!;
+    await page.mouse.move(b.x + b.width - 30, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width - 90, b.y + b.height / 2 + 1, { steps: 4 });
+    await page.mouse.move(b.x + b.width - 200, b.y + b.height / 2 + 2, { steps: 4 });
+    await page.mouse.up();
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    await expect(page.getByText('Pas effacé. Réessaie dans un moment.')).toBeVisible();
+    await expect(ligneGarage(page)).toHaveCount(1);
+  });
+
+  test('après « Annuler », le focus revient sur la ligne rendue', async ({ page }) => {
+    await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page);
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    await page.getByRole('button', { name: 'Annuler' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Cocher : Rappeler le garage' })).toBeFocused();
+  });
+
+  test('aller-retour d\'écran pendant l\'envoi : la ligne effacée ne réapparaît pas', async ({ page }) => {
+    await simuler(page, {
+      ...table(), 'GET /api/historique': json(200, []),
+      [EFFACER]: async (r) => { await new Promise((ok) => setTimeout(ok, 2_500)); await r.fulfill({ status: 204 }); },
+    });
+    await page.goto('/');
+    await glisser(page);
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    await page.getByRole('link', { name: 'Historique' }).click();
+    await expect(page).toHaveURL(/historique/);
+    await page.getByRole('link', { name: 'À faire' }).click();
+    await expect(page.getByText('Changer les draps')).toBeVisible();
+    await expect(ligneGarage(page)).toHaveCount(0);
+  });
 });
 
 
