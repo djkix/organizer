@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- Alertes techniques enregistrées (table `alerte`, migration additive) : chaque alerte de la file `alertes` est gardée une fois, même si le job est rejoué ; `GET /api/alertes` (30 derniers jours) et `POST /api/alertes/vues`, pour l'admin seul (404 pour un autre compte) (2026-10-08).
 - Spec et plan de la 1.7.0 (alertes admin, vue Pensées, rotation de l'audio) : `docs/superpowers/specs/2026-10-08-alertes-pensees-rotation-design.md`, `docs/superpowers/plans/2026-10-08-alertes-pensees-rotation.md` (2026-10-08).
 
 ## [1.6.1] - 2026-10-08
