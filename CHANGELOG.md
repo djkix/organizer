@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Spec et plan de la 1.7.0 (alertes admin, vue Pensées, rotation de l'audio) : `docs/superpowers/specs/2026-10-08-alertes-pensees-rotation-design.md`, `docs/superpowers/plans/2026-10-08-alertes-pensees-rotation.md` (2026-10-08).
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
