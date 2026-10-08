@@ -450,11 +450,13 @@ La règle de restitution est de montrer peu. Une vue qui dépasse cinq lignes su
 | Pensées | Journal antichronologique, filtres par personne et par thème ; rapprochements proposés à la lecture, jamais en notification | Jamais de case à cocher |
 | Privé | Captures privées, groupées par jour, heure et durée, lecteur audio | Aucune recherche texte, navigation par calendrier |
 | À revoir | Items non classifiables | Aucune notification associée |
+| Historique | Envois non privés, par mois et par jour : heure, source, durée, début du texte, natures produites ; détail en lecture seule (texte, audio, éléments et leur état) | Jamais de capture privée ; aucun nombre ni compteur |
 | Recherche | Texte intégral et similarité sémantique, hors captures privées | — |
 
 ### Interactions
 
 - Cocher : un seul geste, avec annulation possible pendant 10 secondes.
+- Effacer : glisser une action vers la gauche ouvre la confirmation ; après confirmation, 5 secondes pour annuler avant l'envoi au serveur.
 - Reporter : trois boutons seulement (demain, la semaine prochaine, plus tard).
 - Corriger le classement : changer la nature ou l'échéance depuis l'item, en deux gestes maximum.
 - Réécouter l'audio d'origine depuis n'importe quel item issu d'un vocal, tant que la rotation ne l'a pas purgé.
