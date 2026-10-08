@@ -7,6 +7,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ### Ajouté
 - Effacer en deux temps : glisser une action vers la gauche ouvre tout de suite la confirmation en bas ; après « Effacer », le bandeau « Effacé. Annuler » laisse 5 secondes pour revenir en arrière, et la requête ne part qu'ensuite (aussitôt si l'on quitte l'écran ; jamais si l'on ferme l'app pendant le délai). Même règle depuis le détail et dans À revoir. Le bouton découvert derrière la ligne disparaît (2026-10-08).
+- `GET /api/historique?mois=AAAA-MM` et `GET /api/historique/:id` : les envois non privés du compte, par jour dans son fuseau (heure, source, vocal ou écrit, durée, début du texte, natures produites, état), et le détail d'un envoi (texte entier, audio, éléments et leur état) ; capture privée, inconnue ou d'un autre compte : 404 ; aucun texte dans les journaux (2026-10-08).
 - Spec et plan de la 1.6.0 (effacement en deux temps, historique des envois) : `docs/superpowers/specs/2026-10-08-effacement-historique-design.md`, `docs/superpowers/plans/2026-10-08-effacement-historique.md` (2026-10-08).
 
 ### Modifié

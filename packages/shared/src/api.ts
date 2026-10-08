@@ -71,3 +71,45 @@ export type EtatAgenda = 'indisponible' | 'deconnecte' | 'en_cours' | 'connecte'
 export type ErreurAgenda = 'portee_refusee' | 'echange' | null;
 export interface ReponseAgenda { etat: EtatAgenda; erreur: ErreurAgenda }
 export interface ReponseConnexionAgenda { url: string }
+
+// Historique des envois (1.6.0) : captures non privées du compte, en lecture seule.
+export type SourceEnvoi = 'pwa' | 'telegram';
+/** `en_cours` : reçue, en file ou à transcrire ; le classement n'est pas fini. */
+export type EtatEnvoi = 'en_cours' | 'classee' | 'a_revoir';
+export interface EnvoiHistorique {
+  id: string;
+  heure: string;
+  source: SourceEnvoi;
+  vocal: boolean;
+  dureeS: number | null;
+  /** Début de la transcription ou du texte écrit, 140 caractères au plus ; null sans texte. */
+  debut: string | null;
+  etat: EtatEnvoi;
+  /** Natures distinctes des éléments produits, dans l'ordre action, pensée, information, ambigu. */
+  natures: Nature[];
+}
+export interface JourHistorique { jour: string; envois: EnvoiHistorique[] }
+/** `note` : pensée, information ou élément ambigu, sans état à cocher. */
+export type StatutElement = 'a_faire' | 'fait' | 'efface' | 'note';
+export interface ElementEnvoi { itemId: string; texte: string; nature: Nature; statut: StatutElement }
+export interface DetailEnvoi {
+  id: string;
+  emisLe: string;
+  source: SourceEnvoi;
+  vocal: boolean;
+  dureeS: number | null;
+  etat: EtatEnvoi;
+  texte: string | null;
+  aAudio: boolean;
+  elements: ElementEnvoi[];
+}
+
+/** Coupe un texte au dernier espace avant `max` caractères et ajoute « … » ; un mot trop long est coupé net. */
+export function debutTexte(texte: string | null, max = 140): string | null {
+  const t = texte?.replace(/\s+/g, ' ').trim();
+  if (!t) return null;
+  if (t.length <= max) return t;
+  const coupe = t.slice(0, max - 1);
+  const espace = coupe.lastIndexOf(' ');
+  return `${(espace > max / 2 ? coupe.slice(0, espace) : coupe).trimEnd()}…`;
+}

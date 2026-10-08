@@ -20,11 +20,13 @@ import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
 import { TelechargeurTelegram } from './ingestion/telechargeur.js';
-import { AGENDA, AUTH, BOT, CAPTURES, EMPREINTES, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, QUEUE_AGENDA, REDIS, REENCODEUR, VUES } from './jetons.js';
+import { AGENDA, AUTH, BOT, CAPTURES, EMPREINTES, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, HISTORIQUE, QUEUE_AGENDA, REDIS, REENCODEUR, VUES } from './jetons.js';
 import { ItemsController } from './items/items.controller.js';
 import { ItemsService } from './items/items.service.js';
 import { CapturesController } from './captures/captures.controller.js';
 import { CapturesOrdinairesService } from './captures/captures.service.js';
+import { HistoriqueController } from './historique/historique.controller.js';
+import { HistoriqueService } from './historique/historique.service.js';
 import { PriveesController } from './privees/privees.controller.js';
 import { CapturesPriveesService } from './privees/privees.service.js';
 import { ReencodeurBorne, ReencodeurFfmpeg, type Reencodeur } from './privees/reencodeur.js';
@@ -110,7 +112,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
 }
 
 @Module({
-  controllers: [TelegramController, AgendaController, AuthController, EmpreintesController, VuesController, ItemsController, PriveesController, CapturesController, SanteController],
+  controllers: [TelegramController, AgendaController, AuthController, EmpreintesController, VuesController, ItemsController, PriveesController, CapturesController, HistoriqueController, SanteController],
   providers: [
     { provide: CONFIG, useFactory: lireConfigApi },
     { provide: PRISMA, useFactory: () => creerPrisma() },
@@ -145,6 +147,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     },
     // Un seul réencodeur borné pour l'API : PWA privée et bulles vidéo Telegram se partagent le plafond de ffmpeg.
     { provide: REENCODEUR, useFactory: (): Reencodeur => new ReencodeurBorne(new ReencodeurFfmpeg()) },
+    { provide: HISTORIQUE, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new HistoriqueService(prisma) },
     { provide: PRIVEES, inject: [CONFIG, PRISMA, REENCODEUR], useFactory: (c: ConfigApi, prisma: PrismaClient, reencodeur: Reencodeur) => new CapturesPriveesService(prisma, new StockageAudio(c.audioRacine), reencodeur) },
     {
       provide: CAPTURES,

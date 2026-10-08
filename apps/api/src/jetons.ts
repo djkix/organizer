@@ -7,6 +7,7 @@ export const AUTH = Symbol('AUTH');
 export const VUES = Symbol('VUES');
 export const ITEMS = Symbol('ITEMS');
 export const PRIVEES = Symbol('PRIVEES');
+export const HISTORIQUE = Symbol('HISTORIQUE');
 export const CAPTURES = Symbol('CAPTURES');
 export const REENCODEUR = Symbol('REENCODEUR');
 export const EMPREINTES = Symbol('EMPREINTES');

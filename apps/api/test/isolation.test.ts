@@ -12,12 +12,14 @@ import { SessionGuard } from '../src/auth/session.guard.js';
 import { StockageAudio } from '../src/ingestion/stockage.js';
 import { ItemsController } from '../src/items/items.controller.js';
 import { ItemsService } from '../src/items/items.service.js';
-import { AUTH, CAPTURES, CONFIG, ITEMS, PRIVEES, VUES } from '../src/jetons.js';
+import { AUTH, CAPTURES, CONFIG, ITEMS, PRIVEES, VUES, HISTORIQUE } from '../src/jetons.js';
 import { CapturesController } from '../src/captures/captures.controller.js';
 import { CapturesOrdinairesService } from '../src/captures/captures.service.js';
 import { PriveesController } from '../src/privees/privees.controller.js';
 import { CapturesPriveesService } from '../src/privees/privees.service.js';
 import type { Reencodeur } from '../src/privees/reencodeur.js';
+import { HistoriqueController } from '../src/historique/historique.controller.js';
+import { HistoriqueService } from '../src/historique/historique.service.js';
 import { VuesController } from '../src/vues/vues.controller.js';
 import { VuesService } from '../src/vues/vues.service.js';
 import { demarrerAppTest } from './aides-http.js';
@@ -70,10 +72,11 @@ beforeEach(async () => {
   const stockage = new StockageAudio(racine);
   class M {}
   Module({
-    controllers: [VuesController, ItemsController, PriveesController, CapturesController],
+    controllers: [VuesController, ItemsController, PriveesController, CapturesController, HistoriqueController],
     providers: [
       { provide: AUTH, useValue: auth }, SessionGuard,
       { provide: VUES, useValue: new VuesService(prisma) },
+      { provide: HISTORIQUE, useValue: new HistoriqueService(prisma) },
       { provide: ITEMS, useValue: new ItemsService(prisma, ['datee', 'jour', 'fenetre', 'relative', 'aucune']) },
       { provide: CONFIG, useValue: { audioRacine: racine } },
       { provide: PRIVEES, useValue: new CapturesPriveesService(prisma, stockage, reen) },
@@ -193,3 +196,43 @@ describe('décision 25 : captures privées', () => {
     );
   });
 });
+
+describe('décision 25 : historique des envois', () => {
+  it('chacun ne voit que ses envois, jamais une capture privée', async () => {
+    const ids = async (c: string) => (await json(c, `/api/historique?mois=${jourIso}`)).flatMap((j: { envois: { id: string }[] }) => j.envois.map((e) => e.id));
+    const a = await ids(cA);
+    expect(a).toContain(A.captureId);
+    expect(a).not.toContain(A.priveeId);
+    expect(a).not.toContain(B.captureId);
+  });
+  it('détail : le sien 200 ; celui d\'un autre compte ou une capture privée : 404', async () => {
+    expect((await appel(cA, 'GET', `/api/historique/${A.captureId}`)).status).toBe(200);
+    expect((await appel(cA, 'GET', `/api/historique/${B.captureId}`)).status).toBe(404);
+    expect((await appel(cA, 'GET', `/api/historique/${A.priveeId}`)).status).toBe(404);
+  });
+  it('mois invalide : 400 ; sans mois : le mois courant', async () => {
+    expect((await appel(cA, 'GET', '/api/historique?mois=2026-13')).status).toBe(400);
+    expect((await appel(cA, 'GET', '/api/historique')).status).toBe(200);
+  });
+  it('sans session : 401', async () => {
+    expect((await appel('', 'GET', `/api/historique?mois=${jourIso}`)).status).toBe(401);
+  });
+  it('le texte n\'apparaît dans aucun journal', async () => {
+    const SECRET = 'Phrase fabriquée pour l\'historique 9c1e';
+    await prisma.capture.update({ where: { id: A.captureId }, data: { texteEcrit: SECRET } });
+    const vus: string[] = [];
+    const garder = (...x: unknown[]): void => { vus.push(x.map(String).join(' ')); };
+    const espions = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(garder));
+    const sorties = [vi.spyOn(process.stdout, 'write'), vi.spyOn(process.stderr, 'write')].map((e) =>
+      e.mockImplementation((morceau: string | Uint8Array) => { vus.push(String(morceau)); return true; }));
+    try {
+      await json(cA, `/api/historique?mois=${jourIso}`);
+      await json(cA, `/api/historique/${A.captureId}`);
+      await appel(cB, 'GET', `/api/historique/${A.captureId}`);
+    } finally {
+      for (const e of [...espions, ...sorties]) e.mockRestore();
+    }
+    expect(vus.join('\n')).not.toContain(SECRET);
+  });
+});
+
