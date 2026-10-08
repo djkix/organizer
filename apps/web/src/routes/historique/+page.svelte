@@ -55,6 +55,14 @@
     (cible?.isConnected ? cible : document.querySelector<HTMLElement>('main h1'))?.focus();
   }
 
+  // Détail ouvert : la barre du bas et le bouton privé, cachés sous le panneau, deviennent inertes.
+  $effect(() => {
+    const ouvert = selection !== null;
+    const fond = document.querySelectorAll('nav[aria-label="Navigation"], .fab');
+    fond.forEach((e) => e.toggleAttribute('inert', ouvert));
+    return () => fond.forEach((e) => e.removeAttribute('inert'));
+  });
+
   // Le retour Android referme le détail.
   $effect(() => {
     if (selection && !page.state.envoi) void fermer();

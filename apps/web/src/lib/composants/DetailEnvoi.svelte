@@ -30,7 +30,7 @@
 </script>
 
 <svelte:window onkeydown={(e) => { if (e.key === 'Escape' && !e.defaultPrevented) surFermer(); }} />
-<div class="panneau" role="dialog" aria-labelledby="titre-envoi">
+<div class="panneau" role="dialog" aria-modal="true" aria-labelledby="titre-envoi">
   <header><button class="bouton-icone" onclick={surFermer} aria-label="Retour"><Icone nom="retour" /></button></header>
   <h2 id="titre-envoi" class="titre" tabindex="-1" bind:this={titre}>{envoi ? momentEnClair(envoi.emisLe, FUSEAU) : 'Envoi'}</h2>
   {#if erreur}
