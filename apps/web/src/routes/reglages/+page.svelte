@@ -207,6 +207,7 @@
     <p>{MESSAGES.sortDeLaMaison3} {MESSAGES.sortDeLaMaison4}</p>
   </section>
   <a class="carte reglage" href={CHEMINS.aRevoir}><span>À revoir</span><Icone nom="suivant" /></a>
+  <a class="carte reglage" href={CHEMINS.historique}><span>{MESSAGES.historiqueEnvois}</span><Icone nom="suivant" /></a>
   <div class="bas">
     <p class="discret" aria-live="polite">{message ?? ''}</p>
     <button class="bouton" onclick={deconnecter}>Me déconnecter</button>
