@@ -69,7 +69,12 @@ test('détail d\'un envoi : texte entier, lecteur, ce qui en est sorti ; Retour'
   await expect(elements.nth(0)).toContainText('À faire');
   await expect(elements.nth(1)).not.toContainText('À faire');
   await expect(elements.nth(2)).toContainText('Effacé');
+  // Détail ouvert : la barre du bas et le bouton privé, cachés sous le panneau, sont hors d'atteinte.
+  await expect(d).toHaveAttribute('aria-modal', 'true');
+  await expect(page.locator('nav[aria-label="Navigation"]')).toHaveAttribute('inert', '');
+  await expect(page.locator('.fab')).toHaveAttribute('inert', '');
   await d.getByRole('button', { name: 'Retour' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('nav[aria-label="Navigation"]')).not.toHaveAttribute('inert', '');
   await expect(page.getByRole('button', { name: /12:05/ })).toBeFocused();
 });
