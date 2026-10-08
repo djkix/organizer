@@ -5,6 +5,7 @@
   import BoutonPrive from '$lib/composants/BoutonPrive.svelte';
   import Navigation from '$lib/composants/Navigation.svelte';
   import { CHEMINS } from '$lib/config';
+  import { rafraichirAlertes } from '$lib/alertes.svelte';
   import { demarrerPrive } from '$lib/prive/demarrage';
   import type { LayoutProps } from './$types';
 
@@ -14,6 +15,13 @@
   const plein = $derived(chemin === CHEMINS.connexion || chemin === CHEMINS.enregistreur || chemin === CHEMINS.enregistrer);
   // À chaque ouverture, au retour du réseau et au retour à l'écran : la file privée part.
   onMount(() => demarrerPrive());
+  // Alertes techniques (admin seulement) : vues à l'ouverture et au retour sur l'application.
+  onMount(() => {
+    void rafraichirAlertes();
+    const retour = (): void => { if (document.visibilityState === 'visible') void rafraichirAlertes(); };
+    document.addEventListener('visibilitychange', retour);
+    return () => document.removeEventListener('visibilitychange', retour);
+  });
 </script>
 
 {@render children()}

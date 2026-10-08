@@ -1,14 +1,15 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
-  import type { ResumeEmpreinte } from '@organizer/shared/api';
+  import type { AlerteTechnique, ResumeEmpreinte } from '@organizer/shared/api';
+  import { etatAlertes } from '$lib/alertes.svelte';
   import { attendreIssue, lireRetour, messageRetour, vueAgenda, type VueAgenda } from '$lib/agenda';
   import { api, garde } from '$lib/client';
   import Icone from '$lib/composants/Icone.svelte';
   import { CHEMINS, FUSEAU } from '$lib/config';
   import { activerEmpreinte, CLE_INCONNUE, memoLocal, retirerEmpreinte } from '$lib/empreinte';
   import { ceremoniesNavigateur } from '$lib/empreinte-navigateur';
-  import { ajouteeLe } from '$lib/format';
+  import { ajouteeLe, momentEnClair } from '$lib/format';
   import { libelleVersion } from '$lib/version';
   import { MESSAGES } from '$lib/messages';
   import type { PageProps } from './$types';
@@ -17,6 +18,28 @@
   let message = $state<string | null>(null);
   const version = $derived(data.session?.etat === 'connecte' && data.session.admin ? libelleVersion(__VERSION_PWA__, data.session.versionServeur) : null);
   const nom = $derived(data.session?.etat === 'connecte' ? data.session.nom : '');
+  const admin = $derived(data.session?.etat === 'connecte' && data.session.admin);
+
+  // Alertes techniques : pour l'admin seulement ; un autre compte ne fait aucune requête.
+  let alertes = $state<AlerteTechnique[] | null>(null);
+  async function chargerAlertes(): Promise<void> {
+    try {
+      const r = await api.alertes();
+      alertes = r.alertes;
+      etatAlertes.nonVues = r.nonVues;
+    } catch {
+      alertes = [];
+    }
+  }
+  async function marquerVues(): Promise<void> {
+    try {
+      await api.marquerAlertesVues();
+      etatAlertes.nonVues = false;
+      await chargerAlertes();
+    } catch {
+      // Réessayable : le bouton reste là.
+    }
+  }
 
   const memo = memoLocal();
   let cles = $state<ResumeEmpreinte[]>([]);
@@ -76,6 +99,7 @@
   }
 
   onMount(async () => {
+    if (admin) void chargerAlertes();
     void chargerAgenda();
     disponible = ceremoniesNavigateur.disponible();
     ici = memo.lire();
@@ -142,6 +166,19 @@
   <header class="entete entete-version"><h1>Réglages</h1>{#if version}<span class="discret" data-testid="version">{version}</span>{/if}</header>
   <h2 class="groupe">Compte</h2>
   <div class="carte reglage"><span>Connecté</span><span class="discret">{nom}</span></div>
+  {#if admin}
+    <h2 class="groupe">{MESSAGES.alertesTitre}</h2>
+    {#if alertes && alertes.length === 0}
+      <p class="carte discret">{MESSAGES.aucuneAlerte}</p>
+    {:else if alertes}
+      <ul class="liste alertes">
+        {#each alertes as a (a.id)}
+          <li class="carte alerte" class:vue={a.vue}><span class="discret">{momentEnClair(a.creeLe, FUSEAU)}</span><span>{a.message}</span></li>
+        {/each}
+      </ul>
+      {#if alertes.some((a) => !a.vue)}<button class="bouton activer" onclick={marquerVues}>{MESSAGES.toutMarquerVu}</button>{/if}
+    {/if}
+  {/if}
   <h2 class="groupe">Empreinte</h2>
   {#each cles as c (c.id)}
     <div class="carte reglage">
@@ -188,4 +225,8 @@
   .note { background: var(--accent-soft); border-color: transparent; font-size: var(--font-meta); line-height: 1.55; display: grid; gap: 6px; }
   .note h2 { font-size: var(--font-meta); font-weight: 700; color: var(--accent-ink); }
   .reglage { font-weight: 500; }
+  .alertes { margin-bottom: 10px; }
+  .alerte { margin: 0; display: grid; gap: 4px; border-left-width: 1px; }
+  .alerte:not(.vue) { border-color: var(--accent); }
+  .alerte.vue { color: var(--muted); }
 </style>

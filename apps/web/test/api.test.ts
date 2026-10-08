@@ -18,6 +18,14 @@ const vide = (status = 204) => new Response(null, { status });
 const entetes = (init: RequestInit) => new Headers(init.headers);
 
 describe('client API', () => {
+  it('alertes : liste et « vues » sur les bonnes routes', async () => {
+    const { f, appels } = fauxFetch([new Response(JSON.stringify({ alertes: [], nonVues: false }), { status: 200, headers: { 'content-type': 'application/json' } }), vide()]);
+    const api = creerClientApi({ fetch: f });
+    expect(await api.alertes()).toEqual({ alertes: [], nonVues: false });
+    await api.marquerAlertesVues();
+    expect(appels.map((a) => `${a.init.method} ${a.url}`)).toEqual(['GET /api/alertes', 'POST /api/alertes/vues']);
+  });
+
   it('historique : liste par mois et détail, sur les bonnes routes', async () => {
     const corps = (x: unknown) => new Response(JSON.stringify(x), { status: 200, headers: { 'content-type': 'application/json' } });
     const { f, appels } = fauxFetch([corps([]), corps({ id: 'x' })]);

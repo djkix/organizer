@@ -1,5 +1,5 @@
 import type {
-  CorpsConnexion, CorpsCorrection, CorpsEtiquette, DetailEnvoi, JourHistorique, JourPrive, ReponseAgenda, ReponseConnexionAgenda, ReponseErreur,
+  CorpsConnexion, CorpsCorrection, CorpsEtiquette, DetailEnvoi, JourHistorique, JourPrive, ReponseAgenda, ReponseAlertes, ReponseConnexionAgenda, ReponseErreur,
   ResumeEmpreinte, VueARevoir, VueAujourdhui, VueHorizons, VueSemaine,
 } from '@organizer/shared/api';
 import type {
@@ -44,6 +44,8 @@ export interface ClientApi {
   /** Ce qui a été dit, pour le détail ; null s'il n'y a rien ou en cas d'échec (le détail garde le lecteur seul). */
   transcription(captureId: string): Promise<string | null>;
   historique(mois: string): Promise<JourHistorique[]>;
+  alertes(): Promise<ReponseAlertes>;
+  marquerAlertesVues(): Promise<void>;
   envoi(captureId: string): Promise<DetailEnvoi>;
   agenda(): Promise<ReponseAgenda>;
   connecterAgenda(): Promise<ReponseConnexionAgenda>;
@@ -141,6 +143,8 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
     privees: (mois) => json(appeler('GET', `/api/captures/privees?mois=${id(mois)}`)),
     etiqueter: (captureId, etiquette) =>
       sansCorps(appeler('PATCH', `/api/captures/privees/${id(captureId)}`, { etiquette } satisfies CorpsEtiquette)),
+    alertes: () => json(appeler('GET', '/api/alertes')),
+    marquerAlertesVues: () => sansCorps(appeler('POST', '/api/alertes/vues')),
     historique: (mois) => json(appeler('GET', `/api/historique?mois=${id(mois)}`)),
     envoi: (captureId) => json(appeler('GET', `/api/historique/${id(captureId)}`)),
     transcription: (captureId) =>
