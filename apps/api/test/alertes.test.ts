@@ -3,8 +3,10 @@ import type { Bot } from 'grammy';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { envoyerAlerte } from '../src/alertes.js';
 
+const enregistrees = new Map<string, string>();
 const prismaAvec = (chats: bigint[]) => ({
   utilisateur: { findMany: async () => chats.map((c, i) => ({ id: `a${i}`, telegramChatId: c })) },
+  alerte: { upsert: async (a: { where: { cle: string }; create: { message: string } }) => { enregistrees.set(a.where.cle, a.create.message); return {}; } },
 }) as unknown as PrismaClient;
 
 function botQui(echoue: number[]) {
@@ -21,19 +23,19 @@ function botQui(echoue: number[]) {
   return { bot, envois };
 }
 
-afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => { vi.restoreAllMocks(); enregistrees.clear(); });
 
 describe('envoyerAlerte', () => {
   it('un admin en échec n\'empêche pas l\'envoi au suivant, puis le job échoue', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { bot, envois } = botQui([1]);
-    await expect(envoyerAlerte('Crédit épuisé.', prismaAvec([1n, 2n]), bot)).rejects.toThrow();
+    await expect(envoyerAlerte('Crédit épuisé.', prismaAvec([1n, 2n]), bot, 'j1')).rejects.toThrow();
     expect(envois).toEqual([1, 2]);
   });
 
   it('réussit quand tous les envois passent', async () => {
     const { bot, envois } = botQui([]);
-    await envoyerAlerte('Crédit épuisé.', prismaAvec([1n, 2n]), bot);
+    await envoyerAlerte('Crédit épuisé.', prismaAvec([1n, 2n]), bot, 'j2');
     expect(envois).toEqual([1, 2]);
   });
 
@@ -41,8 +43,17 @@ describe('envoyerAlerte', () => {
     const erreurs: string[] = [];
     vi.spyOn(console, 'error').mockImplementation((m: unknown) => { erreurs.push(String(m)); });
     const { bot, envois } = botQui([]);
-    await envoyerAlerte('Crédit épuisé.', prismaAvec([]), bot);
+    await envoyerAlerte('Crédit épuisé.', prismaAvec([]), bot, 'j3');
     expect(envois).toHaveLength(0);
+    expect(enregistrees.get('j3')).toBe('Crédit épuisé.');
     expect(erreurs.some((e) => e.includes('Alerte sans destinataire'))).toBe(true);
+  });
+
+  it('enregistre l\'alerte pour la PWA avant tout envoi, par sa clé (un job rejoué ne la double pas)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { bot } = botQui([1]);
+    await expect(envoyerAlerte('Crédit épuisé.', prismaAvec([1n]), bot, 'j4')).rejects.toThrow();
+    await expect(envoyerAlerte('Crédit épuisé.', prismaAvec([1n]), bot, 'j4')).rejects.toThrow();
+    expect([...enregistrees.keys()]).toEqual(['j4']);
   });
 });

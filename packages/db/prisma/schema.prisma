@@ -224,3 +224,16 @@ model AgendaGoogle {
 
   @@map("agenda_google")
 }
+
+/// Alerte technique pour l'administrateur (1.7.0) : message technique, jamais un contenu de capture.
+/// `cle` : identifiant du job de la file `alertes` ; un job rejoué ne crée pas de doublon.
+model Alerte {
+  id      String    @id @default(uuid()) @db.Uuid
+  cle     String    @unique
+  message String
+  creeLe  DateTime  @default(now()) @map("cree_le")
+  vueLe   DateTime? @map("vue_le")
+
+  @@index([creeLe])
+  @@map("alerte")
+}

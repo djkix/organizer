@@ -113,3 +113,7 @@ export function debutTexte(texte: string | null, max = 140): string | null {
   const espace = coupe.lastIndexOf(' ');
   return `${(espace > max / 2 ? coupe.slice(0, espace) : coupe).trimEnd()}…`;
 }
+
+// Alertes techniques (1.7.0), pour l'administrateur seul.
+export interface AlerteTechnique { id: string; message: string; creeLe: string; vue: boolean }
+export interface ReponseAlertes { alertes: AlerteTechnique[]; nonVues: boolean }
