@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.7.0] - 2026-10-08
+
 ### Ajouté
 - Alertes techniques enregistrées (table `alerte`, migration additive) : chaque alerte de la file `alertes` est gardée une fois, même si le job est rejoué ; `GET /api/alertes` (30 derniers jours) et `POST /api/alertes/vues`, pour l'admin seul (404 pour un autre compte) (2026-10-08).
 - Réglages, pour l'admin seulement : section « Alertes techniques » (date, message, « Tout marquer comme vu ») ; un point discret, sans chiffre, sur l'onglet Réglages tant qu'une alerte n'est pas vue, vérifié à l'ouverture et au retour sur l'app. Un autre compte ne voit rien et ne fait aucune requête (2026-10-08).
@@ -13,6 +15,10 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Rotation de l'audio ordinaire : chaque heure, au-delà de 40 Go, l'API purge l'audio déjà transcrit de plus de 30 jours, du plus ancien au plus récent, jusqu'à 35 Go ; jamais l'audio privé, jamais une capture en file ou sans texte ; transcription et éléments intacts ; une alerte admin si rien de plus n'est purgeable. La veille alerte désormais au-delà de 40 Go (2026-10-08).
 - Documentation : alertes dans Réglages, rotation de l'audio et nouveaux messages de la veille (`docs/exploitation.md`), vue Pensées et supervision (`docs/cahier-des-charges.md`) ; contrôle d'apparence étendu aux Pensées (2026-10-08).
 - Spec et plan de la 1.7.0 (alertes admin, vue Pensées, rotation de l'audio) : `docs/superpowers/specs/2026-10-08-alertes-pensees-rotation-design.md`, `docs/superpowers/plans/2026-10-08-alertes-pensees-rotation.md` (2026-10-08).
+
+### Corrigé
+- Une pensée rangée en action (« C'est une chose à faire ») ou un élément à revoir tranché en action va dans Aujourd'hui (« Dans la journée ») : sans date, il n'apparaissait dans aucune liste (2026-10-08).
+- Alertes : la veille n'alerte sur l'audio qu'au-delà de 42 Go (la rotation agit dès 40 Go et tourne une minute après le démarrage) ; la clé d'une alerte inclut l'horodatage du job ; le point de l'admin disparaît dès qu'un autre compte se connecte ; la rotation ne tourne jamais en double (2026-10-08).
 
 ## [1.6.1] - 2026-10-08
 
