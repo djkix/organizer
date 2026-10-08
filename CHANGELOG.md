@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Spec et plan de la 1.6.0 (effacement en deux temps, historique des envois) : `docs/superpowers/specs/2026-10-08-effacement-historique-design.md`, `docs/superpowers/plans/2026-10-08-effacement-historique.md` (2026-10-08).
+
 ### Modifié
 - La base de test `organizer-dev` n'existe plus que le temps des tests : `infra/dev/tunnel.sh` la crée hors de `/opt/stacks` et la supprime à la fermeture ; la mise à jour retire le conteneur `migrate` terminé ; `docs/exploitation.md` explique ce que `prune` peut et ne doit jamais faire (2026-10-08).
 
