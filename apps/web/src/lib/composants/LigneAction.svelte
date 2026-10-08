@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { LigneAffichee } from '$lib/vues';
-  import { creerGlisseur, estGlissement, ouverture } from '$lib/glisser';
-  import { MESSAGES } from '$lib/messages';
+  import { creerGlisseur, estGlissement } from '$lib/glisser';
   import Icone from './Icone.svelte';
   import Pastille from './Pastille.svelte';
 
@@ -16,61 +15,38 @@
   } = $props();
   const glisseur = creerGlisseur();
   let decalage = $state(0);
-  let decouvert = $state(false);
   let glisse = $state(false);
   let avale = false;
 
-  function refermer(): void { decouvert = false; decalage = 0; ouverture.liberer(ligne.itemId); }
-  function ouvrir(): void { decouvert = true; ouverture.ouvrir(ligne.itemId, () => { decouvert = false; decalage = 0; }); }
-  // Ligne ouverte : un appui ailleurs ou un défilement la referme.
-  $effect(() => {
-    if (!decouvert) return;
-    const appui = (e: Event): void => {
-      const id = (e.target as Element | null)?.closest?.('[data-item]')?.getAttribute('data-item') ?? null;
-      if (id === ligne.itemId || (e.target as Element | null)?.closest?.('[role="alertdialog"], [role="dialog"]')) return;
-      ouverture.dehors(id);
-      // Le premier appui ailleurs ne fait que refermer : le clic qui suit est avalé (une fois, 500 ms au plus).
-      const avaler = (c: Event): void => { c.preventDefault(); c.stopPropagation(); fin(); };
-      const fin = (): void => { clearTimeout(t); window.removeEventListener('click', avaler, true); };
-      const t = setTimeout(fin, 500);
-      window.addEventListener('click', avaler, true);
-    };
-    const defile = (): void => ouverture.dehors(null);
-    window.addEventListener('pointerdown', appui, true);
-    window.addEventListener('scroll', defile, true);
-    return () => { window.removeEventListener('pointerdown', appui, true); window.removeEventListener('scroll', defile, true); };
-  });
   function bas(e: PointerEvent): void {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     avale = false;
-    glisseur.debut(e.clientX, e.clientY, decouvert);
+    glisseur.debut(e.clientX, e.clientY);
   }
   function bouge(e: PointerEvent): void {
     const dx = glisseur.deplacer(e.clientX, e.clientY);
     if (dx === null) return;
     glisse = true;
     avale = estGlissement(dx);
-    decalage = decouvert ? Math.min(0, dx - 88) : dx;
+    decalage = dx;
   }
+  /** Un glissement franc demande l'effacement : la ligne revient en place, la confirmation monte en bas. */
   function lache(): void {
     const issue = glisseur.fin();
-    if (issue === 'ouvrir') ouvrir();
-    else if (issue === 'fermer' || (glisse && decouvert)) refermer();
     glisse = false;
-    decalage = decouvert ? -88 : 0;
+    decalage = 0;
+    if (issue === 'ouvrir') surEffacer();
   }
   function corps(): void {
     if (avale) { avale = false; return; }
-    if (decouvert) { refermer(); return; }
     surOuvrir();
   }
 </script>
 
 <li class="ligne" class:coche data-item={ligne.itemId}>
-  {#if decouvert}<button class="effacer" aria-label="{MESSAGES.effacerBouton} : {ligne.texte}" onclick={surEffacer}>{MESSAGES.effacerBouton}</button>{/if}
   <div
     role="presentation" class="piste" class:glisse style:transform="translateX({decalage}px)"
-    onpointerdown={bas} onpointermove={bouge} onpointerup={lache} onpointercancel={() => { glisseur.annuler(); glisse = false; decalage = decouvert ? -88 : 0; }}
+    onpointerdown={bas} onpointermove={bouge} onpointerup={lache} onpointercancel={() => { glisseur.annuler(); glisse = false; decalage = 0; }}
   >
   <button
     class="case"
@@ -97,11 +73,6 @@
   .ligne { position: relative; overflow: hidden; background: var(--surface-alt); border: 1px solid var(--line); border-radius: 14px; }
   .piste { display: flex; align-items: center; min-height: 64px; background: var(--surface); border-radius: 13px; touch-action: pan-y; transition: transform 0.18s ease-out; }
   .piste.glisse { transition: none; }
-  /* Sans rouge, même pour effacer : le bouton reste neutre, lisible par son libellé. */
-  .effacer {
-    position: absolute; inset: 0 0 0 auto; width: 88px; border: none; background: var(--surface-alt); color: var(--text);
-    font-weight: 600; font-size: var(--font-meta);
-  }
 
   .case { width: var(--touch-min); min-height: var(--touch-min); flex: none; align-self: stretch; display: grid; place-items: center; padding: 0 0 0 4px; background: none; border: none; }
   .boite { width: 22px; height: 22px; display: grid; place-items: center; border: 2px solid var(--check); border-radius: 7px; color: var(--bg); }

@@ -1,6 +1,6 @@
-/** Geste « glisser vers la gauche » d'une ligne : seul un geste franchement horizontal découvre « Effacer ». */
-export const SEUIL_OUVERTURE = 64;
-export const DISTANCE_MAX = 96;
+/** Geste « glisser vers la gauche » d'une ligne : seul un geste franchement horizontal demande l'effacement. */
+export const SEUIL_OUVERTURE = 96;
+export const DISTANCE_MAX = 160;
 const DEAD_ZONE = 10;
 
 export type Issue = 'ouvrir' | 'refermer' | 'fermer';
@@ -49,30 +49,3 @@ export function creerGlisseur(): Glisseur {
 
 /** Un appui qui suit un glissement ne doit pas ouvrir la ligne : il est avalé. */
 export const estGlissement = (dx: number | null): boolean => dx !== null && Math.abs(dx) > 4;
-
-/** Une seule ligne ouverte à la fois : en ouvrir une referme la précédente ; un appui ailleurs referme. */
-export interface Ouverture {
-  ouvrir(id: string, fermer: () => void): void;
-  /** La ligne `id` s'est refermée d'elle-même. */
-  liberer(id: string): void;
-  /** Un appui ou un défilement a eu lieu sur la ligne `id` (null : hors de toute ligne). */
-  dehors(id: string | null): void;
-}
-
-export function creerOuverture(): Ouverture {
-  let courante: { id: string; fermer: () => void } | null = null;
-  return {
-    ouvrir(id, fermer) {
-      if (courante && courante.id !== id) courante.fermer();
-      courante = { id, fermer };
-    },
-    liberer(id) { if (courante?.id === id) courante = null; },
-    dehors(id) {
-      if (!courante || courante.id === id) return;
-      const c = courante;
-      courante = null;
-      c.fermer();
-    },
-  };
-}
-export const ouverture = creerOuverture();
