@@ -12,7 +12,7 @@ import { SessionGuard } from '../src/auth/session.guard.js';
 import { StockageAudio } from '../src/ingestion/stockage.js';
 import { ItemsController } from '../src/items/items.controller.js';
 import { ItemsService } from '../src/items/items.service.js';
-import { AUTH, CAPTURES, CONFIG, ITEMS, PRIVEES, VUES, HISTORIQUE } from '../src/jetons.js';
+import { AUTH, CAPTURES, CONFIG, ITEMS, PRIVEES, VUES, HISTORIQUE, PENSEES } from '../src/jetons.js';
 import { CapturesController } from '../src/captures/captures.controller.js';
 import { CapturesOrdinairesService } from '../src/captures/captures.service.js';
 import { PriveesController } from '../src/privees/privees.controller.js';
@@ -20,6 +20,8 @@ import { CapturesPriveesService } from '../src/privees/privees.service.js';
 import type { Reencodeur } from '../src/privees/reencodeur.js';
 import { HistoriqueController } from '../src/historique/historique.controller.js';
 import { HistoriqueService } from '../src/historique/historique.service.js';
+import { PenseesController } from '../src/pensees/pensees.controller.js';
+import { PenseesService } from '../src/pensees/pensees.service.js';
 import { VuesController } from '../src/vues/vues.controller.js';
 import { VuesService } from '../src/vues/vues.service.js';
 import { demarrerAppTest } from './aides-http.js';
@@ -72,11 +74,12 @@ beforeEach(async () => {
   const stockage = new StockageAudio(racine);
   class M {}
   Module({
-    controllers: [VuesController, ItemsController, PriveesController, CapturesController, HistoriqueController],
+    controllers: [VuesController, ItemsController, PriveesController, CapturesController, HistoriqueController, PenseesController],
     providers: [
       { provide: AUTH, useValue: auth }, SessionGuard,
       { provide: VUES, useValue: new VuesService(prisma) },
       { provide: HISTORIQUE, useValue: new HistoriqueService(prisma) },
+      { provide: PENSEES, useValue: new PenseesService(prisma) },
       { provide: ITEMS, useValue: new ItemsService(prisma, ['datee', 'jour', 'fenetre', 'relative', 'aucune']) },
       { provide: CONFIG, useValue: { audioRacine: racine } },
       { provide: PRIVEES, useValue: new CapturesPriveesService(prisma, stockage, reen) },
@@ -233,6 +236,18 @@ describe('décision 25 : historique des envois', () => {
       for (const e of [...espions, ...sorties]) e.mockRestore();
     }
     expect(vus.join('\n')).not.toContain(SECRET);
+  });
+});
+
+describe('décision 25 : pensées', () => {
+  it('chacun ne voit que ses pensées ; mois invalide 400 ; sans session 401', async () => {
+    const pa = await creerAction(prisma, { compte: 'a', texte: 'pensée a', type: null, nature: 'pensee', emisLe: new Date().toISOString() });
+    await creerAction(prisma, { compte: 'b', texte: 'pensée b', type: null, nature: 'pensee', emisLe: new Date().toISOString() });
+    const ids = async (c: string) => (await json(c, `/api/pensees?mois=${jourIso}`)).jours.flatMap((j: { pensees: { itemId: string }[] }) => j.pensees.map((p) => p.itemId));
+    expect(await ids(cA)).toEqual([pa.itemId]);
+    expect((await ids(cB))).not.toContain(pa.itemId);
+    expect((await appel(cA, 'GET', '/api/pensees?mois=2026-13')).status).toBe(400);
+    expect((await appel('', 'GET', '/api/pensees')).status).toBe(401);
   });
 });
 
