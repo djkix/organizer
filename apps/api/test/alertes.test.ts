@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@organizer/db';
 import type { Bot } from 'grammy';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { envoyerAlerte } from '../src/alertes.js';
+import { cleAlerte, envoyerAlerte } from '../src/alertes.js';
 
 const enregistrees = new Map<string, string>();
 const prismaAvec = (chats: bigint[]) => ({
@@ -55,5 +55,10 @@ describe('envoyerAlerte', () => {
     await expect(envoyerAlerte('Crédit épuisé.', prismaAvec([1n]), bot, 'j4')).rejects.toThrow();
     await expect(envoyerAlerte('Crédit épuisé.', prismaAvec([1n]), bot, 'j4')).rejects.toThrow();
     expect([...enregistrees.keys()]).toEqual(['j4']);
+  });
+
+  it('clé d\'une alerte : stable entre deux essais du même job, distincte si le compteur de Valkey repart à zéro', () => {
+    expect(cleAlerte({ id: '7', timestamp: 1000 })).toBe(cleAlerte({ id: '7', timestamp: 1000 }));
+    expect(cleAlerte({ id: '7', timestamp: 1000 })).not.toBe(cleAlerte({ id: '7', timestamp: 2000 }));
   });
 });

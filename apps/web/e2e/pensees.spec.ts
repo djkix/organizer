@@ -59,9 +59,11 @@ test('détail : ce que tu as dit, « C\'est une chose à faire », effacer en de
   const d = page.getByRole('dialog');
   await expect(d).toContainText('« Je me dis que je devrais marcher davantage le soir. »');
   await d.getByRole('button', { name: "C'est une chose à faire" }).click();
-  await expect.poll(() => corpsDe(appels, `PATCH /api/items/${P1.itemId}`)).toEqual({ nature: 'action' });
+  // Rangée dans Aujourd'hui (« Dans la journée ») : jamais une action sans date, qu'aucune liste ne montrerait.
+  await expect.poll(() => corpsDe(appels, `PATCH /api/items/${P1.itemId}`))
+    .toEqual({ nature: 'action', echeance: { type: 'jour', date: '2026-10-08T00:00:00+02:00' } });
   await expect(page.getByText(P1.texte)).toHaveCount(0);
-  await expect(page.getByText('Rangé dans les choses à faire.')).toBeVisible();
+  await expect(page.getByText("Rangé dans aujourd'hui.")).toBeVisible();
 
   await page.getByRole('button', { name: /changer de travail/ }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Effacer' }).click();

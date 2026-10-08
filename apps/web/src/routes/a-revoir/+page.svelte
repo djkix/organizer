@@ -8,7 +8,8 @@
   import { creerEffaceur, effacementsEnVol } from '$lib/effacement';
   import Lecteur from '$lib/composants/Lecteur.svelte';
   import { FUSEAU } from '$lib/config';
-  import { corpsNature } from '$lib/correction';
+  import { corpsEcheance, corpsNature } from '$lib/correction';
+  import { jourLocal } from '@organizer/shared/dates';
   import { momentEnClair } from '$lib/format';
   import Pastille from '$lib/composants/Pastille.svelte';
   import { A_REVOIR } from '$lib/pastilles';
@@ -30,7 +31,8 @@
   async function trancher(itemId: string, nature: 'action' | 'pensee'): Promise<void> {
     message = null;
     try {
-      await api.corriger(itemId, corpsNature(nature));
+      // Une action tranchée va dans Aujourd'hui (« Dans la journée ») : sans date, aucune liste ne la montrerait.
+      await api.corriger(itemId, nature === 'action' ? { ...corpsNature('action'), ...corpsEcheance({ type: 'jour', jour: jourLocal(new Date(), FUSEAU) }, FUSEAU) } : corpsNature(nature));
       if (vue) vue = { ...vue, items: vue.items.filter((i) => i.itemId !== itemId) };
     } catch {
       message = MESSAGES.correctionRatee;

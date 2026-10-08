@@ -28,7 +28,13 @@ export async function envoyerAlerte(message: string, prisma: PrismaClient, bot: 
   if (echecs > 0) throw new Error(`Alerte non remise à ${echecs} admin(s)`);
 }
 
+/**
+ * Clé d'enregistrement d'une alerte : identique entre deux essais d'un même job (idempotence), distincte si le
+ * compteur d'identifiants de Valkey repart à zéro (volume recréé) : jamais une alerte neuve avalée par une ancienne.
+ */
+export const cleAlerte = (job: { id?: string; timestamp: number }): string => `${job.id ?? 'sans-id'}:${job.timestamp}`;
+
 /** L'API est le seul point d'envoi de messages : les alertes du worker passent par ici, vers l'admin seul. */
 export function demarrerAlertes(connexion: ConnectionOptions, prisma: PrismaClient, bot: Bot): Worker<JobAlerte> {
-  return new Worker<JobAlerte>(FILE_ALERTES, (job) => envoyerAlerte(job.data.message, prisma, bot, job.id ?? `${job.name}-${job.timestamp}`), { connection: connexion });
+  return new Worker<JobAlerte>(FILE_ALERTES, (job) => envoyerAlerte(job.data.message, prisma, bot, cleAlerte(job)), { connection: connexion });
 }
