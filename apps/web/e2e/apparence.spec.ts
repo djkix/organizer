@@ -21,6 +21,9 @@ const table = {
     texte: 'Penser à rappeler la mutuelle. '.repeat(15), aAudio: true,
     elements: [{ itemId: 'i1', texte: 'Penser à rappeler la mutuelle pour le remboursement des lunettes et demander le formulaire', nature: 'action', statut: 'efface' }],
   }),
+  'GET /api/pensees': json(200, { jours: [{ jour: '2026-10-06', pensees: [
+    { itemId: '00000000-0000-4000-8000-0000000000d1', captureId: '00000000-0000-4001-8000-0000000000d1', texte: 'Je me demande si je ne devrais pas repeindre le salon en vert sauge, ça apaiserait la pièce et on y passerait plus de temps le soir', heure: '21:10', theme: 'maison et décoration intérieure', personnes: ['Anne-Sophie', 'Jean-Baptiste'], aAudio: true },
+  ] }], themes: ['maison et décoration intérieure', 'santé', 'travail'], personnes: ['Anne-Sophie', 'Jean-Baptiste', 'Paul'] }),
   'GET /api/captures/privees': json(200, [
     { jour: '2026-10-06', captures: [{ id: '00000000-0000-4000-8000-0000000000aa', heure: '12:06', dureeS: 7, etiquette: MOT.slice(0, 80), aAudio: true }] },
   ]),
@@ -42,7 +45,7 @@ async function sansDebordement(page: Page): Promise<void> {
 
 for (const schema of ['light', 'dark'] as const) {
   for (const taille of [{ width: 360, height: 780 }, { width: 390, height: 844 }]) {
-    test(`apparence ${schema} à ${taille.width} px : accueil, semaine, détail, Privé, Historique`, async ({ page }) => {
+    test(`apparence ${schema} à ${taille.width} px : accueil, semaine, détail, Privé, Pensées, Historique`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: schema });
       await page.setViewportSize(taille);
       await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
@@ -66,6 +69,10 @@ for (const schema of ['light', 'dark'] as const) {
 
       await page.goto('/prive');
       await expect(page.getByText(MOT.slice(0, 80))).toBeVisible();
+      await sansDebordement(page);
+
+      await page.goto('/pensees');
+      await expect(page.getByRole('button', { name: /repeindre le salon/ })).toBeVisible();
       await sansDebordement(page);
 
       await page.goto('/historique');
