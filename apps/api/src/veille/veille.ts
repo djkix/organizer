@@ -9,9 +9,9 @@ export interface Mesures {
   derniereCapture: Date | null;
 }
 
-/** Seuils du cahier (section Supervision) ; audio à 30 Go tant que la rotation du lot 2 n'existe pas. */
+/** Seuils du cahier (section Supervision) ; audio : la rotation (1.7.0) le tient sous 40 Go. */
 export const SEUILS = {
-  enAttente: 50, echecsHeure: 3, audioOctets: 30 * GO, baseOctets: 8 * GO, latenceS: 120, silenceJours: 10,
+  enAttente: 50, echecsHeure: 3, audioOctets: 40 * GO, baseOctets: 8 * GO, latenceS: 120, silenceJours: 10,
 } as const;
 
 export interface Constat { cle: string; message: string }
@@ -21,7 +21,7 @@ export function constater(m: Mesures, maintenant: Date, s: typeof SEUILS = SEUIL
   const c: Constat[] = [];
   if (m.enAttente > s.enAttente) c.push({ cle: 'file', message: `File de classement : ${m.enAttente} captures en attente.` });
   if (m.echecsHeure > s.echecsHeure) c.push({ cle: 'echecs', message: `${m.echecsHeure} classements en échec depuis une heure.` });
-  if (m.audioOctets > s.audioOctets) c.push({ cle: 'audio', message: `Audio : ${Math.round(m.audioOctets / GO)} Go. La rotation arrive au lot 2.` });
+  if (m.audioOctets > s.audioOctets) c.push({ cle: 'audio', message: `Audio : ${Math.round(m.audioOctets / GO)} Go, au-delà de 40 Go malgré la rotation.` });
   if (m.baseOctets > s.baseOctets) c.push({ cle: 'base', message: `Base : ${Math.round(m.baseOctets / GO)} Go, au-delà de 8 Go.` });
   if (m.latenceMoyenneS !== null && m.latenceMoyenneS > s.latenceS) {
     c.push({ cle: 'latence', message: `Classement lent : ${Math.round(m.latenceMoyenneS)} s en moyenne sur une heure.` });
