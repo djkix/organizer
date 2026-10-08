@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, existsSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { creerPrisma } from '@organizer/db';
@@ -81,5 +81,30 @@ describe('rotation de l\'audio ordinaire', () => {
     await r.passer();
     expect(await purgee(fantome.id)).toBe(true);
     expect(await purgee(vieille.id)).toBe(true);
+  });
+
+  it('un fichier impossible à supprimer est sauté, sans boucle sans fin ; la capture garde son audio', async () => {
+    mkdirSync(join(racine, 'ordinaire', 'bloque'));
+    writeFileSync(join(racine, 'ordinaire', 'bloque', 'b.oga'), Buffer.alloc(300));
+    const bloquee = await prisma.capture.create({ data: { utilisateurId: compte, canal: 'pwa', prive: false, etat: 'classee', emisLe: new Date('2026-07-01T08:00:00Z'), audioPath: 'ordinaire/bloque/b.oga', texteBrut: 'x' } });
+    const vieille = await audio({ nom: 'v', octets: 200, emisLe: '2026-08-01T08:00:00Z' });
+    chmodSync(join(racine, 'ordinaire', 'bloque'), 0o500);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const { r } = rotation();
+      await r.passer();
+      expect(await purgee(bloquee.id)).toBe(false);
+      expect(await purgee(vieille.id)).toBe(true);
+    } finally {
+      chmodSync(join(racine, 'ordinaire', 'bloque'), 0o700);
+    }
+  });
+
+  it('deux passages simultanés : le second ne fait rien (pas de purge au-delà du seuil bas)', async () => {
+    for (const n of ['a', 'b', 'c', 'd']) await audio({ nom: n, octets: 150, emisLe: `2026-0${['5', '6', '7', '8'][['a', 'b', 'c', 'd'].indexOf(n)]}-01T08:00:00Z` });
+    const { r } = rotation();
+    const [x, y] = await Promise.all([r.passer(), r.passer()]);
+    expect(x.purges + y.purges).toBe(3);
+    expect([x.purges, y.purges]).toContain(0);
   });
 });

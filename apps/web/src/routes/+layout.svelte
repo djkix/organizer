@@ -5,7 +5,7 @@
   import BoutonPrive from '$lib/composants/BoutonPrive.svelte';
   import Navigation from '$lib/composants/Navigation.svelte';
   import { CHEMINS } from '$lib/config';
-  import { rafraichirAlertes } from '$lib/alertes.svelte';
+  import { etatAlertes, rafraichirAlertes } from '$lib/alertes.svelte';
   import { demarrerPrive } from '$lib/prive/demarrage';
   import type { LayoutProps } from './$types';
 
@@ -16,8 +16,15 @@
   // À chaque ouverture, au retour du réseau et au retour à l'écran : la file privée part.
   onMount(() => demarrerPrive());
   // Alertes techniques (admin seulement) : vues à l'ouverture et au retour sur l'application.
-  onMount(() => {
+  // Et à chaque changement de session (déconnexion, autre compte) : le point de l'admin ne reste jamais pour L.
+  // Pas de session lue (raccourci privé) : rien, aucun appel réseau.
+  $effect(() => {
+    const s = page.data.session;
+    if (!s) return;
+    if (s.etat !== 'connecte' || !s.admin) { etatAlertes.nonVues = false; return; }
     void rafraichirAlertes();
+  });
+  onMount(() => {
     const retour = (): void => { if (document.visibilityState === 'visible') void rafraichirAlertes(); };
     document.addEventListener('visibilitychange', retour);
     return () => document.removeEventListener('visibilitychange', retour);

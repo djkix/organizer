@@ -21,10 +21,10 @@ describe('constater', () => {
     expect(cles({ latenceMoyenneS: 121 })).toEqual(['latence']);
   });
 
-  it('audio au-delà de 40 Go : la rotation n\'a pas suffi', () => {
-    expect(cles({ audioOctets: 40 * GO })).toEqual([]);
-    const [c] = constater({ ...BASE, audioOctets: 41 * GO }, T);
-    expect(c).toEqual({ cle: 'audio', message: 'Audio : 41 Go, au-delà de 40 Go malgré la rotation.' });
+  it('audio au-delà de 42 Go : la rotation (seuil 40 Go) n\'a pas suffi ; jamais d\'alerte pendant un cycle normal', () => {
+    expect(cles({ audioOctets: 42 * GO })).toEqual([]);
+    const [c] = constater({ ...BASE, audioOctets: 43 * GO }, T);
+    expect(c).toEqual({ cle: 'audio', message: 'Audio : 43 Go, au-delà de 42 Go malgré la rotation.' });
   });
 
   it('dix jours sans capture : une information, pas une alerte ; rien sur une base neuve', () => {

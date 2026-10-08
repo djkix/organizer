@@ -51,6 +51,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
   private purge?: NodeJS.Timeout;
   private veille?: NodeJS.Timeout;
   private rotation?: NodeJS.Timeout;
+  private premiereRotation?: NodeJS.Timeout;
   private files: Queue[] = [];
   private alertes?: Worker;
   private propositions?: Worker;
@@ -101,9 +102,12 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     }, 15 * 60_000);
     // Rotation de l'audio ordinaire : chaque heure, sans effet sous 40 Go.
     const rotation = new RotationAudio(this.prisma, this.config.audioRacine, async (message) => { await alertes.add('alerte', { message }, OPTIONS_JOB_ALERTE); });
-    this.rotation = setInterval(() => {
+    const tourner = (): void => {
       rotation.passer().catch((err: unknown) => console.error(`Rotation de l'audio en échec (${(err as Error).name})`));
-    }, 3600_000);
+    };
+    // Un premier passage peu après le démarrage, puis chaque heure.
+    this.premiereRotation = setTimeout(tourner, 60_000);
+    this.rotation = setInterval(tourner, 3600_000);
   }
 
   async onApplicationShutdown(): Promise<void> {
@@ -112,6 +116,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
     clearInterval(this.purge);
     clearInterval(this.veille);
     clearInterval(this.rotation);
+    clearTimeout(this.premiereRotation);
     await Promise.all(this.files.map((f) => f.close()));
     if (this.config.telegramMode === 'polling' && this.bot.isRunning()) await this.bot.stop();
     await this.alertes?.close();

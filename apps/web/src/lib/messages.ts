@@ -72,7 +72,7 @@ export const MESSAGES = {
   penseesSous: 'Ce que tu as pensé à voix haute',
   toutes: 'Toutes',
   uneChoseAFaire: "C'est une chose à faire",
-  rangeEnAction: 'Rangé dans les choses à faire.',
+  rangeEnAction: "Rangé dans aujourd'hui.",
   historiqueEnvois: 'Historique des envois',
   alertesTitre: 'Alertes techniques',
   aucuneAlerte: 'Aucune alerte.',

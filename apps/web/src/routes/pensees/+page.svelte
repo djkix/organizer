@@ -11,7 +11,7 @@
   import Icone from '$lib/composants/Icone.svelte';
   import Pastille from '$lib/composants/Pastille.svelte';
   import { FUSEAU } from '$lib/config';
-  import { corpsNature } from '$lib/correction';
+  import { corpsEcheance, corpsNature } from '$lib/correction';
   import { creerEffaceur, effacementsEnVol } from '$lib/effacement';
   import { libelleJour, libelleMois, moisVoisin, titreDuJour } from '$lib/format';
   import { MESSAGES } from '$lib/messages';
@@ -116,7 +116,8 @@
     if (envoi) return;
     envoi = true;
     try {
-      await api.corriger(p.itemId, corpsNature('action'));
+      // Jamais une action sans date, qu'aucune liste d'À faire ne montrerait : elle va dans Aujourd'hui (« Dans la journée »).
+      await api.corriger(p.itemId, { ...corpsNature('action'), ...corpsEcheance({ type: 'jour', jour: jourLocal(new Date(), FUSEAU) }, FUSEAU) });
       await fermer();
       dire(MESSAGES.rangeEnAction);
       await charger();

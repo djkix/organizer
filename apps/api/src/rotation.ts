@@ -16,6 +16,7 @@ export interface SeuilsRotation { haut: number; bas: number; ageJours: number }
  */
 export class RotationAudio {
   private alerteActive = false;
+  private enCours = false;
 
   constructor(
     private readonly prisma: PrismaClient,
@@ -26,27 +27,38 @@ export class RotationAudio {
     private readonly mesurer: (dossier: string) => Promise<number> = tailleDossier,
   ) {}
 
+  /** Un seul passage à la fois : un second, lancé pendant le premier, ne fait rien (sinon il purgerait au-delà du seuil bas). */
   async passer(): Promise<{ purges: number; liberes: number }> {
+    if (this.enCours) return { purges: 0, liberes: 0 };
+    this.enCours = true;
+    try {
+      return await this.tourner();
+    } finally {
+      this.enCours = false;
+    }
+  }
+
+  private async tourner(): Promise<{ purges: number; liberes: number }> {
     let taille = await this.mesurer(this.racine);
     if (taille <= this.seuils.haut) { this.alerteActive = false; return { purges: 0, liberes: 0 }; }
     const avant = new Date(this.maintenant().getTime() - this.seuils.ageJours * 86_400_000);
-    const essayees: string[] = [];
+    // Seuls les échecs sont exclus : une capture purgée sort d'elle-même de la requête (audio_path vidé).
+    const echecs: string[] = [];
     let purges = 0;
     let liberes = 0;
     while (taille > this.seuils.bas) {
       const lot = await this.prisma.capture.findMany({
         where: {
           prive: false, audioPath: { not: null }, emisLe: { lt: avant }, etat: { in: ['classee', 'a_revoir'] },
-          OR: [{ texteBrut: { not: null } }, { texteEcrit: { not: null } }], id: { notIn: essayees },
+          OR: [{ texteBrut: { not: null } }, { texteEcrit: { not: null } }], id: { notIn: echecs },
         },
         orderBy: [{ emisLe: 'asc' }, { id: 'asc' }], take: LOT, select: { id: true, audioPath: true },
       });
       if (lot.length === 0) break;
       for (const c of lot) {
         if (taille <= this.seuils.bas) break;
-        essayees.push(c.id);
         const octets = await this.supprimer(c.audioPath!);
-        if (octets === null) continue;
+        if (octets === null) { echecs.push(c.id); continue; }
         await this.prisma.capture.update({ where: { id: c.id }, data: { audioPath: null, audioPurgeLe: this.maintenant() } });
         taille -= octets;
         liberes += octets;

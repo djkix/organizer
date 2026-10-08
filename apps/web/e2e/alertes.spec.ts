@@ -43,3 +43,27 @@ test('compte ordinaire : ni point, ni section, aucune requête d\'alertes', asyn
   await expect(page.locator('nav[aria-label="Navigation"] .point')).toHaveCount(0);
   expect(appels.filter((a) => a.cle.includes('/api/alertes'))).toHaveLength(0);
 });
+
+test('changement de compte sur le même téléphone : le point de l\'admin ne reste pas pour L', async ({ page }) => {
+  let qui: 'admin' | 'l' | null = 'admin';
+  await simuler(page, {
+    ...VIDE,
+    'GET /api/session/moi': (r) => (qui === null ? r.fulfill({ status: 401, json: { message: 'Non connecté.' } })
+      : r.fulfill({ status: 200, json: qui === 'admin' ? { nom: 'f', admin: true, versionServeur: '1.7.0' } : { nom: 'l', admin: false } })),
+    'GET /api/alertes': json(200, { alertes: [ALERTE], nonVues: true }),
+    'DELETE /api/session': (r) => { qui = null; return r.fulfill({ status: 204 }); },
+    'POST /api/session': (r) => { qui = 'l'; return r.fulfill({ status: 204 }); },
+    'GET /api/empreintes/options-connexion': json(404),
+  });
+  await page.goto('/reglages');
+  const point = page.locator('nav[aria-label="Navigation"] .point');
+  await expect(point).toBeVisible();
+  await page.getByRole('button', { name: 'Me déconnecter' }).click();
+  await expect(page).toHaveURL(/\/connexion$/);
+  await page.getByLabel('Nom').fill('l');
+  await page.getByLabel('Mot de passe').fill('un mot de passe assez long');
+  await page.getByRole('button', { name: /Me connecter|Connexion|Entrer/ }).first().click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('navigation', { name: 'Navigation' })).toBeVisible();
+  await expect(point).toHaveCount(0);
+});

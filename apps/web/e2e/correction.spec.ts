@@ -28,6 +28,7 @@ test('deux gestes : ouvrir, puis « pas une chose à faire » ou une date', asyn
 });
 
 test('À revoir : trancher un item ambigu ; une capture seule reste en lecture', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
   const appels = await simuler(page, {
     ...CONNECTE,
     'GET /api/vues/a-revoir': json(200, {
@@ -39,7 +40,8 @@ test('À revoir : trancher un item ambigu ; une capture seule reste en lecture',
   await page.goto('/a-revoir');
   await expect(page.getByText('Vocal sans texte.')).toBeVisible();
   await page.getByRole('button', { name: "C'est à faire" }).click();
-  await expect.poll(() => corpsDe(appels, `PATCH /api/items/${garage.itemId}`)).toEqual({ nature: 'action' });
+  await expect.poll(() => corpsDe(appels, `PATCH /api/items/${garage.itemId}`))
+    .toEqual({ nature: 'action', echeance: { type: 'jour', date: '2026-10-06T00:00:00+02:00' } });
   await expect(page.getByText('« vendredi ou samedi »')).toHaveCount(0);
   await expect(page.getByRole('button', { name: "C'est à faire" })).toHaveCount(0);
 });
