@@ -8,13 +8,16 @@
 
   const ONGLETS = [
     { href: CHEMINS.accueil, libelle: 'À faire', icone: 'liste' },
-    { href: CHEMINS.historique, libelle: 'Historique', icone: 'horloge' },
+    { href: CHEMINS.pensees, libelle: 'Pensées', icone: 'bulle' },
     { href: CHEMINS.prive, libelle: 'Privé', icone: 'cadenas' },
     { href: CHEMINS.reglages, libelle: 'Réglages', icone: 'reglages' },
   ] as const;
 
+  // L'Historique et À revoir s'ouvrent depuis Réglages : c'est lui qui reste allumé.
+  const DANS_REGLAGES: string[] = [CHEMINS.historique, CHEMINS.aRevoir];
   const actif = (href: string): boolean =>
-    href === CHEMINS.accueil ? page.url.pathname === href : page.url.pathname.startsWith(href);
+    href === CHEMINS.accueil ? page.url.pathname === href
+      : page.url.pathname.startsWith(href) || (href === CHEMINS.reglages && DANS_REGLAGES.some((c) => page.url.pathname.startsWith(c)));
 </script>
 
 {#if page.url.pathname === CHEMINS.accueil}<BoutonsEnregistrer />{:else}<BoutonPrive />{/if}

@@ -264,14 +264,14 @@ test.describe('effacer', () => {
 
   test('aller-retour d\'écran pendant l\'envoi : la ligne effacée ne réapparaît pas', async ({ page }) => {
     await simuler(page, {
-      ...table(), 'GET /api/historique': json(200, []),
+      ...table(), 'GET /api/pensees': json(200, { jours: [], themes: [], personnes: [] }),
       [EFFACER]: async (r) => { await new Promise((ok) => setTimeout(ok, 2_500)); await r.fulfill({ status: 204 }); },
     });
     await page.goto('/');
     await glisser(page);
     await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
-    await page.getByRole('link', { name: 'Historique' }).click();
-    await expect(page).toHaveURL(/historique/);
+    await page.getByRole('link', { name: 'Pensées' }).click();
+    await expect(page).toHaveURL(/pensees/);
     await page.getByRole('link', { name: 'À faire' }).click();
     await expect(page.getByText('Changer les draps')).toBeVisible();
     await expect(ligneGarage(page)).toHaveCount(0);

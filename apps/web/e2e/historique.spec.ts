@@ -25,16 +25,16 @@ test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-06T14:00:00Z') });
 });
 
-test('onglet Historique : les envois du mois par jour, avec source, début et pastilles', async ({ page }) => {
+test('Historique (depuis Réglages) : les envois du mois par jour, avec source, début et pastilles', async ({ page }) => {
   await simuler(page, {
-    ...CONNECTE,
+    ...CONNECTE, 'GET /api/empreintes': json(200, []), 'GET /api/agenda': json(200, { etat: 'deconnecte' }),
     'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [], suggestions: [] }),
     'GET /api/historique': (r) => r.fulfill({ status: 200, json: new URL(r.request().url()).searchParams.get('mois') === '2026-10' ? MOIS : [] }),
   });
   await page.goto('/');
   const nav = page.getByRole('navigation', { name: 'Navigation' });
-  await expect(nav.getByRole('link')).toHaveCount(4);
-  await nav.getByRole('link', { name: 'Historique' }).click();
+  await nav.getByRole('link', { name: 'Réglages' }).click();
+  await page.getByRole('link', { name: 'Historique des envois' }).click();
   await expect(page).toHaveURL(/\/historique$/);
   await expect(page.getByRole('heading', { name: 'Historique', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
