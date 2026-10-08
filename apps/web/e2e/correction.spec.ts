@@ -63,7 +63,8 @@ test('pastilles : alarme dans la liste, « À revoir » sur une pensée ambiguë
   await expect(page.locator('article').filter({ hasText: 'peut-être une idée' }).getByText('À revoir', { exact: true })).toBeVisible();
 });
 
-test('À revoir : effacer un item après confirmation, une seule requête', async ({ page }) => {
+test('À revoir : effacer après confirmation, cinq secondes pour annuler, puis une seule requête', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
   const appels = await simuler(page, {
     ...CONNECTE,
     'GET /api/vues/a-revoir': json(200, {
@@ -77,11 +78,22 @@ test('À revoir : effacer un item après confirmation, une seule requête', asyn
   await page.getByRole('alertdialog').getByRole('button', { name: 'Annuler' }).click();
   await expect(page.getByText('« vendredi ou samedi »')).toBeVisible();
   expect(appels.filter((a) => a.cle === `DELETE /api/items/${garage.itemId}`)).toHaveLength(0);
+  const requetes = () => appels.filter((a) => a.cle === `DELETE /api/items/${garage.itemId}`).length;
   await page.getByRole('button', { name: 'Effacer' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Effacer' }).click();
   await expect(page.getByText('« vendredi ou samedi »')).toHaveCount(0);
-  await expect(page.getByText('Effacé.')).toBeVisible();
-  expect(appels.filter((a) => a.cle === `DELETE /api/items/${garage.itemId}`)).toHaveLength(1);
+  await expect(page.getByRole('status').filter({ hasText: 'Effacé.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await expect(page.getByText('« vendredi ou samedi »')).toBeVisible();
+  await page.clock.fastForward(10_000);
+  expect(requetes()).toBe(0);
+
+  await page.getByRole('button', { name: 'Effacer' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Effacer' }).click();
+  await page.clock.fastForward(4_900);
+  expect(requetes()).toBe(0);
+  await page.clock.fastForward(200);
+  await expect.poll(requetes).toBe(1);
 });
 
 test.describe('focus et retour du détail', () => {

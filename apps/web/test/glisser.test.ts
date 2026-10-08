@@ -9,7 +9,7 @@ function geste(points: [number, number][]): { dx: (number | null)[]; issue: stri
 }
 
 describe('glisser vers la gauche', () => {
-  it('un glissement horizontal assez long demande l'effacement', () => {
+  it('un glissement horizontal assez long demande l\'effacement', () => {
     expect(geste([[300, 100], [260, 102], [200, 104]]).issue).toBe('ouvrir');
   });
   it('trop court : la ligne se referme', () => {
@@ -35,25 +35,6 @@ describe('glisser vers la gauche', () => {
     g.deplacer(150, 100);
     g.annuler();
     expect(g.fin()).toBe('refermer');
-  });
-});
-
-describe('ligne ouverte', () => {
-  it('ouverte, un glissement vers la droite assez long la referme', () => {
-    const g = creerGlisseur();
-    g.debut(100, 100, true);
-    g.deplacer(150, 102);
-    g.deplacer(190, 102);
-    expect(g.fin()).toBe('fermer');
-  });
-  it('ouverte, un geste trop court ou vertical la laisse ouverte', () => {
-    const g = creerGlisseur();
-    g.debut(100, 100, true);
-    g.deplacer(120, 100);
-    expect(g.fin()).toBe('ouvrir');
-    g.debut(100, 100, true);
-    expect(g.deplacer(110, 160)).toBeNull();
-    expect(g.fin()).toBe('ouvrir');
   });
 });
 

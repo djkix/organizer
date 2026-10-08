@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import type { VueARevoir } from '@organizer/shared/api';
   import { urlAudio } from '$lib/api';
   import { api } from '$lib/client';
+  import Bandeau from '$lib/composants/Bandeau.svelte';
   import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
+  import { creerEffaceur } from '$lib/effacement';
   import Lecteur from '$lib/composants/Lecteur.svelte';
   import { FUSEAU } from '$lib/config';
   import { corpsNature } from '$lib/correction';
@@ -35,17 +37,30 @@
     }
   }
 
-  async function effacer(itemId: string): Promise<void> {
+  // Effacer en deux temps, comme dans les listes : l'item part aussitôt, la requête cinq secondes plus tard.
+  let effaces = $state<ReadonlySet<string>>(new Set());
+  let enAttente = $state<string | null>(null);
+  const sansEfface = (id: string): void => { effaces = new Set([...effaces].filter((x) => x !== id)); };
+  const effaceur = creerEffaceur({
+    effacer: (id) => api.effacer(id),
+    surChangement: (e) => { enAttente = e.enAttente; },
+    surEchec: (id) => { sansEfface(id); message = MESSAGES.effaceRate; },
+  });
+  onDestroy(() => effaceur.vider());
+
+  function effacer(itemId: string): void {
     aEffacer = null;
     message = null;
-    try {
-      await api.effacer(itemId);
-      if (vue) vue = { ...vue, items: vue.items.filter((i) => i.itemId !== itemId) };
-      message = MESSAGES.efface;
-    } catch {
-      message = MESSAGES.effaceRate;
-    }
+    effaces = new Set([...effaces, itemId]);
+    effaceur.planifier(itemId);
   }
+
+  function annulerEffacement(): void {
+    const id = effaceur.annuler();
+    if (id) sansEfface(id);
+  }
+
+  const items = $derived(vue ? vue.items.filter((i) => !effaces.has(i.itemId)) : []);
 </script>
 
 <main class="ecran" inert={aEffacer !== null}>
@@ -53,10 +68,10 @@
   {#if message}<p class="discret" role="status">{message}</p>{/if}
   {#if erreur}
     <p class="vide">{MESSAGES.listeIndisponible}</p>
-  {:else if vue && vue.items.length + vue.captures.length === 0}
+  {:else if vue && items.length + vue.captures.length === 0}
     <p class="vide">{MESSAGES.videARevoir}</p>
   {:else if vue}
-    {#each vue.items as i (i.itemId)}
+    {#each items as i (i.itemId)}
       <article class="carte">
         <p>« {i.texte} »</p>
         <p class="discret"><Pastille p={A_REVOIR} /> {momentEnClair(i.emisLe, FUSEAU)}</p>
@@ -77,6 +92,7 @@
     {/each}
   {/if}
 </main>
+<Bandeau texte={enAttente ? MESSAGES.efface : null} annulable={enAttente !== null} surAnnuler={annulerEffacement} />
 {#if aEffacer}
   {@const cible = aEffacer}
   <ConfirmerEffacer texte={cible.texte} surConfirmer={() => void effacer(cible.itemId)} surAnnuler={() => (aEffacer = null)} />
