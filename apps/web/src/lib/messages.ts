@@ -68,6 +68,11 @@ export const MESSAGES = {
   ajouterUnMot: 'Ajouter un mot',
   motRate: 'Pas pu garder le mot. Réessaie.',
   videPrive: 'Rien ce mois-ci.',
+  historiqueSous: 'Ce que tu as envoyé',
+  pasEncoreTranscrit: 'Pas encore transcrit.',
+  ceQuiEnEstSorti: 'Ce qui en est sorti',
+  rienDeSorti: 'Rien n\'en est encore sorti.',
+  envoiIndisponible: 'Envoi indisponible pour le moment.',
   // Empreinte (WebAuthn)
   connecterEmpreinte: "Me connecter avec l'empreinte",
   activerEmpreinte: "Activer l'empreinte",

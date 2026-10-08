@@ -9,6 +9,7 @@ export const CHEMINS = {
   enregistrer: '/enregistrer',
   reglages: '/reglages',
   aRevoir: '/a-revoir',
+  historique: '/historique',
 } as const;
 
 /** Étiquette Background Sync de la file des captures privées. */

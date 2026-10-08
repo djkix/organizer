@@ -18,6 +18,16 @@ const vide = (status = 204) => new Response(null, { status });
 const entetes = (init: RequestInit) => new Headers(init.headers);
 
 describe('client API', () => {
+  it('historique : liste par mois et détail, sur les bonnes routes', async () => {
+    const corps = (x: unknown) => new Response(JSON.stringify(x), { status: 200, headers: { 'content-type': 'application/json' } });
+    const { f, appels } = fauxFetch([corps([]), corps({ id: 'x' })]);
+    const api = creerClientApi({ fetch: f });
+    expect(await api.historique('2026-10')).toEqual([]);
+    expect(appels[0]!.url).toBe('/api/historique?mois=2026-10');
+    expect(await api.envoi('a b')).toEqual({ id: 'x' });
+    expect(appels[1]!.url).toBe('/api/historique/a%20b');
+  });
+
   it('transcription : le texte sur 200, null sur 404 ou coupure, sans renvoyer vers la connexion', async () => {
     const { f, appels } = fauxFetch([
       new Response(JSON.stringify({ texte: 'Appeler le garage.' }), { status: 200, headers: { 'content-type': 'application/json' } }),
