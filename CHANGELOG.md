@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Modifié
+- La base de test `organizer-dev` n'existe plus que le temps des tests : `infra/dev/tunnel.sh` la crée hors de `/opt/stacks` et la supprime à la fermeture ; la mise à jour retire le conteneur `migrate` terminé ; `docs/exploitation.md` explique ce que `prune` peut et ne doit jamais faire (2026-10-08).
+
 ## [1.5.1] - 2026-10-08
 
 ### Corrigé
