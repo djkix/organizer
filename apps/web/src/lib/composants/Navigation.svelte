@@ -26,11 +26,11 @@
 <style>
   nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    background: var(--surface); border-top: 1px solid var(--line); padding: 6px 8px env(safe-area-inset-bottom);
+    background: var(--surface); border-top: 1px solid var(--line); padding: 6px 0 env(safe-area-inset-bottom);
   }
   nav a {
     min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; color: var(--muted); text-decoration: none; font-size: var(--font-meta); font-weight: 500; white-space: nowrap;
+    gap: 2px; color: var(--muted); text-decoration: none; font-size: var(--font-meta); font-weight: 500; white-space: nowrap; letter-spacing: -0.01em;
   }
   nav a :global(svg) { box-sizing: content-box; padding: 2px 14px; border-radius: var(--radius-pill); }
   nav a[aria-current='page'] { color: var(--accent-ink); font-weight: 600; }

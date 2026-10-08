@@ -5,6 +5,17 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.6.1] - 2026-10-08
+
+### Corrigé
+- Bandeau : seul le geste le plus récent a un bandeau ; annuler un cochage ne fait plus revenir « Effacé. Annuler » d'un effacement en attente (2026-10-08).
+- Un échec (« Pas effacé. », cochage raté) s'affiche toujours, même si un autre effacement attend (2026-10-08).
+- Une ligne effacée ne réapparaît plus le temps de la réponse du serveur après un aller-retour d'onglet : les effacements en cours d'envoi sont connus de toute l'app (2026-10-08).
+- L'Historique laissé ouvert se recharge au retour sur l'app (jour et mois à jour) (2026-10-08).
+- Après « Annuler » dans le bandeau, le focus revient sur la ligne rendue, dans les listes comme dans À revoir (2026-10-08).
+- Barre du bas : plus de marge autour du libellé « Historique » à 360 px, vérifiée par un test sur chaque libellé (2026-10-08).
+- `docs/exploitation.md` : on vérifie que `migrate` est « Exited (0) » avant de le retirer ; la vérification du webhook Telegram, désactivé, disparaît (2026-10-08).
+
 ## [1.6.0] - 2026-10-08
 
 ### Ajouté

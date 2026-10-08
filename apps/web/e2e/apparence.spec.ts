@@ -29,6 +29,12 @@ const table = {
 async function sansDebordement(page: Page): Promise<void> {
   const { large, vue } = await page.evaluate(() => ({ large: document.documentElement.scrollWidth, vue: window.innerWidth }));
   expect(large).toBeLessThanOrEqual(vue);
+  // Chaque libellé de la barre du bas tient dans sa case, avec au moins 8 px de marge.
+  for (const marge of await page.locator('nav[aria-label="Navigation"] a').evaluateAll((as) => as.map((a) => {
+    const r = document.createRange(); r.selectNodeContents(a); const texte = [...a.childNodes].filter((n) => n.nodeType === 3);
+    const l = texte.reduce((m, n) => { r.selectNodeContents(n); return Math.max(m, r.getBoundingClientRect().width); }, 0);
+    return a.clientWidth - l;
+  }))) expect(marge).toBeGreaterThanOrEqual(8);
   for (const el of await page.locator('main button:visible, main a:visible, nav a:visible').all()) {
     expect((await el.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }
