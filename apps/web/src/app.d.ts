@@ -3,7 +3,7 @@
 declare global {
   namespace App {
     /** État d'historique du détail ouvert (navigation superficielle). */
-    interface PageState { detail?: string; recu?: boolean }
+    interface PageState { detail?: string; recu?: boolean; envoi?: string }
   }
   /** Version de la PWA, figée par Vite à la construction. */
   const __VERSION_PWA__: string;
