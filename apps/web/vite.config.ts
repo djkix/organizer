@@ -49,6 +49,8 @@ export default defineConfig({
       scope: '/',
       // « / » : la coquille est servie à la racine ; « /index.html » n'existe pas sous vite preview.
       kit: { adapterFallback: 'index.html', spa: { fallbackMapping: '/' } },
+      // Le glob par défaut ignore les polices : sans woff2, la PWA s'ouvrirait hors ligne en police système.
+      injectManifest: { globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,webmanifest,woff2}'] },
       devOptions: { enabled: false },
     }),
   ],
