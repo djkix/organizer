@@ -1,11 +1,12 @@
 <script lang="ts">
   import { pushState } from '$app/navigation';
   import { page } from '$app/state';
-  import { tick } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import { jourLocal } from '@organizer/shared/dates';
   import type { LigneAction } from '@organizer/shared/api';
   import { api } from '$lib/client';
   import { creerCocheur, type EtatCochage } from '$lib/cochage';
+  import { creerEffaceur } from '$lib/effacement';
   import Bandeau from '$lib/composants/Bandeau.svelte';
   import BandeJours from '$lib/composants/BandeJours.svelte';
   import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
@@ -119,23 +120,44 @@
   const retires = $derived(new Set([...cochage.retires, ...effaces]));
   const liste = $derived(donnees && donnees.nom === vue ? groupes(donnees, aujourdhui, FUSEAU, retires) : []);
 
-  /** Effacement : la ligne part aussitôt ; si le serveur ne répond pas, elle revient avec un mot calme. */
+  // Effacer en deux temps : la ligne part aussitôt, la requête cinq secondes plus tard, sauf « Annuler ».
+  let enAttente = $state<string | null>(null);
+  /** Le bandeau suit le geste le plus récent : cochage ou effacement. */
+  let dernierGeste = $state<'cochage' | 'effacement'>('cochage');
+  const sansEfface = (id: string): void => { effaces = new Set([...effaces].filter((x) => x !== id)); };
+  const effaceur = creerEffaceur({
+    effacer: (id) => cocheur.enfiler(() => api.effacer(id)),
+    surChangement: (e) => { enAttente = e.enAttente; },
+    surEchec: (id) => {
+      sansEfface(id);
+      annonce = MESSAGES.effaceRate;
+      setTimeout(() => { if (annonce === MESSAGES.effaceRate) annonce = null; }, 6000);
+    },
+  });
+  // Quitter l'écran pendant le délai : l'intention était claire, l'effacement part.
+  onDestroy(() => effaceur.vider());
+
   async function effacer(l: LigneAction): Promise<void> {
     aEffacer = null;
     if (selection) { selection = null; if (page.state.detail) history.back(); }
     effaces = new Set([...effaces, l.itemId]);
-    try {
-      await cocheur.enfiler(() => api.effacer(l.itemId));
-      annonce = MESSAGES.efface;
-      setTimeout(() => { if (annonce === MESSAGES.efface) annonce = null; }, 6000);
-      await charger(vue);
-    } catch {
-      annonce = MESSAGES.effaceRate;
-    } finally {
-      effaces = new Set([...effaces].filter((x) => x !== l.itemId));
-    }
+    dernierGeste = 'effacement';
+    effaceur.planifier(l.itemId);
     await rendreFocus();
   }
+
+  function annulerEffacement(): void {
+    const id = effaceur.annuler();
+    if (id) sansEfface(id);
+  }
+
+  const bandeau = $derived(
+    enAttente && (dernierGeste === 'effacement' || cochage.enCours === null)
+      ? { texte: MESSAGES.efface, annulable: true, annuler: annulerEffacement }
+      : cochage.enCours !== null
+        ? { texte: MESSAGES.fait, annulable: true, annuler: () => void cocheur.annuler() }
+        : { texte: cochage.message ?? annonce, annulable: false, annuler: () => {} },
+  );
 
   // Une ligne cochée quitte la liste à la fin du délai d'annulation : si le focus s'y trouvait,
   // il passe à la ligne suivante, sinon au titre. Jamais volé à qui est déjà ailleurs.
@@ -184,7 +206,7 @@
           <LigneActionVue
             ligne={l}
             coche={cochage.enCours === l.itemId}
-            surCocher={() => cocheur.cocher(l.itemId)}
+            surCocher={() => { dernierGeste = 'cochage'; cocheur.cocher(l.itemId); }}
             surDecocher={() => void cocheur.annuler()}
             surOuvrir={() => ouvrir(l.source)}
             surEffacer={() => { declencheur = document.activeElement instanceof HTMLElement ? document.activeElement : null; aEffacer = l.source; }}
@@ -195,7 +217,7 @@
   {/if}
 </main>
 
-<Bandeau enCours={cochage.enCours !== null} message={cochage.message ?? annonce} surAnnuler={() => void cocheur.annuler()} />
+<Bandeau texte={bandeau.texte} annulable={bandeau.annulable} surAnnuler={bandeau.annuler} />
 {#if selection}
   <DetailItem ligne={selection} surFermer={fermer} surCorrige={(m) => void corrige(m)} enfiler={cocheur.enfiler} surEffacer={() => (aEffacer = selection)} />
 {/if}

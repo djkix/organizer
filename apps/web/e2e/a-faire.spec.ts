@@ -123,96 +123,108 @@ test.describe('effacer', () => {
     };
   };
   const ligneGarage = (page: import('@playwright/test').Page) => page.locator(`[data-item="${garage.itemId}"]`);
-  async function glisser(page: import('@playwright/test').Page): Promise<void> {
+  const dialogue = (page: import('@playwright/test').Page) => page.getByRole('alertdialog', { name: 'Effacer cette note ?' });
+  async function glisser(page: import('@playwright/test').Page, distance = 170, vertical = 3): Promise<void> {
     const b = (await ligneGarage(page).locator('.piste').boundingBox())!;
     await page.mouse.move(b.x + b.width - 30, b.y + b.height / 2);
     await page.mouse.down();
-    await page.mouse.move(b.x + b.width - 80, b.y + b.height / 2 + 2, { steps: 4 });
-    await page.mouse.move(b.x + b.width - 170, b.y + b.height / 2 + 3, { steps: 4 });
+    await page.mouse.move(b.x + b.width - 30 - distance / 3, b.y + b.height / 2 + vertical / 2, { steps: 4 });
+    await page.mouse.move(b.x + b.width - 30 - distance, b.y + b.height / 2 + vertical, { steps: 4 });
     await page.mouse.up();
   }
+  const requetes = (appels: { cle: string }[]) => appels.filter((a) => a.cle === EFFACER).length;
 
-  test('glisser, confirmer : la ligne disparaît, une seule requête', async ({ page }) => {
-    const appels = await simuler(page, serveur());
-    await page.goto('/');
-    await glisser(page);
-    await ligneGarage(page).getByRole('button', { name: /^Effacer/ }).click();
-    const dialogue = page.getByRole('alertdialog', { name: 'Effacer cette note ?' });
-    await expect(dialogue).toBeVisible();
-    await dialogue.getByRole('button', { name: 'Effacer' }).click();
-    await expect(ligneGarage(page)).toHaveCount(0);
-    await expect(page.getByText('Changer les draps')).toBeVisible();
-    expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(1);
-  });
-
-  test('glisser, annuler : la ligne reste, rien n\'est envoyé', async ({ page }) => {
-    const appels = await simuler(page, serveur());
-    await page.goto('/');
-    await glisser(page);
-    await ligneGarage(page).getByRole('button', { name: /^Effacer/ }).click();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Annuler' }).click();
-    await expect(ligneGarage(page)).toHaveCount(1);
-    expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(0);
-  });
-
-  test('ouverte, un appui ailleurs la referme sans confirmation', async ({ page }) => {
-    const appels = await simuler(page, serveur());
-    await page.goto('/');
-    await glisser(page);
-    await expect(ligneGarage(page).getByRole('button', { name: /^Effacer/ })).toBeVisible();
-    await page.getByRole('heading').first().click();
-    await expect(ligneGarage(page).getByRole('button', { name: /^Effacer/ })).toHaveCount(0);
-    await expect(page.getByRole('alertdialog')).toHaveCount(0);
-    expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(0);
-  });
-
-  test('ouverte, le premier appui sur la case d\'une autre ligne ne fait que refermer', async ({ page }) => {
-    await simuler(page, { ...serveur(), [`POST /api/items/${draps.itemId}/fait`]: (r) => r.fulfill({ status: 204 }) });
-    await page.goto('/');
-    await glisser(page);
-    const caseDraps = page.getByRole('checkbox', { name: 'Cocher : Changer les draps' });
-    await caseDraps.click();
-    await expect(ligneGarage(page).getByRole('button', { name: /^Effacer/ })).toHaveCount(0);
-    await expect(caseDraps).toHaveAttribute('aria-checked', 'false');
-    await caseDraps.click();
-    await expect(caseDraps).toHaveAttribute('aria-checked', 'true');
-  });
-
-  test('ouverte, un glissement vers la droite la referme', async ({ page }) => {
+  test('glisser ouvre la confirmation tout de suite, la ligne revient en place', async ({ page }) => {
     await simuler(page, serveur());
     await page.goto('/');
     await glisser(page);
-    const b = (await ligneGarage(page).locator('.piste').boundingBox())!;
-    const y = b.y + b.height / 2;
-    await page.mouse.move(b.x + 100, y);
-    await page.mouse.down();
-    await page.mouse.move(b.x + 150, y + 2, { steps: 4 });
-    await page.mouse.move(b.x + 230, y + 3, { steps: 4 });
-    await page.mouse.up();
+    await expect(dialogue(page)).toBeVisible();
+    await expect(dialogue(page)).toContainText('Rappeler le garage');
+    await expect(ligneGarage(page).locator('.piste')).toHaveAttribute('style', /translateX\(0px\)/);
     await expect(ligneGarage(page).getByRole('button', { name: /^Effacer/ })).toHaveCount(0);
-    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('depuis le détail : même confirmation', async ({ page }) => {
+  test('un glissement court ou vertical n\'ouvre rien', async ({ page }) => {
+    await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page, 60);
+    await expect(dialogue(page)).toHaveCount(0);
+    await glisser(page, 40, 160);
+    await expect(dialogue(page)).toHaveCount(0);
+  });
+
+  test('confirmer : la ligne part, cinq secondes sans requête, puis une seule', async ({ page }) => {
+    const appels = await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page);
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    await expect(ligneGarage(page)).toHaveCount(0);
+    await expect(page.getByRole('status').filter({ hasText: 'Effacé.' })).toBeVisible();
+    await page.clock.fastForward(4_900);
+    expect(requetes(appels)).toBe(0);
+    await page.clock.fastForward(200);
+    await expect.poll(() => requetes(appels)).toBe(1);
+    await page.clock.fastForward(10_000);
+    expect(requetes(appels)).toBe(1);
+    await expect(page.getByText('Changer les draps')).toBeVisible();
+  });
+
+  test('« Annuler » dans les cinq secondes : la ligne revient, rien n\'est envoyé', async ({ page }) => {
+    const appels = await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page);
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    await expect(ligneGarage(page)).toHaveCount(0);
+    await page.clock.fastForward(3_000);
+    await page.getByRole('button', { name: 'Annuler' }).click();
+    await expect(ligneGarage(page)).toHaveCount(1);
+    await page.clock.fastForward(10_000);
+    expect(requetes(appels)).toBe(0);
+  });
+
+  test('« Annuler » dans la confirmation : rien ne change', async ({ page }) => {
+    const appels = await simuler(page, serveur());
+    await page.goto('/');
+    await glisser(page);
+    await dialogue(page).getByRole('button', { name: 'Annuler' }).click();
+    await expect(ligneGarage(page)).toHaveCount(1);
+    await page.clock.fastForward(10_000);
+    expect(requetes(appels)).toBe(0);
+  });
+
+  test('depuis le détail : même confirmation, même délai', async ({ page }) => {
     const appels = await simuler(page, serveur());
     await page.goto('/');
     await page.getByText('Rappeler le garage').click();
     await page.getByRole('dialog').getByRole('button', { name: 'Effacer' }).click();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Effacer' }).click();
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
     await expect(ligneGarage(page)).toHaveCount(0);
-    expect(appels.filter((a) => a.cle === EFFACER)).toHaveLength(1);
+    await page.clock.fastForward(4_900);
+    expect(requetes(appels)).toBe(0);
+    await page.clock.fastForward(200);
+    await expect.poll(() => requetes(appels)).toBe(1);
+  });
+
+  test('quitter l\'écran pendant le délai : l\'effacement part aussitôt', async ({ page }) => {
+    const appels = await simuler(page, { ...serveur(), 'GET /api/captures/privees': json(200, []) });
+    await page.goto('/');
+    await glisser(page);
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    await page.getByRole('link', { name: 'Privé' }).last().click();
+    await expect.poll(() => requetes(appels)).toBe(1);
   });
 
   test('le serveur ne répond pas : la ligne revient avec un mot calme', async ({ page }) => {
     await simuler(page, { ...table(), [EFFACER]: (r) => r.abort('internetdisconnected') });
     await page.goto('/');
     await glisser(page);
-    await ligneGarage(page).getByRole('button', { name: /^Effacer/ }).click();
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Effacer' }).click();
+    await dialogue(page).getByRole('button', { name: 'Effacer' }).click();
+    await page.clock.fastForward(5_100);
     await expect(page.getByText('Pas effacé. Réessaie dans un moment.')).toBeVisible();
     await expect(ligneGarage(page)).toHaveCount(1);
   });
 });
+
 
 test('focus clavier visible sur l\'onglet actif', async ({ page }) => {
   await simuler(page, table());

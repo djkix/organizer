@@ -1,13 +1,14 @@
 <script lang="ts">
   import { MESSAGES } from '$lib/messages';
 
-  let { enCours, message, surAnnuler }: { enCours: boolean; message: string | null; surAnnuler: () => void } = $props();
+  /** `annulable` : le dernier geste (cochage ou effacement) peut encore être retenu. */
+  let { texte, annulable, surAnnuler }: { texte: string | null; annulable: boolean; surAnnuler: () => void } = $props();
 </script>
 
-<div class="bandeau" class:vide={!enCours && !message}>
+<div class="bandeau" class:vide={!texte}>
   <!-- Zone vocale toujours montée : seul son texte change, pour que TalkBack l'annonce. -->
-  <span role="status" aria-live="polite">{enCours ? MESSAGES.fait : (message ?? '')}</span>
-  {#if enCours}<button onclick={surAnnuler}>{MESSAGES.annuler}</button>{/if}
+  <span role="status" aria-live="polite">{texte ?? ''}</span>
+  {#if texte && annulable}<button onclick={surAnnuler}>{MESSAGES.annuler}</button>{/if}
 </div>
 
 <style>

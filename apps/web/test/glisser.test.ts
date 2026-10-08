@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creerGlisseur, creerOuverture, DISTANCE_MAX, SEUIL_OUVERTURE } from '../src/lib/glisser';
+import { creerGlisseur, DISTANCE_MAX, SEUIL_OUVERTURE } from '../src/lib/glisser';
 
 function geste(points: [number, number][]): { dx: (number | null)[]; issue: string } {
   const g = creerGlisseur();
@@ -9,7 +9,7 @@ function geste(points: [number, number][]): { dx: (number | null)[]; issue: stri
 }
 
 describe('glisser vers la gauche', () => {
-  it('un glissement horizontal assez long découvre « Effacer »', () => {
+  it('un glissement horizontal assez long demande l'effacement', () => {
     expect(geste([[300, 100], [260, 102], [200, 104]]).issue).toBe('ouvrir');
   });
   it('trop court : la ligne se referme', () => {
@@ -57,23 +57,11 @@ describe('ligne ouverte', () => {
   });
 });
 
-describe('une seule ligne ouverte', () => {
-  it('un appui ailleurs referme la ligne ouverte, pas un appui sur elle', () => {
-    const o = creerOuverture();
-    let fermee = 0;
-    o.ouvrir('a', () => fermee++);
-    o.dehors('a');
-    expect(fermee).toBe(0);
-    o.dehors('b');
-    expect(fermee).toBe(1);
-    o.dehors(null);
-    expect(fermee).toBe(1);
-  });
-  it('ouvrir B referme A', () => {
-    const o = creerOuverture();
-    const f: string[] = [];
-    o.ouvrir('a', () => f.push('a'));
-    o.ouvrir('b', () => f.push('b'));
-    expect(f).toEqual(['a']);
+describe('seuils : un geste franc, pas un effleurement', () => {
+  it('96 px pour demander l\'effacement, décalage borné à 160 px', () => {
+    expect(SEUIL_OUVERTURE).toBe(96);
+    expect(DISTANCE_MAX).toBe(160);
+    expect(geste([[300, 100], [200, 102]]).issue).toBe('ouvrir');
+    expect(geste([[300, 100], [220, 102]]).issue).toBe('refermer');
   });
 });
