@@ -203,3 +203,16 @@ test('détail : « Ce que tu as dit » montre la transcription ; sans elle, le l
   await expect(page.getByRole('heading', { name: 'Quand' })).toBeVisible();
   await expect(page.getByText('Ce que tu as dit')).toHaveCount(0);
 });
+
+test('après « Lire tout », le focus va sur la transcription dépliée', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
+  await simuler(page, {
+    ...CONNECTE,
+    'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [garage], suggestions: [] }),
+    [`GET /api/captures/${garage.captureId}/transcription`]: json(200, { texte: 'Rappeler le garage demain. '.repeat(20) }),
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Rappeler le garage/ }).click();
+  await page.getByRole('button', { name: 'Lire tout' }).click();
+  await expect(page.locator('blockquote.dit')).toBeFocused();
+});

@@ -106,7 +106,7 @@
     <p class="vide">{MESSAGES.videPrive}</p>
   {:else if jours}
     {#each jours as j (j.jour)}
-      <h2 class="groupe">{libelleJour(j.jour, aujourdhui)}</h2>
+      <h2 class="groupe" class:aujourdhui={j.jour === aujourdhui}>{libelleJour(j.jour, aujourdhui)}</h2>
       <ul class="liste">
         {#each j.captures as c (c.id)}
           <li class="ligne">
@@ -139,5 +139,5 @@
   }
   .corps { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .quand { color: var(--muted); }
-  :global(.prive .groupe:first-of-type) { color: var(--private-ink); }
+  .aujourdhui { color: var(--private-ink); }
 </style>

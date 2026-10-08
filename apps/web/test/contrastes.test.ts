@@ -30,10 +30,11 @@ const TEXTES: [Token, Token][] = [
   ['ctaPrivateText', 'ctaPrivate'], // grand bouton « Privé »
   ['accentInk', 'accentSoft'], ['accentInk', 'surface'], ['accentInk', 'surfaceAlt'], ['muted', 'surfaceAlt'], // onglets, liens
   ['privateInk', 'privateSoft'], ['privateInk', 'privateBg'], ['text', 'privateBg'], ['muted', 'privateBg'], // écran Privé
+  ['privateInk', 'surface'], // « Ajouter un mot », onglet Privé actif
 ];
 /** Icônes et bords de commandes (WCAG 1.4.11 : 3). */
 const ICONES: [Token, Token][] = [
-  ['accent', 'accentSoft'], ['private', 'privateSoft'], ['private', 'bg'], ['muted', 'surface'], ['check', 'surface'], ['private', 'privateBg'],
+  ['accent', 'accentSoft'], ['private', 'privateSoft'], ['private', 'bg'], ['muted', 'surface'], ['check', 'surface'], ['private', 'privateBg'], ['private', 'surface'], // crayon du mot
   ['cta', 'bg'], ['ctaPrivate', 'bg'],
 ];
 

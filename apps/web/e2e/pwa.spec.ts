@@ -112,3 +112,8 @@ test('le service worker vide la file privée sur la synchronisation « organizer
     return n;
   })).toBe(0);
 });
+
+test('le service worker précache la police : la PWA garde sa typographie hors ligne', async ({ request }) => {
+  const sw = await (await request.get('/sw.js')).text();
+  expect(sw).toMatch(/plus-jakarta-sans-latin-wght-normal\.[\w-]+\.woff2/);
+});

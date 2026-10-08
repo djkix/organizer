@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import type { CorpsCorrection, LigneAction } from '@organizer/shared/api';
   import { ErreurApi, urlAudio } from '$lib/api';
   import { api } from '$lib/client';
@@ -27,6 +27,14 @@
   // Ce qui a été dit : chargé à l'ouverture ; absent ou en échec, la carte garde le lecteur seul.
   let transcription = $state<string | null>(null);
   let toutLire = $state(false);
+  let citation = $state<HTMLElement>();
+
+  /** Déplie la transcription ; le bouton disparaît, le focus passe sur le texte déplié. */
+  async function lireTout(): Promise<void> {
+    toutLire = true;
+    await tick();
+    citation?.focus();
+  }
   $effect(() => {
     const id = ligne.captureId;
     let actif = true;
@@ -90,8 +98,8 @@
     <section class="carte lecteur">
       <h3 class="etiquette">Ce que tu as dit</h3>
       {#if transcription}
-        <blockquote class="dit" class:replie={!toutLire && transcription.length > 280}>« {transcription} »</blockquote>
-        {#if !toutLire && transcription.length > 280}<button class="lien lire" onclick={() => (toutLire = true)}>Lire tout</button>{/if}
+        <blockquote class="dit" tabindex="-1" bind:this={citation} class:replie={!toutLire && transcription.length > 280}>« {transcription} »</blockquote>
+        {#if !toutLire && transcription.length > 280}<button class="lien lire" onclick={lireTout}>Lire tout</button>{/if}
       {/if}
       {#if ligne.aAudio}<Lecteur src={urlAudio(ligne.captureId)} />{/if}
     </section>
@@ -146,6 +154,8 @@
   }
   .replie { display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
   .lire { align-self: flex-start; padding: 0; }
+  .dit:focus { outline: none; }
+  .dit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .actions { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; padding-bottom: 28px; }
   .actions .discret { flex-basis: 100%; order: -1; }
 </style>

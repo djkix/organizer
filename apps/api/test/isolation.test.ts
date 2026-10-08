@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../src/auth/auth.service.js';
 import { NOM_COOKIE } from '../src/auth/cookies.js';
 import { SessionGuard } from '../src/auth/session.guard.js';
@@ -152,6 +152,22 @@ describe('décision 25 : accès croisé en 404', () => {
     expect((await appel(cB, 'GET', `/api/captures/${A.captureId}/transcription`)).status).toBe(404);
     expect((await appel(cB, 'GET', `/api/captures/${B.priveeId}/transcription`)).status).toBe(404);
     expect(await json(cA, `/api/captures/${A.captureId}/transcription`)).toEqual({ texte: 'Appeler le garage jeudi.' });
+  });
+  it('le texte transcrit n\'apparaît dans aucun journal, ni en succès ni en 404', async () => {
+    const SECRET = 'Phrase fabriquée à ne jamais journaliser 7f3a';
+    await prisma.capture.update({ where: { id: A.captureId }, data: { texteBrut: SECRET } });
+    const vus: string[] = [];
+    const garder = (...a: unknown[]): void => { vus.push(a.map(String).join(' ')); };
+    const espions = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(garder));
+    const sorties = [vi.spyOn(process.stdout, 'write'), vi.spyOn(process.stderr, 'write')].map((e) =>
+      e.mockImplementation((morceau: string | Uint8Array) => { vus.push(String(morceau)); return true; }));
+    try {
+      expect((await json(cA, `/api/captures/${A.captureId}/transcription`)).texte).toBe(SECRET);
+      expect((await appel(cB, 'GET', `/api/captures/${A.captureId}/transcription`)).status).toBe(404);
+    } finally {
+      for (const e of [...espions, ...sorties]) e.mockRestore();
+    }
+    expect(vus.join('\n')).not.toContain(SECRET);
   });
   it('étiqueter la capture privée d\'un autre compte : 404, étiquette intacte', async () => {
     expect((await appel(cA, 'PATCH', `/api/captures/privees/${B.priveeId}`, { etiquette: 'piratée' })).status).toBe(404);

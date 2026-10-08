@@ -5,6 +5,16 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.5.1] - 2026-10-08
+
+### Corrigé
+- Le service worker précache la police : hors ligne, la PWA garde Plus Jakarta Sans au lieu de la police système (2026-10-08).
+- Focus : après « Lire tout », il passe sur la transcription dépliée ; « Ajouter un mot » et le crayon placent le curseur dans le champ (2026-10-08).
+- Écran Privé : le titre du jour courant est teinté par une classe propre à la page, plus par un sélecteur global qui pouvait déborder ailleurs (2026-10-08).
+
+### Modifié
+- Tests : les contrastes du lien « Ajouter un mot », de l'onglet Privé actif et du crayon sont vérifiés dans les deux thèmes ; un test garantit que le texte transcrit n'apparaît dans aucun journal, en succès comme en 404 (2026-10-08).
+
 ## [1.5.0] - 2026-10-07
 
 ### Ajouté

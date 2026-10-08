@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import { api } from '$lib/client';
   import { MESSAGES } from '$lib/messages';
   import Icone from './Icone.svelte';
@@ -9,6 +10,15 @@
   let edition = $state(false);
   let brouillon = $state('');
   let message = $state<string | null>(null);
+  let champ = $state<HTMLInputElement>();
+
+  /** Ouvre l'édition, le curseur déjà dans le champ. */
+  async function editer(): Promise<void> {
+    brouillon = actuelle ?? '';
+    edition = true;
+    await tick();
+    champ?.focus();
+  }
 
   async function garder(e: SubmitEvent): Promise<void> {
     e.preventDefault();
@@ -26,7 +36,7 @@
 
 {#if edition}
   <form class="mot" onsubmit={garder}>
-    <input class="champ-texte" bind:value={brouillon} maxlength="80" aria-label="Un mot pour t'y retrouver" />
+    <input class="champ-texte" bind:this={champ} bind:value={brouillon} maxlength="80" aria-label="Un mot pour t'y retrouver" />
     <button class="garder" type="submit">Garder</button>
   </form>
   {#if message}<span class="discret" role="status">{message}</span>{/if}
@@ -34,10 +44,10 @@
   <!-- Le mot sert de titre à la ligne ; le crayon le change. -->
   <span class="titre-mot">
     <span class="texte-mot">{actuelle}</span>
-    <button class="crayon" aria-label="Changer le mot : {actuelle}" onclick={() => { brouillon = actuelle ?? ''; edition = true; }}><Icone nom="crayon" taille={18} /></button>
+    <button class="crayon" aria-label="Changer le mot : {actuelle}" onclick={editer}><Icone nom="crayon" taille={18} /></button>
   </span>
 {:else}
-  <button class="ajouter" onclick={() => { brouillon = ''; edition = true; }}>{MESSAGES.ajouterUnMot}</button>
+  <button class="ajouter" onclick={editer}>{MESSAGES.ajouterUnMot}</button>
 {/if}
 
 <style>
