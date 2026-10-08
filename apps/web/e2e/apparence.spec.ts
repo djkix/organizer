@@ -13,6 +13,14 @@ const table = {
   'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [longue, jour], suggestions: [] }),
   'GET /api/vues/semaine': json(200, { jours: [{ jour: '2026-10-06', actions: [longue] }, { jour: '2026-10-08', actions: [jour] }] }),
   [`GET /api/captures/${longue.captureId}/transcription`]: json(200, { texte: 'Penser à rappeler la mutuelle. '.repeat(20) }),
+  'GET /api/historique': json(200, [{ jour: '2026-10-06', envois: [
+    { id: '00000000-0000-4001-8000-0000000000c1', heure: '12:05', source: 'telegram', vocal: true, dureeS: 75, debut: 'a'.repeat(140), etat: 'classee', natures: ['action', 'pensee', 'information', 'ambigu'] },
+  ] }]),
+  'GET /api/historique/00000000-0000-4001-8000-0000000000c1': json(200, {
+    id: '00000000-0000-4001-8000-0000000000c1', emisLe: '2026-10-06T10:05:00.000Z', source: 'telegram', vocal: true, dureeS: 75, etat: 'classee',
+    texte: 'Penser à rappeler la mutuelle. '.repeat(15), aAudio: true,
+    elements: [{ itemId: 'i1', texte: 'Penser à rappeler la mutuelle pour le remboursement des lunettes et demander le formulaire', nature: 'action', statut: 'efface' }],
+  }),
   'GET /api/captures/privees': json(200, [
     { jour: '2026-10-06', captures: [{ id: '00000000-0000-4000-8000-0000000000aa', heure: '12:06', dureeS: 7, etiquette: MOT.slice(0, 80), aAudio: true }] },
   ]),
@@ -28,7 +36,7 @@ async function sansDebordement(page: Page): Promise<void> {
 
 for (const schema of ['light', 'dark'] as const) {
   for (const taille of [{ width: 360, height: 780 }, { width: 390, height: 844 }]) {
-    test(`apparence ${schema} à ${taille.width} px : accueil, semaine, détail, Privé`, async ({ page }) => {
+    test(`apparence ${schema} à ${taille.width} px : accueil, semaine, détail, Privé, Historique`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: schema });
       await page.setViewportSize(taille);
       await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
@@ -52,6 +60,13 @@ for (const schema of ['light', 'dark'] as const) {
 
       await page.goto('/prive');
       await expect(page.getByText(MOT.slice(0, 80))).toBeVisible();
+      await sansDebordement(page);
+
+      await page.goto('/historique');
+      await expect(page.getByRole('button', { name: /12:05/ })).toBeVisible();
+      await sansDebordement(page);
+      await page.getByRole('button', { name: /12:05/ }).click();
+      await expect(page.getByText('Effacé')).toBeVisible();
       await sansDebordement(page);
     });
   }
