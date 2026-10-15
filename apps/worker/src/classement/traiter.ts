@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { PrismaClient } from '@organizer/db';
-import { isoLocal, jourSemaine, rendrePrompt, type Prompt } from '@organizer/shared';
+import { ecarterPassees, isoLocal, jourSemaine, rendrePrompt, type Prompt } from '@organizer/shared';
 import { SortieNonConforme, type ClassificationProvider, type ResultatClassement } from './provider.js';
 
 export interface DepsTraitement {
@@ -59,6 +59,7 @@ export async function traiterCapture(id: string, d: DepsTraitement): Promise<Iss
     return 'a_revoir';
   }
 
+  r = { ...r, sortie: ecarterPassees(r.sortie, c.emisLe) };
   if (r.sortie.items.length === 0) {
     // Vocal vide ou inaudible : non classifiable, donc visible en « à revoir » (règle n° 5).
     await d.prisma.$transaction([

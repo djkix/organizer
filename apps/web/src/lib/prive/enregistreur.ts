@@ -4,8 +4,8 @@ export const MIME_PRIVE = 'audio/webm;codecs=opus';
 /** 48 kbit/s : une heure tient en 22 Mo, sous la limite de 30 Mo de l'API. */
 export const DEBIT_PRIVE = 48_000;
 
-/** Une heure : au-delà, l'API tronque (3600 s) ou refuse (30 Mo). On s'arrête avant. */
-export const DUREE_MAX_S = 3600;
+/** 1 min 30 par message, ordinaire comme privé (décision 26) : l'enregistrement s'arrête et garde. */
+export const DUREE_MAX_S = 90;
 /** Délai laissé à un navigateur muet pour dire « stop » avant de garder ce qu'il a donné. */
 const ATTENTE_STOP_MS = 5000;
 

@@ -33,3 +33,4 @@
 - Le widget suffit-il à rappeler les choses sans alarme ni relance ? Test central du lot 2.
 - Basculer sur un compte Google dédié si les factures ou quotas deviennent gênants.
 | 25 | Données propres à chaque compte | Chaque compte ne voit et ne modifie que ses propres captures, items, actions, pensées, captures privées et éléments à revoir. Décidé par djkix le 6 octobre 2026 ; remplace la décision 8. |
+| 26 | Durée d'un enregistrement dans la PWA | 1 min 30 au plus, en ordinaire comme en privé : un minuteur affiche le temps écoulé sur 1:30, l'enregistrement s'arrête seul et garde ce qui a été dit. Telegram n'est pas limité. Décidé par djkix le 15 octobre 2026 |

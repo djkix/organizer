@@ -122,5 +122,10 @@ Lot 1-D (décision 23, 4 octobre 2026) : reconnexion par empreinte digitale (Web
 livrée juste après la mise en service. Le mot de passe reste toujours possible ; aucune invite biométrique
 ne précède un enregistrement. Plan : `docs/superpowers/plans/2026-10-05-lot1-d-empreinte.md`.
 
+Prompt `tri/v2` (15 octobre 2026), tiré des premières captures de L : intitulés courts au lieu
+d'extraits, consignes (« mets-moi une alarme ») appliquées à l'élément voisin, bruit et annulations
+écartés, thèmes de base. Le worker range en « à revoir » une nature sous 0,5 de confiance et une
+action datée de plus de 24 h avant l'envoi. Enregistrement PWA limité à 1 min 30 (décision 26).
+
 Lot 2-A : Google Agenda et alarme item par item, par un service `apps/scheduler` (seul à joindre Google), en version 1.2.0.
 Plan : `docs/superpowers/plans/2026-10-05-lot2-a-agenda.md`.

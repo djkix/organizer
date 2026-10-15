@@ -65,6 +65,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 22 | Mise en service | **Directe, sans attendre la sortie du lot 0**, décidé par djkix le 4 octobre 2026. L'application démarre en production avec le prompt actuel (`tri/v1`) ; le classement est affiné à l'usage, sur les captures réelles et les corrections. Le corpus du lot 0 continue de servir de jeu de test, sans bloquer la mise en service. Motif : le banc d'essai classe déjà les vraies captures de L avec le même prompt, et chaque élément garde la version du prompt et le modèle, donc une capture se reclasse après un changement de prompt |
 | 23 | Empreinte digitale | **Avancée du lot 3 à un lot 1-D**, livrée juste après la mise en service, décidée par djkix le 4 octobre 2026. WebAuthn (clé d'accès, Credential Manager Android) remplace seulement la saisie du mot de passe à la reconnexion ; le mot de passe reste toujours possible, et aucune invite biométrique ne précède jamais un enregistrement. Précisions de djkix le 5 octobre 2026 : le mot de passe n'est pas redemandé avant « Activer l'empreinte » (la session suffit), et la synchronisation des clés d'accès Google sur les autres appareils Android de L est acceptée |
 | 24 | Capture ordinaire dans la PWA | **Avancée du lot 3 au lot 2-B**, décidée par djkix le 5 octobre 2026. Un bouton « Enregistrer » ordinaire (envoyé à Gemini, classé) à côté du bouton « Privé », un appui pour démarrer, un appui pour arrêter. Telegram reste un point d'entrée. Le mode reste décidé par le point d'entrée : deux boutons, deux écrans, deux routes d'API, jamais de bascule après coup |
+| 26 | Durée d'un enregistrement dans la PWA | **1 min 30 au plus**, en ordinaire comme en privé : un minuteur affiche le temps écoulé sur 1:30, l'enregistrement s'arrête seul et garde ce qui a été dit. Telegram n'est pas limité. Décidé par djkix le 15 octobre 2026 |
 
 ## Périmètre fonctionnel
 
@@ -247,6 +248,8 @@ L a explicitement demandé une limite pour ne plus se perdre dans les détails. 
 | Long | 180 s ou 350 mots | Le bot signale et découpe automatiquement, sans rien supprimer |
 
 Les trois seuils sont réglables par utilisateur et désactivables d'un seul réglage. Le garde-fou n'intervient jamais pendant l'enregistrement, uniquement après réception.
+
+Dans la PWA, un enregistrement dure 1 min 30 au plus, ordinaire comme privé (décision 26) : le minuteur affiche le temps écoulé sur 1:30, puis l'enregistrement s'arrête et garde tout ce qui a été dit.
 
 ### Disponibilité et mode dégradé
 

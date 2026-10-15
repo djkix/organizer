@@ -8,7 +8,7 @@
   import { chrono } from '$lib/format';
   import { MESSAGES } from '$lib/messages';
   import { garderEtEnvoyer } from '$lib/prive/demarrage';
-  import { creerEnregistreur } from '$lib/prive/enregistreur';
+  import { creerEnregistreur, DUREE_MAX_S } from '$lib/prive/enregistreur';
   import { envoyerCapture, EnregistrementVide, type Enregistrement, type ModeCapture } from '$lib/prive/file';
 
   /** Fixé par la route qui monte l'écran, jamais déduit de l'enregistrement (règle n° 6). Aucun repli : il est obligatoire. */
@@ -30,7 +30,7 @@
   let detruit = false;
   const enregistreur = creerEnregistreur({
     surInterruption: () => void arreter(),
-    surLimite: () => void arreter(false, MESSAGES.heureAtteinte),
+    surLimite: () => void arreter(false, MESSAGES.limiteAtteinte),
   });
   const statut = $derived(etat === 'ecoute' ? MESSAGES.ecoute : '');
 
@@ -187,7 +187,7 @@
   </div>
 
   <div class="commandes">
-    <p class="minuteur">{etat === 'ecoute' ? chrono(secondes) : ''}</p>
+    <p class="minuteur">{etat === 'ecoute' ? chrono(secondes) : ''}<span class="max">{etat === 'ecoute' ? ` / ${chrono(DUREE_MAX_S)}` : ''}</span></p>
     {#if aGarder}
       <button class="bouton reessayer" bind:this={reessai} onclick={() => aGarder && garder(aGarder, true)} disabled={etat === 'rangement'}>{MESSAGES.reessayer}</button>
       <button class="bouton reessayer" onclick={() => aGarder && envoyerDirect(aGarder)} disabled={etat === 'rangement'}>{MESSAGES.envoyerMaintenant}</button>
@@ -244,6 +244,7 @@
   @media (prefers-reduced-motion: reduce) { .onde.active span { animation: none; transform: scaleY(0.7); } }
   .commandes { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 20px; }
   .minuteur { font-size: 32px; font-weight: 600; line-height: 40px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; min-height: 40px; }
+  .max { font-size: 18px; font-weight: 500; color: var(--muted); }
   .enreg {
     width: 96px; height: 96px; display: grid; place-items: center; border: none; border-radius: var(--radius-pill);
     background: var(--teinte); outline: 10px solid var(--teinte-douce);

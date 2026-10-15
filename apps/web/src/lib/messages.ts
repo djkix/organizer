@@ -41,7 +41,7 @@ export const MESSAGES = {
   ecoute: "J'écoute",
   finirEnregistrement: 'Appuie sur le carré quand tu as fini.',
   garde: 'Gardé.',
-  heureAtteinte: "Une heure atteinte. C'est gardé.",
+  limiteAtteinte: "1 min 30 atteinte. C'est gardé.",
   microOccupe: 'Le micro est pris, par un appel peut-être.',
   microAbsent: 'Aucun micro trouvé sur ce téléphone.',
   rienEnregistre: "Rien n'a été enregistré.",
