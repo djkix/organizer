@@ -33,7 +33,6 @@ x-app: &app
     REDIS_URL: redis://queue:6379
     PROMPTS_DIR: /app/prompts
     PROMPT_VERSION: ${PROMPT_VERSION:-tri/v2}
-    ORGANIZER_VERSION: ${ORGANIZER_VERSION:?}
     AUDIO_STORAGE_PATH: /data/audio
     HTTPS_PROXY: http://sortie:3128
     NO_PROXY: db,queue,localhost,127.0.0.1
@@ -42,7 +41,7 @@ services:
   # Migrations Prisma jouées avant le démarrage de l'API et du worker.
   migrate:
     <<: *app
-    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:?}
+    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:-latest}
     restart: "no"
     command: ["node", "packages/db/node_modules/prisma/build/index.js", "migrate", "deploy", "--schema", "packages/db/prisma/schema.prisma"]
     networks: [core]
@@ -56,7 +55,7 @@ services:
 
   api:
     <<: *app
-    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:?}
+    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:-latest}
     environment:
       <<: *app-env
       TELEGRAM_MODE: webhook
@@ -98,7 +97,7 @@ services:
 
   worker:
     <<: *app
-    image: ghcr.io/djkix/organizer-worker:${ORGANIZER_VERSION:?}
+    image: ghcr.io/djkix/organizer-worker:${ORGANIZER_VERSION:-latest}
     environment:
       <<: *app-env
       GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
@@ -134,7 +133,7 @@ services:
   # et oauth2.googleapis.com seulement. Jeton de rafraîchissement chiffré par agenda_cle.
   scheduler:
     <<: *app
-    image: ghcr.io/djkix/organizer-scheduler:${ORGANIZER_VERSION:?}
+    image: ghcr.io/djkix/organizer-scheduler:${ORGANIZER_VERSION:-latest}
     environment:
       <<: *app-env
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?}
@@ -160,7 +159,7 @@ services:
 
   # Coquille de la PWA, en-têtes, et passage vers l'API (infra/caddy/Caddyfile).
   web:
-    image: ghcr.io/djkix/organizer-web:${ORGANIZER_VERSION:?}
+    image: ghcr.io/djkix/organizer-web:${ORGANIZER_VERSION:-latest}
     restart: unless-stopped
     user: "1000:1000"
     read_only: true
@@ -186,7 +185,7 @@ services:
 
   # Proxy sortant : seule route vers Internet (infra/sortie/squid.conf).
   sortie:
-    image: ghcr.io/djkix/organizer-sortie:${ORGANIZER_VERSION:?}
+    image: ghcr.io/djkix/organizer-sortie:${ORGANIZER_VERSION:-latest}
     restart: unless-stopped
     read_only: true
     tmpfs:

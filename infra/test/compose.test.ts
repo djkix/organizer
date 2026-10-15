@@ -29,9 +29,9 @@ describe('stack de production', () => {
     expect(Object.keys(S).sort()).toEqual(['api', 'db', 'migrate', 'queue', 'scheduler', 'sortie', 'web', 'worker']);
   });
 
-  it('images épinglées, jamais latest ; les nôtres à la version du .env', () => {
+  it('images tierces épinglées ; les nôtres en latest, sauf version fixée dans le .env', () => {
     for (const [n, s] of Object.entries(S)) {
-      if (s.image.startsWith('ghcr.io/djkix/organizer-')) expect(s.image, n).toMatch(/:\$\{ORGANIZER_VERSION:\?\}$/);
+      if (s.image.startsWith('ghcr.io/djkix/organizer-')) expect(s.image, n).toMatch(/:\$\{ORGANIZER_VERSION:-latest\}$/);
       else expect(s.image, n).toMatch(/:\d+\.\d+/);
     }
   });
