@@ -672,7 +672,7 @@ Certificats Let's Encrypt gérés par le Nginx Proxy Manager. HSTS activé, HTTP
 5. Limites mémoire explicites par service, et plafond de concurrence sur le worker pour ne pas saturer le quota d'API en rattrapage.
 6. Journalisation en JSON, rotation à 10 Mo et trois fichiers.
 7. Conteneurs applicatifs en utilisateur non root, système de fichiers racine en lecture seule.
-8. Migrations Prisma jouées par un conteneur d'initialisation avant le démarrage de l'API.
+8. Migrations Prisma jouées par l'API à son démarrage, avant d'écouter ; `worker` et `scheduler` attendent l'API saine. Pas de conteneur d'initialisation qui resterait arrêté dans Dockge (1.9.1).
 
 ### Chaine de livraison
 
