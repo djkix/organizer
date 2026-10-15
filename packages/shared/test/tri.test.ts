@@ -2,7 +2,7 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { chargerPrompt, normaliser, normaliserTheme, rendrePrompt, valeursAdmises } from '../src/tri.js';
+import { chargerPrompt, ecarterPassees, normaliser, normaliserTheme, rendrePrompt, valeursAdmises } from '../src/tri.js';
 import { sortieExemple } from './sortie-exemple.js';
 
 const PROMPTS = join(import.meta.dirname, '../../../prompts');
@@ -60,6 +60,14 @@ describe('chargerPrompt tri/v1', () => {
   });
 });
 
+describe('chargerPrompt tri/v2', () => {
+  it('valide une sortie conforme avec le même schéma', () => {
+    const p = chargerPrompt(PROMPTS, 'tri/v2');
+    expect(p.version).toBe('tri/v2');
+    expect(p.valider(sortieExemple()).items).toHaveLength(2);
+  });
+});
+
 describe('normaliser', () => {
   it('vide les attributs d\'action sur une pensée et la tonalité sur une action', () => {
     const s = sortieExemple();
@@ -77,6 +85,29 @@ describe('normaliser', () => {
     const n = normaliser(s);
     expect(n.items[0]!.alarme).toBeNull();
     expect(n.items[0]!.alarme_expr).toBeNull();
+  });
+
+  it('range en ambigu un élément dont la nature est incertaine (sous 0,5)', () => {
+    const s = sortieExemple();
+    s.items[0]!.confiance.nature = 0.4;
+    s.items[0]!.echeance_type = 'jour';
+    s.items[1]!.confiance.nature = 0.5;
+    const n = normaliser(s);
+    expect(n.items[0]!.nature).toBe('ambigu');
+    expect(n.items[0]!.echeance_type).toBeNull();
+    expect(n.items[1]!.nature).not.toBe('ambigu');
+  });
+
+  it('range en ambigu une action datée de plus de 24 h avant l\'envoi, garde celle du jour', () => {
+    const s = sortieExemple();
+    s.items[0]!.echeance_type = 'datee';
+    s.items[0]!.echeance_date = '2026-09-12T10:00:00+02:00';
+    const emis = new Date('2026-10-02T17:33:00+02:00');
+    expect(ecarterPassees(s, emis).items[0]!.nature).toBe('ambigu');
+    expect(ecarterPassees(s, emis).items[0]!.echeance_date).toBeNull();
+    s.items[0]!.echeance_type = 'jour';
+    s.items[0]!.echeance_date = '2026-10-02T00:00:00+02:00';
+    expect(ecarterPassees(s, emis).items[0]!.nature).toBe('action');
   });
 
   it('renumérote les positions de 1 à n', () => {

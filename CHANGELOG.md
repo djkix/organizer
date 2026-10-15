@@ -5,6 +5,13 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Prompt `tri/v2`, désormais par défaut (`PROMPT_VERSION`) : chaque élément porte un intitulé court (« Acheter du lait ») au lieu d'un extrait de phrase ; « mets-moi une alarme », « fais-moi un rappel », « note dans l'agenda » modifient l'élément voisin au lieu d'en créer un ; essais, remplissage et annulations sont écartés ; aucun élément incompréhensible seul ; jamais d'échéance avant l'envoi ; alarme demandée sans heure : 9 h (ou midi, 14 h, 19 h selon le moment dit) ; thèmes de base (courses, maison, sante, animaux, famille, administratif, travail, projets, loisirs), sans `autre` ni `alarme`. Même schéma de sortie que `tri/v1` (2026-10-15).
+- Enregistrer, ordinaire comme privé : 1 min 30 au plus (décision 26). Le minuteur affiche « 0:42 / 1:30 » ; à 1:30, l'enregistrement s'arrête et garde ce qui a été dit (« 1 min 30 atteinte. C'est gardé. ») (2026-10-15).
+
+### Corrigé
+- Un élément dont la nature est incertaine (confiance sous 0,5) va dans « À revoir » au lieu d'être rangé de force ; une action datée de plus de 24 h avant l'envoi aussi (2026-10-15).
+
 ## [1.7.0] - 2026-10-08
 
 ### Ajouté

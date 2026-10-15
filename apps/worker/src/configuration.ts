@@ -17,7 +17,7 @@ export function analyserStatutsIndisponibles(brut: string | undefined, erreur: (
 
 /** Prompt et fournisseur, lus de l'environnement : communs au worker et à la sonde. */
 export function lireConfigWorker(): { prompt: Prompt; provider: GeminiProvider } {
-  const prompt = chargerPrompt(cheminConfigure('PROMPTS_DIR', lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v1');
+  const prompt = chargerPrompt(cheminConfigure('PROMPTS_DIR', lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v2');
   const provider = new GeminiProvider({
     cle: exigerVar('GEMINI_API_KEY'),
     modele: lireVar('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',

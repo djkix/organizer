@@ -35,7 +35,7 @@ export function lireConfigApi(): ConfigApi {
     webhookUrl: lireVar('TELEGRAM_WEBHOOK_URL'),
     audioRacine: cheminConfigure('AUDIO_STORAGE_PATH', exigerVar('AUDIO_STORAGE_PATH')),
     typesEcheance: valeursAdmises(
-      chargerPrompt(cheminConfigure('PROMPTS_DIR', lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v1'),
+      chargerPrompt(cheminConfigure('PROMPTS_DIR', lireVar('PROMPTS_DIR') ?? 'prompts'), lireVar('PROMPT_VERSION') ?? 'tri/v2'),
       'echeance_type',
     ),
     webauthn: lireConfigWebauthn(),

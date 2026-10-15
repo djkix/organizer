@@ -132,12 +132,17 @@ const ATTRIBUTS_ACTION = [
   'importance', 'effort', 'contexte', 'alarme', 'alarme_expr',
 ] as const;
 
+/** Sous cette confiance de nature, l'élément part dans « à revoir ». */
+export const SEUIL_NATURE = 0.5;
+
 /** Applique les règles du prompt que le schéma ne peut pas exprimer. */
 export function normaliser(s: TriSortie): TriSortie {
   return {
     transcription: s.transcription,
     items: s.items.map((it, i) => {
       const n: ItemTri = { ...it, position: i + 1, theme: normaliserTheme(it.theme) };
+      // Nature incertaine : « à revoir » plutôt qu'un classement forcé (règle n° 5).
+      if (n.confiance.nature < SEUIL_NATURE) n.nature = 'ambigu';
       if (n.nature !== 'action') {
         for (const k of ATTRIBUTS_ACTION) n[k] = null;
       } else if (n.echeance_type !== 'datee') {
@@ -148,6 +153,16 @@ export function normaliser(s: TriSortie): TriSortie {
       return n;
     }),
   };
+}
+
+/** Une action dont l'échéance précède l'envoi de plus de 24 h part dans « à revoir » : jamais de rendez-vous déjà passé. */
+export function ecarterPassees(s: TriSortie, emisLe: Date): TriSortie {
+  const limite = emisLe.getTime() - 24 * 3600_000;
+  const passe = (d: string | null): boolean => d !== null && new Date(d).getTime() < limite;
+  return normaliser({
+    ...s,
+    items: s.items.map((it) => (it.nature === 'action' && (passe(it.echeance_date) || passe(it.fenetre_fin)) ? { ...it, nature: 'ambigu' } : it)),
+  });
 }
 
 /** Valeurs admises d'un champ d'item, lues dans le schéma de la version (décision 21). */
