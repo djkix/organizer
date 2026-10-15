@@ -5,6 +5,10 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Pensées : glisser une pensée vers la gauche ouvre la confirmation, puis 5 s « Effacé. Annuler », comme pour une action (2026-10-15).
+- Réglages › « Éléments effacés » : ce que tu as effacé (actions, pensées, à revoir), le plus récent d'abord, avec « Remettre » qui le rend à ses listes ; un rendez-vous à venir revient dans l'agenda. `GET /api/effaces` (les 100 derniers, jamais une capture privée) et `POST /api/items/:id/restaurer` (404 pour un autre compte) (2026-10-15).
+
 ## [1.8.2] - 2026-10-15
 
 ### Ajouté

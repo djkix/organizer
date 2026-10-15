@@ -74,3 +74,49 @@ test('détail : ce que tu as dit, « C\'est une chose à faire », effacer en de
   await page.clock.fastForward(200);
   await expect.poll(() => appels.filter((a) => a.cle === `DELETE /api/items/${P2.itemId}`).length).toBe(1);
 });
+
+test('glisser une pensée vers la gauche ouvre la confirmation, puis l\'efface en deux temps', async ({ page }) => {
+  const appels = await simuler(page, {
+    ...CONNECTE,
+    'GET /api/pensees': json(200, VUE),
+    [`DELETE /api/items/${P1.itemId}`]: json(204),
+  });
+  await page.goto('/pensees');
+  const ligne = page.locator(`[data-item="${P1.itemId}"] button`);
+  const b = (await ligne.boundingBox())!;
+  await page.mouse.move(b.x + b.width - 30, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width - 90, b.y + b.height / 2 + 1, { steps: 4 });
+  await page.mouse.move(b.x + b.width - 200, b.y + b.height / 2 + 3, { steps: 4 });
+  await page.mouse.up();
+  const confirmation = page.getByRole('alertdialog', { name: 'Effacer cette note ?' });
+  await expect(confirmation).toContainText('marcher davantage');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await confirmation.getByRole('button', { name: 'Effacer' }).click();
+  await expect(page.getByText(P1.texte)).toHaveCount(0);
+  await page.clock.fastForward(5_100);
+  await expect.poll(() => appels.filter((a) => a.cle === `DELETE /api/items/${P1.itemId}`).length).toBe(1);
+});
+
+test('Réglages › Éléments effacés : remettre en place', async ({ page }) => {
+  const efface = { itemId: P1.itemId, texte: P1.texte, nature: 'pensee', effaceLe: '2026-10-08T08:00:00Z' };
+  let liste = [efface];
+  const appels = await simuler(page, {
+    ...CONNECTE,
+    'GET /api/empreintes': json(200, []), 'GET /api/agenda': json(200, { etat: 'deconnecte' }),
+    'GET /api/effaces': (r) => r.fulfill({ status: 200, json: liste }),
+    [`POST /api/items/${P1.itemId}/restaurer`]: (r) => { liste = []; return r.fulfill({ status: 204 }); },
+  });
+  await page.goto('/reglages');
+  await page.getByRole('link', { name: 'Éléments effacés' }).click();
+  await expect(page).toHaveURL(/\/effaces$/);
+  await expect(page.getByRole('navigation', { name: 'Navigation' }).getByRole('link', { name: 'Réglages' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByText(P1.texte)).toBeVisible();
+  await expect(page.getByText('Pensée', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /^Remettre/ }).click();
+  await expect(page.getByText('Remis en place.')).toBeVisible();
+  await expect(page.getByText(P1.texte)).toHaveCount(0);
+  expect(appels.filter((a) => a.cle === `POST /api/items/${P1.itemId}/restaurer`)).toHaveLength(1);
+  await page.reload();
+  await expect(page.getByText("Rien d'effacé.")).toBeVisible();
+});

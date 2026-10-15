@@ -1,6 +1,7 @@
 import { resolve, sep } from 'node:path';
 import { Prisma, type PrismaClient } from '@organizer/db';
 import { DELAI_SYNCHRO_COCHAGE_MS, type CorpsCorrection } from '@organizer/shared';
+import type { ElementEfface } from '@organizer/shared/api';
 import { SANS_AGENDA, type SignalAgenda } from '../agenda/signal.js';
 
 export type CorrectionItem = CorpsCorrection;
@@ -65,6 +66,23 @@ export class ItemsService {
     if (!it) throw new ItemIntrouvable(itemId);
     if (!it.archiveLe) await this.prisma.item.updateMany({ where: { id: itemId, archiveLe: null }, data: { archiveLe: this.maintenant() } });
     await this.agenda.signaler(itemId);
+  }
+
+  /** Remet en place un élément effacé, dans ses listes d'origine ; l'agenda le reprend s'il est à venir. Idempotent. */
+  async restaurer(utilisateurId: string, itemId: string): Promise<void> {
+    const it = await this.prisma.item.findFirst({ where: { id: itemId, ...proprietaire(utilisateurId), capture: { utilisateurId, prive: false } }, select: { id: true } });
+    if (!it) throw new ItemIntrouvable(itemId);
+    await this.prisma.item.update({ where: { id: itemId }, data: { archiveLe: null } });
+    await this.agenda.signaler(itemId);
+  }
+
+  /** Les éléments effacés du compte, le plus récent d'abord. ponytail: les 100 derniers, une pagination si un jour ça ne suffit pas. */
+  async effaces(utilisateurId: string): Promise<ElementEfface[]> {
+    const items = await this.prisma.item.findMany({
+      where: { archiveLe: { not: null }, capture: { utilisateurId, prive: false } },
+      orderBy: { archiveLe: 'desc' }, take: 100, select: { id: true, texte: true, nature: true, archiveLe: true },
+    });
+    return items.map((i) => ({ itemId: i.id, texte: i.texte, nature: i.nature, effaceLe: i.archiveLe!.toISOString() }));
   }
 
   /** `utilisateurId` : propriétaire exigé (404 sinon). `null` : appel interne du bot, déjà lié au compte. */

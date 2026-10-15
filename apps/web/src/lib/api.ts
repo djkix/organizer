@@ -1,5 +1,5 @@
 import type {
-  CorpsConnexion, CorpsCorrection, CorpsEtiquette, DetailEnvoi, JourHistorique, JourPrive, ReponseAgenda, ReponseAlertes, VuePensees, ReponseConnexionAgenda, ReponseErreur,
+  CorpsConnexion, CorpsCorrection, CorpsEtiquette, DetailEnvoi, ElementEfface, JourHistorique, JourPrive, ReponseAgenda, ReponseAlertes, VuePensees, ReponseConnexionAgenda, ReponseErreur,
   ResumeEmpreinte, VueARevoir, VueAujourdhui, VueHorizons, VueSemaine,
 } from '@organizer/shared/api';
 import type {
@@ -39,6 +39,9 @@ export interface ClientApi {
   decocher(itemId: string): Promise<void>;
   corriger(itemId: string, c: CorpsCorrection): Promise<void>;
   effacer(itemId: string): Promise<void>;
+  /** Remet en place un élément effacé. */
+  restaurer(itemId: string): Promise<void>;
+  effaces(): Promise<ElementEfface[]>;
   privees(mois: string): Promise<JourPrive[]>;
   etiqueter(captureId: string, etiquette: string | null): Promise<void>;
   /** Ce qui a été dit, pour le détail ; null s'il n'y a rien ou en cas d'échec (le détail garde le lecteur seul). */
@@ -140,6 +143,8 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
     cocher: (itemId) => sansCorps(appeler('POST', `/api/items/${id(itemId)}/fait`)),
     decocher: (itemId) => sansCorps(appeler('DELETE', `/api/items/${id(itemId)}/fait`)),
     effacer: (itemId) => sansCorps(appeler('DELETE', `/api/items/${id(itemId)}`)),
+    restaurer: (itemId) => sansCorps(appeler('POST', `/api/items/${id(itemId)}/restaurer`)),
+    effaces: () => json(appeler('GET', '/api/effaces')),
     corriger: (itemId, c) => sansCorps(appeler('PATCH', `/api/items/${id(itemId)}`, c)),
     privees: (mois) => json(appeler('GET', `/api/captures/privees?mois=${id(mois)}`)),
     etiqueter: (captureId, etiquette) =>

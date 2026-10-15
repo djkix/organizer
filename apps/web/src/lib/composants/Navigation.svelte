@@ -14,7 +14,7 @@
   ] as const;
 
   // L'Historique et À revoir s'ouvrent depuis Réglages : c'est lui qui reste allumé.
-  const DANS_REGLAGES: string[] = [CHEMINS.historique, CHEMINS.aRevoir];
+  const DANS_REGLAGES: string[] = [CHEMINS.historique, CHEMINS.aRevoir, CHEMINS.effaces];
   const actif = (href: string): boolean =>
     href === CHEMINS.accueil ? page.url.pathname === href
       : page.url.pathname.startsWith(href) || (href === CHEMINS.reglages && DANS_REGLAGES.some((c) => page.url.pathname.startsWith(c)));

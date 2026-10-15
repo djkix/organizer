@@ -9,7 +9,7 @@
   import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
   import DetailPensee from '$lib/composants/DetailPensee.svelte';
   import Icone from '$lib/composants/Icone.svelte';
-  import Pastille from '$lib/composants/Pastille.svelte';
+  import LignePensee from '$lib/composants/LignePensee.svelte';
   import { FUSEAU } from '$lib/config';
   import { corpsEcheance, corpsNature } from '$lib/correction';
   import { creerEffaceur, effacementsEnVol } from '$lib/effacement';
@@ -176,16 +176,7 @@
       <h2 class="groupe">{libelleJour(j.jour, aujourdhui)}</h2>
       <ul class="liste">
         {#each j.pensees as p (p.itemId)}
-          <li>
-            <button class="pensee" onclick={() => ouvrir(p)}>
-              <span class="texte">{p.texte}</span>
-              <span class="meta">
-                <span class="heure">{p.heure}</span>
-                {#if p.theme}<Pastille p={{ type: 'pensee', libelle: p.theme }} />{/if}
-                {#each p.personnes as n (n)}<Pastille p={{ type: 'info', libelle: n }} />{/each}
-              </span>
-            </button>
-          </li>
+          <LignePensee pensee={p} surOuvrir={() => ouvrir(p)} surEffacer={() => (aEffacer = p)} />
         {/each}
       </ul>
     {/each}
@@ -217,14 +208,4 @@
     border: 1px solid var(--line); background: var(--surface); color: var(--text); font-weight: 500; white-space: nowrap;
   }
   .puce[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  .pensee {
-    width: 100%; min-height: 64px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; color: var(--text); text-align: left;
-  }
-  .texte {
-    line-height: 24px; overflow-wrap: anywhere;
-    display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-  .heure { color: var(--muted); margin-right: 4px; }
 </style>
