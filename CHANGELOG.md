@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.10.0] - 2026-10-15
+
 ### Ajouté
 - Privé : glisser un enregistrement vers la gauche l'efface en deux temps (confirmation, puis 5 s « Effacé. Annuler »). Rien n'est détruit : l'audio reste, jamais purgé ; Réglages › Éléments effacés le montre à part (moment, durée, mot, lecteur) avec « Remettre ». Colonne `capture.archive_le` (migration additive) ; `DELETE /api/captures/privees/:id`, `POST /api/captures/privees/:id/restaurer`, `GET /api/captures/privees/effacees` (404 ou rien pour un autre compte) (2026-10-15).
 
