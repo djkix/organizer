@@ -3,6 +3,7 @@ import {
   Param, ParseUUIDPipe, Patch, Post, Req, Res, UseGuards,
 } from '@nestjs/common';
 import { NATURES } from '@organizer/shared';
+import type { ElementEfface } from '@organizer/shared/api';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { SessionGuard, type RequeteAuthentifiee } from '../auth/session.guard.js';
@@ -56,6 +57,17 @@ export class ItemsController {
   @HttpCode(204)
   effacer(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return traduire(() => this.items.effacer(req.utilisateur.id, id));
+  }
+
+  @Post('items/:id/restaurer')
+  @HttpCode(204)
+  restaurer(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return traduire(() => this.items.restaurer(req.utilisateur.id, id));
+  }
+
+  @Get('effaces')
+  effaces(@Req() req: RequeteAuthentifiee): Promise<ElementEfface[]> {
+    return this.items.effaces(req.utilisateur.id);
   }
 
   @Get('captures/:id/transcription')

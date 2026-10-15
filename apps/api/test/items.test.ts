@@ -281,6 +281,47 @@ describe('effacer', () => {
   });
 });
 
+describe('restaurer et effacés', () => {
+  const signaux: string[] = [];
+  const svc = new ItemsService(prisma, TYPES, () => new Date('2026-10-06T07:00:00Z'), {
+    signaler: async (itemId) => { signaux.push(itemId); },
+  });
+  beforeEach(() => { signaux.length = 0; });
+
+  it('liste les éléments effacés du compte, le plus récent d\'abord, jamais d\'une capture privée ni d\'un autre compte', async () => {
+    const moi = await compteTest(prisma);
+    const a = await creerAction(prisma, { type: null, texte: 'acheter du pain' });
+    const p = await creerAction(prisma, { type: null, texte: 'une pensée', nature: 'pensee' });
+    await creerAction(prisma, { type: null, texte: 'gardée' });
+    const autre = await creerAction(prisma, { type: null, compte: 'autre' });
+    await prisma.item.update({ where: { id: a.itemId }, data: { archiveLe: new Date('2026-10-05T08:00:00Z') } });
+    await prisma.item.update({ where: { id: p.itemId }, data: { archiveLe: new Date('2026-10-05T09:00:00Z') } });
+    await prisma.item.update({ where: { id: autre.itemId }, data: { archiveLe: new Date() } });
+    expect(await svc.effaces(moi)).toEqual([
+      { itemId: p.itemId, texte: 'une pensée', nature: 'pensee', effaceLe: '2026-10-05T09:00:00.000Z' },
+      { itemId: a.itemId, texte: 'acheter du pain', nature: 'action', effaceLe: '2026-10-05T08:00:00.000Z' },
+    ]);
+  });
+
+  it('remet en place un élément effacé, signale l\'agenda ; idempotent', async () => {
+    const moi = await compteTest(prisma);
+    const { itemId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });
+    await svc.effacer(moi, itemId);
+    await svc.restaurer(moi, itemId);
+    await svc.restaurer(moi, itemId);
+    expect((await prisma.item.findUniqueOrThrow({ where: { id: itemId } })).archiveLe).toBeNull();
+    expect(signaux).toEqual([itemId, itemId, itemId]);
+    expect(await svc.effaces(moi)).toEqual([]);
+  });
+
+  it('l\'élément d\'un autre compte : introuvable, rien ne change', async () => {
+    const { itemId } = await creerAction(prisma, { type: null, compte: 'autre' });
+    await prisma.item.update({ where: { id: itemId }, data: { archiveLe: new Date() } });
+    await expect(svc.restaurer(await compteTest(prisma), itemId)).rejects.toBeInstanceOf(ItemIntrouvable);
+    expect((await prisma.item.findUniqueOrThrow({ where: { id: itemId } })).archiveLe).not.toBeNull();
+  });
+});
+
 describe('transcription', () => {
   it('rend texte_brut, sinon texte_ecrit, sinon null', async () => {
     const { captureId } = await creerAction(prisma, { type: 'jour', date: '2026-10-06T00:00:00+02:00' });

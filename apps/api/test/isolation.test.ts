@@ -143,6 +143,12 @@ describe('décision 25 : accès croisé en 404', () => {
     expect((await appel(cB, 'DELETE', `/api/items/${B.ambigu}`)).status).toBe(204);
     expect((await appel(cB, 'DELETE', `/api/items/${B.ambigu}`)).status).toBe(204);
     expect((await json(cB, '/api/vues/a-revoir')).items).toEqual([]);
+    // Remettre en place : 404 pour un autre compte ; la liste des effacés ne montre que les siens.
+    expect((await appel(cA, 'POST', `/api/items/${B.ambigu}/restaurer`)).status).toBe(404);
+    expect((await json(cA, '/api/effaces')).map((e: { itemId: string }) => e.itemId)).not.toContain(B.ambigu);
+    expect((await json(cB, '/api/effaces')).map((e: { itemId: string }) => e.itemId)).toEqual([B.ambigu]);
+    expect((await appel(cB, 'POST', `/api/items/${B.ambigu}/restaurer`)).status).toBe(204);
+    expect((await json(cB, '/api/vues/a-revoir')).items).toHaveLength(1);
   });
   it('audio ordinaire et privé d\'un autre compte : 404 ; le sien : 200', async () => {
     await prisma.capture.update({ where: { id: B.captureId }, data: { audioPath: 'ordinaire/b.oga' } });
