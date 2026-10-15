@@ -78,6 +78,8 @@ export const MESSAGES = {
   effacesSous: 'Remets en place ce qui est parti par erreur',
   videEffaces: "Rien d'effacé.",
   remettre: 'Remettre',
+  enregistrementsPrives: 'Enregistrements privés',
+  enregistrementDe: 'Enregistrement de',
   remis: 'Remis en place.',
   remiseRatee: 'Pas remis. Réessaie dans un moment.',
   alertesTitre: 'Alertes techniques',

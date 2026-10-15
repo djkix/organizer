@@ -186,6 +186,16 @@ describe('décision 25 : accès croisé en 404', () => {
     expect((await prisma.capture.findUniqueOrThrow({ where: { id: B.priveeId } })).etiquette).toBeNull();
     expect((await appel(cB, 'PATCH', `/api/captures/privees/${B.priveeId}`, { etiquette: 'ok' })).status).toBe(204);
   });
+  it('effacer, remettre, lister les effacées : 404 ou rien pour un autre compte', async () => {
+    expect((await appel(cA, 'DELETE', `/api/captures/privees/${B.priveeId}`)).status).toBe(404);
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id: B.priveeId } })).archiveLe).toBeNull();
+    expect((await appel(cB, 'DELETE', `/api/captures/privees/${B.priveeId}`)).status).toBe(204);
+    expect(await json(cA, '/api/captures/privees/effacees')).toEqual([]);
+    expect((await json(cB, '/api/captures/privees/effacees')).map((c: { id: string }) => c.id)).toEqual([B.priveeId]);
+    expect((await appel(cA, 'POST', `/api/captures/privees/${B.priveeId}/restaurer`)).status).toBe(404);
+    expect((await appel(cB, 'POST', `/api/captures/privees/${B.priveeId}/restaurer`)).status).toBe(204);
+    expect(await json(cB, '/api/captures/privees/effacees')).toEqual([]);
+  });
 });
 
 describe('décision 25 : captures privées', () => {

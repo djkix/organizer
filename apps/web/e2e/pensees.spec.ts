@@ -105,6 +105,7 @@ test('Réglages › Éléments effacés : remettre en place', async ({ page }) =
     ...CONNECTE,
     'GET /api/empreintes': json(200, []), 'GET /api/agenda': json(200, { etat: 'deconnecte' }),
     'GET /api/effaces': (r) => r.fulfill({ status: 200, json: liste }),
+    'GET /api/captures/privees/effacees': json(200, []),
     [`POST /api/items/${P1.itemId}/restaurer`]: (r) => { liste = []; return r.fulfill({ status: 204 }); },
   });
   await page.goto('/reglages');

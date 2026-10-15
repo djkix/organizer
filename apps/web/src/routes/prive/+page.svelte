@@ -1,14 +1,18 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import type { JourPrive } from '@organizer/shared/api';
   import { jourLocal } from '@organizer/shared/dates';
   import { urlAudio } from '$lib/api';
   import { api } from '$lib/client';
+  import Bandeau from '$lib/composants/Bandeau.svelte';
+  import ConfirmerEffacer from '$lib/composants/ConfirmerEffacer.svelte';
   import Etiquette from '$lib/composants/Etiquette.svelte';
+  import Glissable from '$lib/composants/Glissable.svelte';
   import Icone from '$lib/composants/Icone.svelte';
   import Lecteur from '$lib/composants/Lecteur.svelte';
   import { FUSEAU } from '$lib/config';
   import { duree, heureLocale, libelleJour, libelleMois, moisVoisin } from '$lib/format';
+  import { creerEffaceur, effacementsEnVol } from '$lib/effacement';
   import { MESSAGES } from '$lib/messages';
   import { filePrivee, videur } from '$lib/prive/demarrage';
   import { plusRecentesDAbord, type BilanVidage, type CapturePrivee } from '$lib/prive/file';
@@ -56,6 +60,37 @@
 
   $effect(() => { void charger(mois); });
 
+  // Effacer en deux temps, comme les actions et les pensées : rien n'est détruit, Réglages › Éléments effacés la rend.
+  let aEffacer = $state<{ id: string; texte: string } | null>(null);
+  let effacees = $state<ReadonlySet<string>>(new Set(effacementsEnVol));
+  let enAttenteEffacement = $state<string | null>(null);
+  let annonce = $state<string | null>(null);
+  const sansEffacee = (id: string): void => { effacees = new Set([...effacees].filter((x) => x !== id)); };
+  const effaceur = creerEffaceur({
+    effacer: (id) => api.effacerPrivee(id),
+    surChangement: (e) => { enAttenteEffacement = e.enAttente; },
+    surEchec: (id) => { sansEffacee(id); annonce = MESSAGES.effaceRate; },
+  });
+  onDestroy(() => effaceur.vider());
+
+  function effacer(id: string): void {
+    aEffacer = null;
+    annonce = null;
+    effacees = new Set([...effacees, id]);
+    effaceur.planifier(id);
+  }
+
+  function annulerEffacement(): void {
+    const id = effaceur.annuler();
+    if (id) sansEffacee(id);
+  }
+
+  const visibles = $derived(
+    (jours ?? []).map((j) => ({ ...j, captures: j.captures.filter((c) => !effacees.has(c.id)) })).filter((j) => j.captures.length > 0),
+  );
+  const libelle = (jour: string, c: { heure: string; etiquette: string | null }): string =>
+    `${MESSAGES.enregistrementDe} ${libelleJour(jour, aujourdhui).toLowerCase()}, ${c.heure}${c.etiquette ? ` · ${c.etiquette}` : ''}`;
+
   onMount(() => {
     void lireAttente();
     const arret = videur.ecouter((b) => {
@@ -68,7 +103,7 @@
   });
 </script>
 
-<main class="ecran prive">
+<main class="ecran prive" inert={aEffacer !== null}>
   <header class="entete"><h1>Privé</h1><p class="sous">{MESSAGES.priveSous}</p></header>
   <p class="garde"><span class="cadenas"><Icone nom="cadenas" taille={16} /></span>{MESSAGES.priveEnTete}</p>
 
@@ -102,26 +137,37 @@
 
   {#if erreur}
     <p class="vide">{MESSAGES.listeIndisponible}</p>
-  {:else if jours && jours.length === 0}
+  {:else if jours && visibles.length === 0}
     <p class="vide">{MESSAGES.videPrive}</p>
   {:else if jours}
-    {#each jours as j (j.jour)}
+    {#each visibles as j (j.jour)}
       <h2 class="groupe" class:aujourdhui={j.jour === aujourdhui}>{libelleJour(j.jour, aujourdhui)}</h2>
       <ul class="liste">
         {#each j.captures as c (c.id)}
-          <li class="ligne">
-            {#if c.aAudio}<Lecteur src={urlAudio(c.id)} libelle="Écouter, {c.heure}" teinte="prive" />{/if}
-            <div class="corps">
-              <span class="quand">{c.heure}{c.dureeS !== null ? ` · ${duree(c.dureeS)}` : ''}</span>
-              {#if !c.aAudio}<span class="discret">{MESSAGES.noteEcrite}</span>{/if}
-              <Etiquette id={c.id} valeur={c.etiquette} />
-            </div>
+          <li class="cadre" data-item={c.id}>
+            <Glissable classe="ligne" surEffacer={() => (aEffacer = { id: c.id, texte: libelle(j.jour, c) })}>
+              {#if c.aAudio}<Lecteur src={urlAudio(c.id)} libelle="Écouter, {c.heure}" teinte="prive" />{/if}
+              <div class="corps">
+                <span class="quand">{c.heure}{c.dureeS !== null ? ` · ${duree(c.dureeS)}` : ''}</span>
+                {#if !c.aAudio}<span class="discret">{MESSAGES.noteEcrite}</span>{/if}
+                <Etiquette id={c.id} valeur={c.etiquette} />
+              </div>
+            </Glissable>
           </li>
         {/each}
       </ul>
     {/each}
   {/if}
 </main>
+<Bandeau
+  texte={annonce ?? (enAttenteEffacement ? MESSAGES.efface : null)}
+  annulable={annonce === null && enAttenteEffacement !== null}
+  surAnnuler={annulerEffacement}
+/>
+{#if aEffacer}
+  {@const cible = aEffacer}
+  <ConfirmerEffacer texte={cible.texte} surConfirmer={() => effacer(cible.id)} surAnnuler={() => (aEffacer = null)} />
+{/if}
 
 <style>
   .prive { background: var(--private-bg); }
@@ -133,7 +179,8 @@
   .mois { display: flex; align-items: center; justify-content: space-between; padding: 0 20px 4px; font-size: 18px; font-weight: 600; }
   .mois :global(.bouton-icone) { border: 1px solid var(--line); background: var(--surface); }
   .mois :global(.bouton-icone:disabled) { background: transparent; }
-  .ligne {
+  .cadre { position: relative; overflow: hidden; border-radius: 14px; background: var(--private-soft); }
+  .ligne, .cadre :global(.ligne) {
     display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 8px;
     background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
   }

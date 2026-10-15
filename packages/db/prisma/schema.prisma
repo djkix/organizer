@@ -91,6 +91,8 @@ model Capture {
   tokensEntree  Int?        @map("tokens_entree")
   tokensSortie  Int?        @map("tokens_sortie")
   classeLe      DateTime?   @map("classe_le")
+  /// Capture privée effacée par la personne : hors de la vue Privé, audio gardé, réversible.
+  archiveLe     DateTime?   @map("archive_le")
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
   items         Item[]
 

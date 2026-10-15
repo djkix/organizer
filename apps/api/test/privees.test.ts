@@ -13,7 +13,7 @@ import { SessionGuard } from '../src/auth/session.guard.js';
 import { StockageAudio } from '../src/ingestion/stockage.js';
 import { AUTH, PRIVEES } from '../src/jetons.js';
 import { PriveesController } from '../src/privees/privees.controller.js';
-import { CapturesPriveesService, FormatRefuse } from '../src/privees/privees.service.js';
+import { CapturePriveeIntrouvable, CapturesPriveesService, FormatRefuse } from '../src/privees/privees.service.js';
 import { AudioIllisible, ServeurOccupe, type Reencodeur } from '../src/privees/reencodeur.js';
 import { TAILLE_MAX_AUDIO } from '../src/http.js';
 import { demarrerAppTest } from './aides-http.js';
@@ -81,6 +81,35 @@ describe('CapturesPriveesService', () => {
     const mois = await service.lister(utilisateurId, '2026-10', 'Europe/Paris');
     expect(mois.map((j) => j.jour)).toEqual(['2026-10-07', '2026-10-06']);
     expect(mois[1]!.captures).toEqual([{ id: ID, heure: '08:12', dureeS: 14, etiquette: 'garage', aAudio: true }]);
+  });
+});
+
+describe('effacer et remettre une capture privée', () => {
+  it('effacée : hors de la liste du mois, audio gardé, dans les effacées ; remise : de retour ; idempotent', async () => {
+    await service.enregistrer(utilisateurId, depot());
+    const efface = new CapturesPriveesService(prisma, new StockageAudio(racine), reencodeur, () => new Date('2026-10-07T08:00:00Z'));
+    await efface.effacer(utilisateurId, ID);
+    await efface.effacer(utilisateurId, ID);
+    expect(await service.lister(utilisateurId, '2026-10', 'Europe/Paris')).toEqual([]);
+    const c = await prisma.capture.findUniqueOrThrow({ where: { id: ID } });
+    expect(existsSync(join(racine, c.audioPath!))).toBe(true);
+    expect(await service.effacees(utilisateurId)).toEqual([
+      { id: ID, emisLe: '2026-10-06T06:12:00.000Z', dureeS: 14, etiquette: null, aAudio: true, effaceLe: '2026-10-07T08:00:00.000Z' },
+    ]);
+    await service.restaurer(utilisateurId, ID);
+    await service.restaurer(utilisateurId, ID);
+    expect((await service.lister(utilisateurId, '2026-10', 'Europe/Paris'))[0]!.captures.map((x) => x.id)).toEqual([ID]);
+    expect(await service.effacees(utilisateurId)).toEqual([]);
+  });
+
+  it('une capture ordinaire, inconnue ou d\'un autre compte : introuvable', async () => {
+    const autre = (await prisma.utilisateur.create({ data: { nom: 'autre' } })).id;
+    await service.enregistrer(autre, depot());
+    await expect(service.effacer(utilisateurId, ID)).rejects.toBeInstanceOf(CapturePriveeIntrouvable);
+    await expect(service.restaurer(utilisateurId, ID)).rejects.toBeInstanceOf(CapturePriveeIntrouvable);
+    const ordinaire = await prisma.capture.create({ data: { utilisateurId, canal: 'pwa', prive: false, etat: 'classee', emisLe: new Date(), texteEcrit: 'x' } });
+    await expect(service.effacer(utilisateurId, ordinaire.id)).rejects.toThrow();
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id: ID } })).archiveLe).toBeNull();
   });
 });
 

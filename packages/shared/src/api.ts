@@ -22,6 +22,9 @@ export interface ItemARevoir { itemId: string; captureId: string; texte: string;
 export interface CaptureARevoir { captureId: string; texte: string | null; emisLe: string; aAudio: boolean }
 export interface VueARevoir { items: ItemARevoir[]; captures: CaptureARevoir[] }
 
+/** Capture privée effacée : ni texte ni transcription, seulement le moment, la durée et l'étiquette. */
+export interface PriveeEffacee { id: string; emisLe: string; dureeS: number | null; etiquette: string | null; aAudio: boolean; effaceLe: string }
+
 /** Élément effacé, qu'on peut remettre en place depuis Réglages. */
 export interface ElementEfface { itemId: string; texte: string; nature: 'action' | 'pensee' | 'information' | 'ambigu'; effaceLe: string }
 

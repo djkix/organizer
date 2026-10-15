@@ -264,3 +264,41 @@ test('un play interrompu par un pause rapide n\'annonce pas « audio indisponibl
   await expect(page.getByText('Audio indisponible.')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Écouter, 23:41' })).toBeVisible();
 });
+
+test('glisser un enregistrement privé l\'efface en deux temps ; Réglages › Éléments effacés le remet', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-06T20:00:00Z') });
+  const id = '00000000-0000-4000-8000-0000000000aa';
+  let efface = false;
+  const appels = await simuler(page, {
+    ...CONNECTE,
+    'GET /api/captures/privees': (r) => r.fulfill({ status: 200, json: efface ? [] : [{ jour: '2026-10-05', captures: [{ id, heure: '23:41', dureeS: 64, etiquette: 'au réveil', aAudio: true }] }] }),
+    [`DELETE /api/captures/privees/${id}`]: (r) => { efface = true; return r.fulfill({ status: 204 }); },
+    'GET /api/effaces': json(200, []),
+    'GET /api/captures/privees/effacees': (r) => r.fulfill({ status: 200, json: efface ? [{ id, emisLe: '2026-10-05T21:41:00Z', dureeS: 64, etiquette: 'au réveil', aAudio: true, effaceLe: '2026-10-06T20:00:05Z' }] : [] }),
+    [`POST /api/captures/privees/${id}/restaurer`]: (r) => { efface = false; return r.fulfill({ status: 204 }); },
+    'GET /api/empreintes': json(200, []), 'GET /api/agenda': json(200, { etat: 'deconnecte' }),
+  });
+  await page.goto('/prive');
+  const ligne = page.locator(`[data-item="${id}"] .ligne`);
+  const b = (await ligne.boundingBox())!;
+  await page.mouse.move(b.x + b.width - 30, b.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width - 90, b.y + 21, { steps: 4 });
+  await page.mouse.move(b.x + b.width - 200, b.y + 23, { steps: 4 });
+  await page.mouse.up();
+  const confirmation = page.getByRole('alertdialog', { name: 'Effacer cette note ?' });
+  await expect(confirmation).toContainText('Enregistrement de hier, 23:41 · au réveil');
+  await confirmation.getByRole('button', { name: 'Effacer' }).click();
+  await expect(page.locator(`[data-item="${id}"]`)).toHaveCount(0);
+  await expect(page.getByRole('status').filter({ hasText: 'Effacé.' })).toBeVisible();
+  await page.clock.fastForward(5_100);
+  await expect.poll(() => appels.filter((a) => a.cle === `DELETE /api/captures/privees/${id}`).length).toBe(1);
+
+  await page.goto('/effaces');
+  await expect(page.getByRole('heading', { name: 'Enregistrements privés' })).toBeVisible();
+  await expect(page.getByText('au réveil')).toBeVisible();
+  await page.getByRole('button', { name: /^Remettre : Enregistrement de/ }).click();
+  await expect(page.getByText('Remis en place.')).toBeVisible();
+  await page.goto('/prive');
+  await expect(page.getByText('23:41 · 1 min 04')).toBeVisible();
+});

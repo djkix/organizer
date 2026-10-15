@@ -164,6 +164,14 @@
 
 <main class="ecran">
   <header class="entete entete-version"><h1>Réglages</h1>{#if version}<span class="discret" data-testid="version">{version}</span>{/if}</header>
+  <section class="carte note">
+    <h2>{MESSAGES.sortDeLaMaisonTitre}</h2>
+    <p>{MESSAGES.sortDeLaMaison1} {MESSAGES.sortDeLaMaison2}</p>
+    <p>{MESSAGES.sortDeLaMaison3} {MESSAGES.sortDeLaMaison4}</p>
+  </section>
+  <a class="carte reglage" href={CHEMINS.aRevoir}><span>À revoir</span><Icone nom="suivant" /></a>
+  <a class="carte reglage" href={CHEMINS.historique}><span>{MESSAGES.historiqueEnvois}</span><Icone nom="suivant" /></a>
+  <a class="carte reglage" href={CHEMINS.effaces}><span>{MESSAGES.effacesTitre}</span><Icone nom="suivant" /></a>
   <h2 class="groupe">Compte</h2>
   <div class="carte reglage"><span>Connecté</span><span class="discret">{nom}</span></div>
   {#if admin}
@@ -201,14 +209,6 @@
     <button class="lien activer" onclick={deconnecterAgenda} disabled={occupeAgenda}>{MESSAGES.deconnecterAgenda}</button>
   {/if}
   <p class="discret message" aria-live="polite">{messageAgenda ?? ''}</p>
-  <section class="carte note">
-    <h2>{MESSAGES.sortDeLaMaisonTitre}</h2>
-    <p>{MESSAGES.sortDeLaMaison1} {MESSAGES.sortDeLaMaison2}</p>
-    <p>{MESSAGES.sortDeLaMaison3} {MESSAGES.sortDeLaMaison4}</p>
-  </section>
-  <a class="carte reglage" href={CHEMINS.aRevoir}><span>À revoir</span><Icone nom="suivant" /></a>
-  <a class="carte reglage" href={CHEMINS.historique}><span>{MESSAGES.historiqueEnvois}</span><Icone nom="suivant" /></a>
-  <a class="carte reglage" href={CHEMINS.effaces}><span>{MESSAGES.effacesTitre}</span><Icone nom="suivant" /></a>
   <div class="bas">
     <p class="discret" aria-live="polite">{message ?? ''}</p>
     <button class="bouton" onclick={deconnecter}>Me déconnecter</button>
