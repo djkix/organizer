@@ -38,21 +38,6 @@ x-app: &app
     NO_PROXY: db,queue,localhost,127.0.0.1
 
 services:
-  # Migrations Prisma jouées avant le démarrage de l'API et du worker.
-  migrate:
-    <<: *app
-    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:-latest}
-    restart: "no"
-    command: ["node", "packages/db/node_modules/prisma/build/index.js", "migrate", "deploy", "--schema", "packages/db/prisma/schema.prisma"]
-    networks: [core]
-    depends_on:
-      db:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-
   api:
     <<: *app
     image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:-latest}
@@ -78,9 +63,10 @@ services:
       core: {}
       sortie:
         ipv4_address: 10.201.2.10
+    # L'API joue les migrations à son démarrage (CMD de l'image), puis répond : « healthy » = base à jour.
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
       queue:
         condition: service_healthy
       sortie:
@@ -90,6 +76,8 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 60s
+      start_interval: 2s
     deploy:
       resources:
         limits:
@@ -118,8 +106,8 @@ services:
       sortie:
         ipv4_address: 10.201.2.11
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      api:
+        condition: service_healthy
       queue:
         condition: service_healthy
       sortie:
@@ -146,8 +134,8 @@ services:
       sortie:
         ipv4_address: 10.201.2.12
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      api:
+        condition: service_healthy
       queue:
         condition: service_healthy
       sortie:

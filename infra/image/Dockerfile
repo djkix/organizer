@@ -58,7 +58,8 @@ COPY --from=dependances-api /depot /app
 COPY --from=construction /depot/apps/api/dist /app/apps/api/dist
 USER 1000:1000
 EXPOSE 3000
-CMD ["node", "apps/api/dist/main.mjs"]
+# Migrations d'abord (idempotentes), puis l'API : aucun conteneur à part qui resterait « Exited » dans Dockge.
+CMD ["sh", "-c", "node packages/db/node_modules/prisma/build/index.js migrate deploy --schema packages/db/prisma/schema.prisma && exec node apps/api/dist/main.mjs"]
 
 FROM base-node AS worker
 # Ni npm, ni npx, ni corepack à l'exécution (le CVE de tar est dans npm) : tout passe par node.

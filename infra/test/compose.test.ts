@@ -25,8 +25,8 @@ const reseaux = (s: Service): string[] => (Array.isArray(s.networks) ? [...s.net
 const ip = (n: string): string | undefined => (service(n).networks as Record<string, { ipv4_address?: string }>).sortie?.ipv4_address;
 
 describe('stack de production', () => {
-  it('services du lot 2-A : migrations, proxy sortant et scheduler', () => {
-    expect(Object.keys(S).sort()).toEqual(['api', 'db', 'migrate', 'queue', 'scheduler', 'sortie', 'web', 'worker']);
+  it('services : proxy sortant et scheduler ; plus de conteneur de migrations (l\'API les joue)', () => {
+    expect(Object.keys(S).sort()).toEqual(['api', 'db', 'queue', 'scheduler', 'sortie', 'web', 'worker']);
   });
 
   it('images tierces épinglées ; les nôtres en latest, sauf version fixée dans le .env', () => {
@@ -37,7 +37,7 @@ describe('stack de production', () => {
   });
 
   it('conteneurs applicatifs non root, racine en lecture seule', () => {
-    for (const n of ['api', 'worker', 'scheduler', 'migrate', 'web']) {
+    for (const n of ['api', 'worker', 'scheduler', 'web']) {
       expect(service(n).user, n).toBe('1000:1000');
       expect(service(n).read_only, n).toBe(true);
     }
@@ -45,9 +45,9 @@ describe('stack de production', () => {
   });
 
   it('redémarrage, journaux JSON 10 Mo × 3, limites mémoire du cahier', () => {
-    const limites: Record<string, string> = { api: '512m', worker: '768m', scheduler: '256m', db: '1g', queue: '128m', web: '64m', sortie: '64m', migrate: '256m' };
+    const limites: Record<string, string> = { api: '512m', worker: '768m', scheduler: '256m', db: '1g', queue: '128m', web: '64m', sortie: '64m' };
     for (const [n, s] of Object.entries(S)) {
-      expect(s.restart, n).toBe(n === 'migrate' ? 'no' : 'unless-stopped');
+      expect(s.restart, n).toBe('unless-stopped');
       expect(s.logging, n).toEqual({ driver: 'json-file', options: { 'max-size': '10m', 'max-file': '3' } });
       expect(s.deploy?.resources?.limits?.memory, n).toBe(limites[n]);
     }
@@ -56,7 +56,6 @@ describe('stack de production', () => {
   it('réseaux : seul le proxy sortant atteint Internet ; base et file isolées', () => {
     expect(reseaux(service('db'))).toEqual(['core']);
     expect(reseaux(service('queue'))).toEqual(['core']);
-    expect(reseaux(service('migrate'))).toEqual(['core']);
     expect(reseaux(service('api'))).toEqual(['core', 'edge', 'sortie']);
     expect(reseaux(service('worker'))).toEqual(['core', 'sortie']);
     expect(reseaux(service('scheduler'))).toEqual(['core', 'sortie']);
@@ -115,8 +114,9 @@ describe('stack de production', () => {
     }
   });
 
-  it('migrations jouées avant l\'API et le worker ; sondes de santé sur api, db, queue, web', () => {
-    for (const n of ['api', 'worker', 'scheduler']) expect(service(n).depends_on?.migrate?.condition, n).toBe('service_completed_successfully');
+  it('l\'API attend la base et joue les migrations ; worker et scheduler attendent l\'API saine ; sondes de santé', () => {
+    expect(service('api').depends_on?.db?.condition).toBe('service_healthy');
+    for (const n of ['worker', 'scheduler']) expect(service(n).depends_on?.api?.condition, n).toBe('service_healthy');
     for (const n of ['api', 'db', 'queue', 'web']) expect(service(n).healthcheck, n).toBeDefined();
   });
 
@@ -138,7 +138,7 @@ describe('stack de production', () => {
     expect(monte('api')).toEqual(['telegram_bot_token', 'telegram_webhook_secret']);
     expect(monte('worker')).toEqual(['gemini_api_key']);
     expect(monte('scheduler')).toEqual(['google_client_secret', 'agenda_cle']);
-    for (const n of ['db', 'queue', 'web', 'sortie', 'migrate']) expect(monte(n), n).toBeUndefined();
+    for (const n of ['db', 'queue', 'web', 'sortie']) expect(monte(n), n).toBeUndefined();
     expect(service('api').environment).toMatchObject({ TELEGRAM_BOT_TOKEN_FILE: '/run/secrets/telegram_bot_token' });
     expect(service('worker').environment).toMatchObject({ GEMINI_API_KEY_FILE: '/run/secrets/gemini_api_key' });
     expect(service('scheduler').environment).toMatchObject({
@@ -157,7 +157,7 @@ describe('stack de production', () => {
   });
 
   it('tmpfs pour /tmp (applicatifs, sortie, web : Caddy y range son état) ; volumes nommés', () => {
-    for (const n of ['api', 'worker', 'scheduler', 'migrate', 'sortie']) expect((service(n) as unknown as { tmpfs: string[] }).tmpfs, n).toContain('/tmp');
+    for (const n of ['api', 'worker', 'scheduler', 'sortie']) expect((service(n) as unknown as { tmpfs: string[] }).tmpfs, n).toContain('/tmp');
     expect((service('web') as unknown as { tmpfs: string[] }).tmpfs).toEqual(['/tmp']);
     const volumes = Object.keys((parse(texte, { merge: true }) as { volumes: object }).volumes).sort();
     expect(volumes).toEqual(['audio', 'pgdata', 'valkeydata']);

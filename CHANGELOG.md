@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Modifié
+- Plus de conteneur `migrate` : l'API joue les migrations Prisma à son démarrage, puis démarre ; `worker` et `scheduler` attendent l'API saine. Dockge n'affiche plus la stack « arrêté » après une mise à jour, plus rien à retirer à la main. Une seule fois en passant à cette version : `docker compose up -d --remove-orphans` (2026-10-15).
+
 ## [1.9.0] - 2026-10-15
 
 ### Ajouté

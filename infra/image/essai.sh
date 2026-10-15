@@ -49,7 +49,8 @@ i=0
 until curl -fsS "$URL/api/sante" 2>/dev/null | grep -q '"ok":true'; do
   i=$((i + 1)); [ "$i" -lt 60 ] || echec "la stack ne répond pas sur /api/sante"; sleep 3
 done
-[ "$(dc ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | grep '^migrate ')" = "migrate exited 0" ] || echec "migrations"
+# L'API ne répond qu'après « migrate deploy » réussi (CMD de l'image) : /api/sante vaut contrôle des migrations.
+dc logs --no-color api 2>/dev/null | grep -q 'migrations\|No pending migrations\|applied' || echec "migrations"
 
 # Scheduler : démarré, non root, racine en lecture seule
 i=0
