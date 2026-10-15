@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- `cli reclasser <nom> [--essai]` : remet en file, pour la version courante du prompt, les captures ordinaires d'un compte classées par une autre version, sauf celles dont un élément a été coché, effacé, corrigé ou envoyé à l'agenda ; jamais une capture privée ; aucun rendez-vous passé n'est écrit dans l'agenda (2026-10-15).
+
 ## [1.8.1] - 2026-10-15
 
 ### Modifié

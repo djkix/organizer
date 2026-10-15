@@ -1,5 +1,5 @@
 import { creerPrisma, type PrismaClient } from '@organizer/db';
-import { cheminConfigure, creerFetchSortant, essayerSortie, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, type JobClassement, lireVar, OPTIONS_JOB_ALERTE } from '@organizer/shared';
+import { cheminConfigure, creerFetchSortant, essayerSortie, exigerVar, FILE_ALERTES, FILE_CLASSEMENT, type JobClassement, lireVar, OPTIONS_JOB_ALERTE, OPTIONS_JOB_CLASSEMENT } from '@organizer/shared';
 import { Queue } from 'bullmq';
 import { Api } from 'grammy';
 import { Redis } from 'ioredis';
@@ -12,6 +12,7 @@ import { chatPriveValide, LiaisonService } from './telegram/liaison.service.js';
 import { formaterMesures, mesurer } from './veille/mesures.js';
 import { etatWebhook, poserWebhook, retirerWebhook } from './telegram/webhook.js';
 import { retirerEmpreintes } from './auth/empreintes/empreintes.service.js';
+import { reclasser } from './reclassement/reclasser.js';
 
 /** Lit une ligne sans l'afficher : la sortie de readline est coupée pendant la frappe. */
 async function saisirMasque(invite: string): Promise<string> {
@@ -138,6 +139,18 @@ const COMMANDES: Record<string, Commande> = {
     async lancer() {
       await avecFile(FILE_ALERTES, (file) => file.add('alerte', { message: 'Essai d\'alerte : la veille joint les administrateurs.' }, OPTIONS_JOB_ALERTE));
       console.log('Alerte d\'essai en file : elle part vers les administrateurs liés.');
+    },
+  },
+  reclasser: {
+    usage: 'reclasser <nom> [--essai]',
+    async lancer([nom, option], prisma) {
+      if (!nom || (option !== undefined && option !== '--essai')) throw new Usage();
+      const essai = option === '--essai';
+      const version = lireVar('PROMPT_VERSION') ?? 'tri/v2';
+      // jobId propre au reclassement : celui du premier classement (= captureId) est encore gardé par BullMQ.
+      const b = await avecFile(FILE_CLASSEMENT, (file) => reclasser(prisma, nom, version,
+        async (id) => { await file.add('classer', { captureId: id } satisfies JobClassement, { ...OPTIONS_JOB_CLASSEMENT, jobId: `reclasser-${version}-${id}` }); }, essai));
+      console.log(`${essai ? 'Essai (rien changé)' : `Reclassement en ${version}`} : ${b.reclassees} capture(s) ${essai ? 'à reclasser' : 'remise(s) en file'}, ${b.gardees} gardée(s) telles quelles (élément coché, effacé, corrigé ou dans l'agenda).`);
     },
   },
   'importer-terrain': {
