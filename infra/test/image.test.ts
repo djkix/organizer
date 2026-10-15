@@ -183,7 +183,9 @@ describe('ci.yml', () => {
     expect(y).toContain('--build-arg ORGANIZER_VERSION="$VERSION"');
     expect(y).toContain('--build-arg ORGANIZER_VERSION=essai');
     expect(lire('infra/image/Dockerfile')).toMatch(/AS construction\nRUN pnpm install --frozen-lockfile\nCOPY \. \.\n(#[^\n]*\n)*ARG ORGANIZER_VERSION=dev\nENV ORGANIZER_VERSION=\$\{ORGANIZER_VERSION\}/);
-    expect(lire('infra/docker-compose.yml')).toContain('ORGANIZER_VERSION: ${ORGANIZER_VERSION:?}');
+    // La version affichée vient de l'image, jamais du .env : une image latest dit son vrai numéro.
+    expect(lire('infra/docker-compose.yml')).not.toMatch(/^\s+ORGANIZER_VERSION:/m);
+    expect(y).toContain('-t "ghcr.io/djkix/organizer-$cible:latest"');
   });
   it('les cinq images sont construites, analysées et publiées', () => {
     const boucles = [...y.matchAll(/for cible in ([a-z ]+); do/g)].map((m) => m[1]);

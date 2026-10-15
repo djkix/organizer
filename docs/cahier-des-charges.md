@@ -664,7 +664,7 @@ Certificats Let's Encrypt gérés par le Nginx Proxy Manager. HSTS activé, HTTP
 ### Principes de configuration
 
 1. Aucun secret dans le fichier Compose : un fichier `.env` hors dépôt, plus les secrets Docker pour les clés VAPID, le jeton du bot, la clé d'API Gemini, le secret du client OAuth Google et la clé de chiffrement des jetons de l'agenda.
-2. Images épinglées par version majeure et mineure, jamais `latest`.
+2. Images tierces épinglées par version majeure et mineure. Les images Organizer suivent `latest`, publiée par la CI avec chaque étiquette `v*` ; la mise à jour reste manuelle (`pull` depuis Dockge) et `ORGANIZER_VERSION` dans le `.env` fige une version pour revenir en arrière (décidé par djkix le 15 octobre 2026).
 3. `restart: unless-stopped` sur tous les services applicatifs.
 4. Sondes de santé sur `api`, `db` et `queue`, avec dépendance conditionnée à l'état sain.
 5. Limites mémoire explicites par service, et plafond de concurrence sur le worker pour ne pas saturer le quota d'API en rattrapage.
