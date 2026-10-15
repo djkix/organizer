@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from '@organizer/db';
 import { ajouterJours, debutJour, isoLocal, jourLocal, type JourPrive } from '@organizer/shared';
+import type { PriveeEffacee } from '@organizer/shared/api';
 import type { StockageAudio } from '../ingestion/stockage.js';
 import type { Reencodeur } from './reencodeur.js';
 
@@ -28,6 +29,7 @@ export class CapturesPriveesService {
     private readonly prisma: PrismaClient,
     private readonly stockage: StockageAudio,
     private readonly reencodeur: Reencodeur,
+    private readonly maintenant: () => Date = () => new Date(),
   ) {}
 
   async enregistrer(utilisateurId: string, d: DepotPrive): Promise<{ id: string; nouvelle: boolean }> {
@@ -60,12 +62,38 @@ export class CapturesPriveesService {
     if (r.count === 0) throw new CapturePriveeIntrouvable(id);
   }
 
+  /** Hors de la vue Privé, sans rien détruire : l'audio reste, jamais purgé. Idempotent. */
+  async effacer(utilisateurId: string, id: string): Promise<void> {
+    await this.exiger(utilisateurId, id);
+    await this.prisma.capture.updateMany({ where: { id, utilisateurId, prive: true, archiveLe: null }, data: { archiveLe: this.maintenant() } });
+  }
+
+  async restaurer(utilisateurId: string, id: string): Promise<void> {
+    await this.exiger(utilisateurId, id);
+    await this.prisma.capture.updateMany({ where: { id, utilisateurId, prive: true }, data: { archiveLe: null } });
+  }
+
+  /** Les captures privées effacées, la plus récemment effacée d'abord. ponytail: les 100 dernières. */
+  async effacees(utilisateurId: string): Promise<PriveeEffacee[]> {
+    const captures = await this.prisma.capture.findMany({
+      where: { utilisateurId, prive: true, archiveLe: { not: null } }, orderBy: { archiveLe: 'desc' }, take: 100,
+      select: { id: true, emisLe: true, dureeS: true, etiquette: true, audioPath: true, archiveLe: true },
+    });
+    return captures.map((c) => ({
+      id: c.id, emisLe: c.emisLe.toISOString(), dureeS: c.dureeS, etiquette: c.etiquette, aAudio: c.audioPath !== null, effaceLe: c.archiveLe!.toISOString(),
+    }));
+  }
+
+  private async exiger(utilisateurId: string, id: string): Promise<void> {
+    if (!(await this.prisma.capture.findFirst({ where: { id, utilisateurId, prive: true }, select: { id: true } }))) throw new CapturePriveeIntrouvable(id);
+  }
+
   async lister(utilisateurId: string, mois: string, fuseau: string): Promise<JourPrive[]> {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mois)) throw new MoisInvalide(mois);
     const premier = `${mois}-01`;
     const suivant = ajouterJours(`${mois}-28`, 4).slice(0, 7) + '-01';
     const captures = await this.prisma.capture.findMany({
-      where: { utilisateurId, prive: true, emisLe: { gte: debutJour(premier, fuseau), lt: debutJour(suivant, fuseau) } },
+      where: { utilisateurId, prive: true, archiveLe: null, emisLe: { gte: debutJour(premier, fuseau), lt: debutJour(suivant, fuseau) } },
       orderBy: { emisLe: 'desc' },
       select: { id: true, emisLe: true, dureeS: true, etiquette: true, audioPath: true },
     });

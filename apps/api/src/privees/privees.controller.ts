@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import {
-  BadRequestException, Body, Controller, Get, HttpCode, HttpException, Inject, NotFoundException,
+  BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpException, Inject, NotFoundException,
   Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
 import { EN_TETES_CAPTURE_PRIVEE, jourLocal, type JourPrive, type ReponseDepotPrive } from '@organizer/shared';
+import type { PriveeEffacee } from '@organizer/shared/api';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { SessionGuard, type RequeteAuthentifiee } from '../auth/session.guard.js';
@@ -28,6 +29,15 @@ export function duree(valeur: string | undefined): number | null {
   if (valeur === undefined || !/^\d{1,4}$/.test(valeur)) return null;
   const n = Number(valeur);
   return n <= 3600 ? n : null;
+}
+
+async function introuvableEn404(appel: () => Promise<void>): Promise<void> {
+  try {
+    await appel();
+  } catch (e) {
+    if (!(e instanceof CapturePriveeIntrouvable)) throw e;
+    throw new NotFoundException('Élément introuvable.');
+  }
 }
 
 @Controller('api/captures/privees')
@@ -70,6 +80,23 @@ export class PriveesController {
       if (!(e instanceof CapturePriveeIntrouvable)) throw e;
       throw new NotFoundException('Élément introuvable.');
     }
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  effacer(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return introuvableEn404(() => this.privees.effacer(req.utilisateur.id, id));
+  }
+
+  @Post(':id/restaurer')
+  @HttpCode(204)
+  restaurer(@Req() req: RequeteAuthentifiee, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return introuvableEn404(() => this.privees.restaurer(req.utilisateur.id, id));
+  }
+
+  @Get('effacees')
+  effacees(@Req() req: RequeteAuthentifiee): Promise<PriveeEffacee[]> {
+    return this.privees.effacees(req.utilisateur.id);
   }
 
   @Get()
