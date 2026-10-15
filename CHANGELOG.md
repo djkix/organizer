@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.8.1] - 2026-10-15
+
 ### Modifié
 - Images Organizer : la CI publie aussi l'étiquette `latest`, que le compose suit par défaut ; `ORGANIZER_VERSION` devient facultative (elle fige une version pour revenir en arrière). La version affichée dans Réglages vient de l'image, plus du `.env` (2026-10-15).
 
