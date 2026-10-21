@@ -2,10 +2,12 @@
   import '../app.css';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
+  import BandeauMaj from '$lib/composants/BandeauMaj.svelte';
   import BoutonPrive from '$lib/composants/BoutonPrive.svelte';
   import Navigation from '$lib/composants/Navigation.svelte';
   import { CHEMINS } from '$lib/config';
   import { etatAlertes, rafraichirAlertes } from '$lib/alertes.svelte';
+  import { etatMaj } from '$lib/maj.svelte';
   import { demarrerPrive } from '$lib/prive/demarrage';
   import type { LayoutProps } from './$types';
 
@@ -21,6 +23,8 @@
   $effect(() => {
     const s = page.data.session;
     if (!s) return;
+    // Version du serveur déjà lue par la garde : le bandeau de mise à jour part de là.
+    if (s.etat === 'connecte') etatMaj.versionServeur = s.versionServeur;
     if (s.etat !== 'connecte' || !s.admin) { etatAlertes.nonVues = false; return; }
     void rafraichirAlertes();
   });
@@ -32,4 +36,6 @@
 </script>
 
 {@render children()}
+<!-- Monté une seule fois : le service worker est suivi quel que soit l'écran, le bandeau se cache seulement. -->
+<BandeauMaj cache={plein} />
 {#if !plein}<Navigation />{:else if chemin === CHEMINS.connexion}<BoutonPrive sansNavigation />{/if}

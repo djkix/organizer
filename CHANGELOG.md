@@ -5,6 +5,15 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Bandeau « Nouvelle version disponible » et bouton « Recharger » : la mise à jour est proposée, jamais imposée (décision 27). Deux signaux, une coquille téléchargée qui attend d'être activée et un écart avec la version annoncée par l'API, revérifiés toutes les 30 minutes et à chaque retour au premier plan. « Recharger » active la version en attente puis recharge la page dans tous les cas. Jamais sur l'écran de connexion, jamais pendant un enregistrement (2026-10-21).
+
+### Modifié
+- `GET /api/session/moi` donne `versionServeur` aux deux comptes, pas seulement à l'administrateur : la PWA la compare à la sienne. Réglages ne l'affiche toujours qu'à l'administrateur (2026-10-21).
+
+### Corrigé
+- L'image `api` ne portait pas `ORGANIZER_VERSION` : l'API annonçait « dev » en production, et Réglages affichait « serveur dev » à côté du vrai numéro de la coquille (2026-10-21).
+
 ## [1.10.0] - 2026-10-15
 
 ### Ajouté

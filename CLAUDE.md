@@ -25,7 +25,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 Les fichiers de ce dépôt font foi. Il n'existe aucune version ailleurs qui les
 dépasse : le document de cadrage initial est archivé et n'est plus mis à jour.
 
-- @docs/decisions.md — 25 décisions fermées. Ne pas les rouvrir sans demander.
+- @docs/decisions.md — 27 décisions fermées. Ne pas les rouvrir sans demander.
 - @docs/cahier-des-charges.md — spécification complète.
 
 Quand une décision change : mettre à jour `docs/decisions.md`, répercuter dans
@@ -126,6 +126,10 @@ Prompt `tri/v2` (15 octobre 2026), tiré des premières captures de L : intitul�
 d'extraits, consignes (« mets-moi une alarme ») appliquées à l'élément voisin, bruit et annulations
 écartés, thèmes de base. Le worker range en « à revoir » une nature sous 0,5 de confiance et une
 action datée de plus de 24 h avant l'envoi. Enregistrement PWA limité à 1 min 30 (décision 26).
+
+Mise à jour de la PWA proposée, jamais imposée (décision 27, 21 octobre 2026) : bandeau « Nouvelle version disponible »
+et bouton « Recharger », sur coquille en attente ou écart de version publiée. Coquille et API portent le même
+`ORGANIZER_VERSION`, étiqueté au même build : sans cela l'écart serait permanent.
 
 Lot 2-A : Google Agenda et alarme item par item, par un service `apps/scheduler` (seul à joindre Google), en version 1.2.0.
 Plan : `docs/superpowers/plans/2026-10-05-lot2-a-agenda.md`.

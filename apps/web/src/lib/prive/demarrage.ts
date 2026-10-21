@@ -1,6 +1,6 @@
 import { registerSW } from 'virtual:pwa-register';
 import { creerVideur, garderPuisEnvoyer, ouvrirFilePrivee, type Enregistrement, type ModeCapture } from './file.js';
-import { enregistrerSW } from '../pwa/enregistrement.js';
+import { brancherMaj } from '../maj.svelte.js';
 import { demanderPersistance, demanderSynchro, installerRelances, synchroSiRestantes } from './relances.js';
 
 /** Instances de la fenêtre. Le service worker ouvre les siennes sur la même base. */
@@ -8,7 +8,8 @@ export const filePrivee = ouvrirFilePrivee();
 export const videur = creerVideur(filePrivee);
 
 export function demarrerPrive(): () => void {
-  enregistrerSW(registerSW);
+  // Un seul enregistrement du service worker pour toute l'application : la file privée et le bandeau de mise à jour en dépendent.
+  brancherMaj(registerSW);
   // Écouteur avant le premier vidage : un bilan avec des restes demande aussi la synchro d'arrière-plan.
   const arreterSynchro = synchroSiRestantes((f) => videur.ecouter(f), demanderSynchro);
   const arreterRelances = installerRelances(() => videur.vider(), window, document);

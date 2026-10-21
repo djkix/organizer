@@ -224,8 +224,18 @@ Elle part dès que le réseau revient, ou après la connexion si la session manq
 Un envoi qui échoue laisse la copie en place. Une capture refusée pour de bon est mise de côté : elle ne part plus toute seule et n'est jamais supprimée.
 
 Le service worker ne garde que la coquille de l'application. Aucune réponse de l'API n'est mise en cache.
-Une mise à jour s'applique une fois toutes les fenêtres de l'application fermées, jamais en plein enregistrement.
-Android peut garder l'ancienne version tant que l'application reste dans les applications récentes : la fermer pour de bon, puis la rouvrir.
+Une mise à jour ne s'applique jamais toute seule, jamais en plein enregistrement.
+
+Quand une nouvelle version est là, un bandeau discret l'annonce et « Recharger » l'applique (décision 27).
+Deux signaux, parce qu'aucun ne suffit seul : une coquille téléchargée qui attend d'être activée, et un écart
+entre la version de la coquille chargée et celle que l'API annonce (cache périmé que le service worker n'a pas vu).
+Les deux sont revérifiés toutes les 30 minutes et à chaque retour au premier plan : sans cela, une version publiée
+en journée n'arriverait sur le téléphone qu'au prochain démarrage à froid. Le bandeau ne s'affiche ni sur l'écran
+de connexion, ni pendant un enregistrement. Sans toucher au bandeau, l'ancienne version reste : fermer
+l'application pour de bon, puis la rouvrir, suffit aussi.
+
+Les deux numéros comparés viennent du même `docker build` (`ORGANIZER_VERSION`, porté par l'image `web` comme par
+l'image `api`) et seuls deux numéros publiés se comparent : en développement, rien ne s'affiche.
 
 ## Administration
 
@@ -286,7 +296,7 @@ Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.
 
 - [Exploitation](docs/exploitation.md) : stack, commandes, Nginx Proxy Manager, mise à jour, secrets, supervision.
 - [Cahier des charges](docs/cahier-des-charges.md) : la spécification complète.
-- [Décisions](docs/decisions.md) : les 23 décisions fermées.
+- [Décisions](docs/decisions.md) : les 27 décisions fermées.
 - [Guide d'annotation](docs/guide-annotation.md) : format du corpus du lot 0.
 - [Prompts](prompts/README.md) : versions, variables, schéma de sortie.
 - [Outil de relecture](tools/relecture/README.md) : relire les captures du banc d'essai.

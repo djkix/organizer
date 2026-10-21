@@ -183,6 +183,8 @@ describe('ci.yml', () => {
     expect(y).toContain('--build-arg ORGANIZER_VERSION="$VERSION"');
     expect(y).toContain('--build-arg ORGANIZER_VERSION=essai');
     expect(lire('infra/image/Dockerfile')).toMatch(/AS construction\nRUN pnpm install --frozen-lockfile\nCOPY \. \.\n(#[^\n]*\n)*ARG ORGANIZER_VERSION=dev\nENV ORGANIZER_VERSION=\$\{ORGANIZER_VERSION\}/);
+    // L'API dit la même version que la coquille, étiquetée au même build : sinon l'écart serait permanent.
+    expect(lire('infra/image/Dockerfile')).toMatch(/AS api\n(.*\n)*?ARG ORGANIZER_VERSION=dev\nENV ORGANIZER_VERSION=\$\{ORGANIZER_VERSION\}\nUSER /);
     // La version affichée vient de l'image, jamais du .env : une image latest dit son vrai numéro.
     expect(lire('infra/docker-compose.yml')).not.toMatch(/^\s+ORGANIZER_VERSION:/m);
     expect(y).toContain('-t "ghcr.io/djkix/organizer-$cible:latest"');
