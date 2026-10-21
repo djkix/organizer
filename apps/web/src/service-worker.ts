@@ -21,8 +21,14 @@ cleanupOutdatedCaches();
 registerRoute(new NavigationRoute(createHandlerBoundToURL('/'), { denylist: [/^\/api\//] }));
 
 // Première installation : contrôle immédiat. Une mise à jour attend la fermeture de l'application,
-// pour ne jamais recharger la page pendant un enregistrement.
+// ou « Recharger » dans le bandeau : jamais de rechargement en plein enregistrement.
 clientsClaim();
+
+// Seule demande acceptée : activer la version en attente, quand L appuie sur « Recharger ».
+// Sans cela, le bandeau de mise à jour n'aurait aucun moyen d'activer la coquille téléchargée.
+self.addEventListener('message', (e: ExtendableMessageEvent) => {
+  if ((e.data as { type?: string } | null)?.type === 'SKIP_WAITING') void self.skipWaiting();
+});
 
 // Même module que la page : un seul code d'envoi, verrou « organizer-prive » partagé.
 const videur = creerVideur(ouvrirFilePrivee());

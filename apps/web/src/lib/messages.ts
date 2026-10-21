@@ -57,6 +57,9 @@ export const MESSAGES = {
   enregistrer: 'Enregistrer',
   priveBouton: 'Privé',
   recu: 'Reçu.',
+  // Mise à jour de l'application
+  nouvelleVersion: 'Nouvelle version disponible',
+  rechargerBouton: 'Recharger',
   // Vue Privé
   priveSous: 'Par date et par heure',
   priveEnTete: 'Ces enregistrements ne sortent jamais de la maison.',

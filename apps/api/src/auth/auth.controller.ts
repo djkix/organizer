@@ -36,9 +36,10 @@ export class AuthController {
 
   @Get('moi')
   @UseGuards(SessionGuard)
-  moi(@Req() req: RequeteAuthentifiee): { nom: string; admin: boolean; versionServeur?: string } {
+  moi(@Req() req: RequeteAuthentifiee): { nom: string; admin: boolean; versionServeur: string } {
     const { nom, admin } = req.utilisateur;
-    // La version du serveur ne sort que pour l'administrateur.
-    return admin ? { nom, admin, versionServeur: lireVar('ORGANIZER_VERSION') ?? 'dev' } : { nom, admin };
+    // La version sort pour les deux comptes : la PWA la compare à la sienne pour proposer « Recharger ».
+    // Elle n'est affichée dans Réglages que pour l'administrateur.
+    return { nom, admin, versionServeur: lireVar('ORGANIZER_VERSION') ?? 'dev' };
   }
 }

@@ -56,6 +56,9 @@ RUN apk add --no-cache ffmpeg
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 COPY --from=dependances-api /depot /app
 COPY --from=construction /depot/apps/api/dist /app/apps/api/dist
+# Même valeur que la coquille, au même build : sans elle l'API dirait « dev » et l'écart de version serait permanent.
+ARG ORGANIZER_VERSION=dev
+ENV ORGANIZER_VERSION=${ORGANIZER_VERSION}
 USER 1000:1000
 EXPOSE 3000
 # Migrations d'abord (idempotentes), puis l'API : aucun conteneur à part qui resterait « Exited » dans Dockge.

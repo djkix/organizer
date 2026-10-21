@@ -66,6 +66,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 23 | Empreinte digitale | **Avancée du lot 3 à un lot 1-D**, livrée juste après la mise en service, décidée par Franck le 4 octobre 2026. WebAuthn (clé d'accès, Credential Manager Android) remplace seulement la saisie du mot de passe à la reconnexion ; le mot de passe reste toujours possible, et aucune invite biométrique ne précède jamais un enregistrement. Précisions de Franck le 5 octobre 2026 : le mot de passe n'est pas redemandé avant « Activer l'empreinte » (la session suffit), et la synchronisation des clés d'accès Google sur les autres appareils Android de L est acceptée |
 | 24 | Capture ordinaire dans la PWA | **Avancée du lot 3 au lot 2-B**, décidée par Franck le 5 octobre 2026. Un bouton « Enregistrer » ordinaire (envoyé à Gemini, classé) à côté du bouton « Privé », un appui pour démarrer, un appui pour arrêter. Telegram reste un point d'entrée. Le mode reste décidé par le point d'entrée : deux boutons, deux écrans, deux routes d'API, jamais de bascule après coup |
 | 26 | Durée d'un enregistrement dans la PWA | **1 min 30 au plus**, en ordinaire comme en privé : un minuteur affiche le temps écoulé sur 1:30, l'enregistrement s'arrête seul et garde ce qui a été dit. Telegram n'est pas limité. Décidé par Franck le 15 octobre 2026 |
+| 27 | Mise à jour de la PWA | **Proposée, jamais imposée**, décidée par Franck le 21 octobre 2026. Un bandeau discret « Nouvelle version disponible » et son bouton « Recharger », affiché quand une nouvelle coquille attend d'être activée ou que le serveur annonce un autre numéro publié. Jamais sur l'écran de connexion ni pendant un enregistrement. Ce n'est pas une sollicitation au sens de la décision 5 : rien ne sort de l'application, aucune notification n'est émise, et le contenu de L n'est pas en cause |
 
 ## Périmètre fonctionnel
 
@@ -208,6 +209,8 @@ L'option 1 est retenue au lot 2, puisque le widget devient la seule surface de r
 - Background Sync pour vider la file de captures dès le retour du réseau, sans ouvrir l'application.
 - Web Share Target déclaré dans le manifeste : L peut partager un texte ou un audio depuis n'importe quelle application vers l'outil.
 - Raccourcis d'application dans le manifeste : appui long sur l'icône pour « Capturer » ou « Aujourd'hui ».
+- Mise à jour proposée, jamais appliquée d'elle-même (décision 27). Deux signaux : une coquille téléchargée qui attend d'être activée, et un écart entre la version de la coquille chargée et celle que l'API annonce. Les deux sont revérifiés toutes les 30 minutes et à chaque retour au premier plan, sans quoi une version publiée en journée n'arriverait qu'au prochain démarrage à froid. « Recharger » active la version en attente puis recharge la page dans tous les cas : sur un simple écart de version, aucun service worker n'attend.
+- Les deux versions comparées viennent du même `docker build` (`ORGANIZER_VERSION`), coquille et API : sinon l'écart serait permanent. Deux numéros publiés seulement (`1.2.0`), jamais `dev` ni `essai`.
 - Cible de compatibilité : Chrome Android 120 et plus, Android 12 et plus. Aucun développement ni test iOS.
 - La cible est un mobile en mode portrait, utilisable d'une seule main et en marchant.
 
@@ -466,6 +469,7 @@ La règle de restitution est de montrer peu. Une vue qui dépasse cinq lignes su
 - Reporter : trois boutons seulement (demain, la semaine prochaine, plus tard).
 - Corriger le classement : changer la nature ou l'échéance depuis l'item, en deux gestes maximum.
 - Réécouter l'audio d'origine depuis n'importe quel item issu d'un vocal, tant que la rotation ne l'a pas purgé.
+- Mettre à jour : un bandeau discret annonce la nouvelle version, « Recharger » l'applique. Rien ne se recharge tout seul.
 
 ### Types de rappels
 

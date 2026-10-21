@@ -105,10 +105,10 @@ describe('/api/session', () => {
     const r = await connecter('un mot de passe assez long');
     const jeton = lireCookie(r.headers.get('set-cookie') ?? '', NOM_COOKIE);
     const moi = await fetch(`${app.url}/api/session/moi`, { headers: { cookie: `${NOM_COOKIE}=${jeton}` } });
-    expect(await moi.json()).toEqual({ nom: 'l', admin: false });
+    expect(await moi.json()).toEqual({ nom: 'l', admin: false, versionServeur: 'dev' });
   });
 
-  it('moi donne la version du serveur à l\'administrateur seulement', async () => {
+  it('moi donne la version du serveur aux deux comptes (le bandeau de mise à jour la compare)', async () => {
     await prisma.utilisateur.create({ data: { nom: 'a', admin: true } });
     await auth.definirMotDePasse('a', 'un mot de passe assez long');
     const jeton = async (nom: string) => lireCookie((await connecter('un mot de passe assez long', nom)).headers.get('set-cookie') ?? '', NOM_COOKIE);
@@ -116,7 +116,7 @@ describe('/api/session', () => {
     process.env.ORGANIZER_VERSION = '1.2.1';
     try {
       expect(await moi('a')).toEqual({ nom: 'a', admin: true, versionServeur: '1.2.1' });
-      expect(await moi('l')).toEqual({ nom: 'l', admin: false });
+      expect(await moi('l')).toEqual({ nom: 'l', admin: false, versionServeur: '1.2.1' });
     } finally { delete process.env.ORGANIZER_VERSION; }
   });
 
