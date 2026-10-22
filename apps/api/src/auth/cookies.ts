@@ -1,4 +1,10 @@
-export const NOM_COOKIE = 'organizer_session';
+/**
+ * Préfixe __Host- : le navigateur n'accepte ce cookie que Secure, Path=/ et sans Domain.
+ * Un sous-domaine voisin ne peut donc ni le poser ni l'écraser (injection de session).
+ */
+export const NOM_COOKIE = '__Host-organizer_session';
+/** Nom d'avant le préfixe : jamais lu, seulement effacé à la connexion et à la déconnexion. */
+export const ANCIEN_NOM_COOKIE = 'organizer_session';
 const ATTRIBUTS = 'Path=/; HttpOnly; Secure; SameSite=Lax';
 
 export function lireCookie(entete: string | undefined, nom: string): string | undefined {
@@ -20,3 +26,5 @@ export function cookieSession(jeton: string, expireLe: Date, maintenant: Date): 
 }
 
 export const cookieEfface = (): string => `${NOM_COOKIE}=; ${ATTRIBUTS}; Max-Age=0`;
+
+export const ancienCookieEfface = (): string => `${ANCIEN_NOM_COOKIE}=; ${ATTRIBUTS}; Max-Age=0`;

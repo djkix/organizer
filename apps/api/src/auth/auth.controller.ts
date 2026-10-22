@@ -4,7 +4,7 @@ import { lireVar } from '@organizer/shared';
 import { z } from 'zod';
 import { AUTH } from '../jetons.js';
 import type { AuthService } from './auth.service.js';
-import { cookieEfface, cookieSession, lireCookie, NOM_COOKIE } from './cookies.js';
+import { ancienCookieEfface, cookieEfface, cookieSession, lireCookie, NOM_COOKIE } from './cookies.js';
 import { LimiteurDebit } from './limiteur.js';
 import { SessionGuard, type RequeteAuthentifiee } from './session.guard.js';
 
@@ -23,7 +23,7 @@ export class AuthController {
     const p = schemaConnexion.safeParse(corps);
     const s = p.success ? await this.auth.ouvrirSession(p.data.nom, p.data.motDePasse) : null;
     if (!s) throw new UnauthorizedException('Identifiants invalides.');
-    res.setHeader('Set-Cookie', cookieSession(s.jeton, s.expireLe, this.auth.maintenant()));
+    res.setHeader('Set-Cookie', [cookieSession(s.jeton, s.expireLe, this.auth.maintenant()), ancienCookieEfface()]);
   }
 
   @Delete()
@@ -31,7 +31,7 @@ export class AuthController {
   async fermer(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
     const jeton = lireCookie(req.headers.cookie, NOM_COOKIE);
     if (jeton) await this.auth.fermerSession(jeton);
-    res.setHeader('Set-Cookie', cookieEfface());
+    res.setHeader('Set-Cookie', [cookieEfface(), ancienCookieEfface()]);
   }
 
   @Get('moi')

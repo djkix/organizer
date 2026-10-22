@@ -87,6 +87,21 @@ describe('/api/session', () => {
     expect(cookie).toMatch(/Max-Age=7776000/);
   });
 
+  it('nomme le cookie avec le préfixe __Host- et efface l\'ancien nom', async () => {
+    const r = await connecter('un mot de passe assez long');
+    const poses = r.headers.getSetCookie();
+    expect(poses[0]).toMatch(/^__Host-organizer_session=[^;]+; Path=\/; HttpOnly; Secure; SameSite=Lax; Max-Age=7776000$/);
+    expect(poses[0]).not.toMatch(/Domain=/i);
+    expect(poses[1]).toBe('organizer_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+  });
+
+  it('l\'ancien cookie, sans préfixe, n\'ouvre plus de session', async () => {
+    const r = await connecter('un mot de passe assez long');
+    const jeton = lireCookie(r.headers.get('set-cookie') ?? '', NOM_COOKIE);
+    const moi = await fetch(`${app.url}/api/session/moi`, { headers: { cookie: `organizer_session=${jeton}` } });
+    expect(moi.status).toBe(401);
+  });
+
   it('même réponse pour un mauvais mot de passe et un compte inconnu', async () => {
     const a = await connecter('mauvais mot de passe !');
     const b = await connecter('un mot de passe assez long', 'inconnu');
@@ -125,7 +140,10 @@ describe('/api/session', () => {
     const jeton = lireCookie(r.headers.get('set-cookie') ?? '', NOM_COOKIE);
     const d = await fetch(`${app.url}/api/session`, { method: 'DELETE', headers: { cookie: `${NOM_COOKIE}=${jeton}` } });
     expect(d.status).toBe(204);
-    expect(d.headers.get('set-cookie')).toMatch(/Max-Age=0/);
+    expect(d.headers.getSetCookie()).toEqual([
+      '__Host-organizer_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
+      'organizer_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
+    ]);
     expect(await prisma.session.count()).toBe(0);
   });
 

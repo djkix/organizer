@@ -8,7 +8,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { AUTH, EMPREINTES } from '../../jetons.js';
 import type { AuthService } from '../auth.service.js';
-import { cookieSession } from '../cookies.js';
+import { ancienCookieEfface, cookieSession } from '../cookies.js';
 import { LimiteurDebit } from '../limiteur.js';
 import { SessionGuard, type RequeteAuthentifiee } from '../session.guard.js';
 import { DelaiDepasse } from './defis.js';
@@ -59,7 +59,7 @@ export class EmpreintesController {
     const utilisateurId = p.success ? await sansPanne(() => this.empreintes.verifierConnexion(p.data)) : null;
     if (!utilisateurId) throw new UnauthorizedException(MESSAGE_REFUS);
     const s = await this.auth.ouvrirSessionPour(utilisateurId);
-    res.setHeader('Set-Cookie', cookieSession(s.jeton, s.expireLe, this.auth.maintenant()));
+    res.setHeader('Set-Cookie', [cookieSession(s.jeton, s.expireLe, this.auth.maintenant()), ancienCookieEfface()]);
   }
 
   @Get('empreintes')

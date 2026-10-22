@@ -5,6 +5,7 @@ import { json, raw, type NextFunction, type Request, type Response } from 'expre
 import type { AuthService } from './auth/auth.service.js';
 import { lireCookie, NOM_COOKIE } from './auth/cookies.js';
 import { AUTH } from './jetons.js';
+import { lireConfigWebauthn } from './auth/empreintes/config.js';
 import { LimiteurDebit } from './auth/limiteur.js';
 import { erreurDeCorps, FiltreSansContenu } from './erreurs.js';
 
@@ -21,6 +22,27 @@ export function lireConfianceProxy(env: NodeJS.ProcessEnv = process.env): string
     throw new Error('TRUSTED_PROXY obligatoire en production : sous-réseau de Caddy et adresse du Nginx Proxy Manager');
   }
   return 'loopback';
+}
+
+const METHODES_SURES = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/**
+ * Défense CSRF en plus de SameSite=Lax : une requête qui modifie quelque chose doit venir de la PWA elle-même.
+ * Refus si le navigateur la dit d'un autre site (Sec-Fetch-Site) ou si son Origin n'est pas celle de la PWA.
+ * Un client sans ces en-têtes (CLI, tests) passe : il ne porte pas le cookie d'une victime.
+ * Montée sur /api seulement : le webhook Telegram (/telegram/webhook) a son propre secret.
+ */
+export function verifierOrigine(origineApp: string): (req: Request, res: Response, suite: NextFunction) => void {
+  return (req, res, suite) => {
+    if (METHODES_SURES.has(req.method)) return suite();
+    const site = req.header('sec-fetch-site');
+    const origine = req.header('origin');
+    if ((site !== undefined && site !== 'same-origin') || (origine !== undefined && origine !== origineApp)) {
+      res.status(403).json({ message: 'Requête refusée.' });
+      return;
+    }
+    suite();
+  };
 }
 
 /**
@@ -47,6 +69,9 @@ export function configurerApp(app: NestExpressApplication): void {
     if (limiteur.autoriser(req.ip ?? 'inconnue')) return suite();
     res.status(429).json({ message: 'Trop de requêtes. Réessaie dans une minute.' });
   });
+  // Avant tout corps lu : une requête d'un autre site est refusée sans toucher aux 30 Mio d'audio.
+  // L'origine de la PWA est celle de l'empreinte (WEBAUTHN_ORIGIN), obligatoire en production.
+  app.use('/api', verifierOrigine(lireConfigWebauthn().origine));
   const audio = raw({ type: () => true, limit: TAILLE_MAX_AUDIO });
   // Deux dépôts d'audio, deux routes : le mode est dans l'adresse (règle n° 6), jamais dans le corps.
   for (const route of ['/api/captures/privees', '/api/captures']) {

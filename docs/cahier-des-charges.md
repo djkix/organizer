@@ -709,7 +709,8 @@ Le système contient des pensées intimes de L sur elle-même et sur des tiers n
 | Mécanisme | Application |
 | --- | --- |
 | Comptes locaux | Identifiant et mot de passe, haché en Argon2id |
-| Session PWA | Jeton en cookie `HttpOnly`, `Secure`, `SameSite=Lax`, durée 90 jours |
+| Session PWA | Jeton en cookie `__Host-` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sans `Domain`), durée 90 jours |
+| Requêtes qui modifient | Refusées si `Origin` n'est pas celle de la PWA ou si `Sec-Fetch-Site` n'est pas `same-origin` (défense CSRF) |
 | Reconnexion | Empreinte digitale via WebAuthn et Credential Manager Android, au lot 1-D (décision 23). Le mot de passe reste toujours possible ; aucune invite ne précède un enregistrement |
 | Bot Telegram | Liaison du `chat_id` à un compte par code à usage unique, expirant en 10 minutes |
 | Webhook Telegram | Jeton secret dans l'en-tête, vérifié à chaque appel |
