@@ -40,7 +40,7 @@ x-app: &app
 services:
   api:
     <<: *app
-    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:-latest}
+    image: ghcr.io/djkix/organizer-api:${ORGANIZER_VERSION:?numéro de version obligatoire dans le .env}
     environment:
       <<: *app-env
       TELEGRAM_MODE: webhook
@@ -85,7 +85,7 @@ services:
 
   worker:
     <<: *app
-    image: ghcr.io/djkix/organizer-worker:${ORGANIZER_VERSION:-latest}
+    image: ghcr.io/djkix/organizer-worker:${ORGANIZER_VERSION:?numéro de version obligatoire dans le .env}
     environment:
       <<: *app-env
       GEMINI_API_KEY_FILE: /run/secrets/gemini_api_key
@@ -121,7 +121,7 @@ services:
   # et oauth2.googleapis.com seulement. Jeton de rafraîchissement chiffré par agenda_cle.
   scheduler:
     <<: *app
-    image: ghcr.io/djkix/organizer-scheduler:${ORGANIZER_VERSION:-latest}
+    image: ghcr.io/djkix/organizer-scheduler:${ORGANIZER_VERSION:?numéro de version obligatoire dans le .env}
     environment:
       <<: *app-env
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?}
@@ -147,7 +147,7 @@ services:
 
   # Coquille de la PWA, en-têtes, et passage vers l'API (infra/caddy/Caddyfile).
   web:
-    image: ghcr.io/djkix/organizer-web:${ORGANIZER_VERSION:-latest}
+    image: ghcr.io/djkix/organizer-web:${ORGANIZER_VERSION:?numéro de version obligatoire dans le .env}
     restart: unless-stopped
     user: "1000:1000"
     read_only: true
@@ -173,7 +173,7 @@ services:
 
   # Proxy sortant : seule route vers Internet (infra/sortie/squid.conf).
   sortie:
-    image: ghcr.io/djkix/organizer-sortie:${ORGANIZER_VERSION:-latest}
+    image: ghcr.io/djkix/organizer-sortie:${ORGANIZER_VERSION:?numéro de version obligatoire dans le .env}
     restart: unless-stopped
     read_only: true
     tmpfs:

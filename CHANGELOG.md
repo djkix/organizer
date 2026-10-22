@@ -10,6 +10,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Bandeau « Nouvelle version disponible » et bouton « Recharger » : la mise à jour est proposée, jamais imposée (décision 27). Deux signaux, une coquille téléchargée qui attend d'être activée et un écart avec la version annoncée par l'API, revérifiés toutes les 30 minutes et à chaque retour au premier plan. « Recharger » active la version en attente puis recharge la page dans tous les cas. Jamais sur l'écran de connexion, jamais pendant un enregistrement (2026-10-21).
 
 ### Modifié
+- `ORGANIZER_VERSION` devient obligatoire dans le `.env` : le compose ne suit plus `latest` par défaut et refuse de démarrer sans numéro. **Avant cette mise à jour**, ajouter `ORGANIZER_VERSION=<numéro>` au `.env` (2026-10-22).
 - `GET /api/session/moi` donne `versionServeur` aux deux comptes, pas seulement à l'administrateur : la PWA la compare à la sienne. Réglages ne l'affiche toujours qu'à l'administrateur (2026-10-21).
 
 ### Corrigé
