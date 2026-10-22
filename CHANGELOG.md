@@ -13,6 +13,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - `GET /api/session/moi` donne `versionServeur` aux deux comptes, pas seulement à l'administrateur : la PWA la compare à la sienne. Réglages ne l'affiche toujours qu'à l'administrateur (2026-10-21).
 
 ### Corrigé
+- `deepmerge-ts` forcé en 8.0.2 (épuisement de pile sur un graphe récursif, corrigé en 8.0.0). Prisma 6.19.3 est la dernière 6.x et le fige en 7.1.5 ; Prisma 7, qui corrige, casse l'API. Dérogation à retirer au passage à Prisma 7 (2026-10-22).
 - Défense CSRF : une requête `/api` qui modifie (POST, PUT, PATCH, DELETE) est refusée (403) si son `Origin` n'est pas celle de la PWA (`WEBAUTHN_ORIGIN`) ou si le navigateur la dit d'un autre site (`Sec-Fetch-Site`). Le webhook Telegram, hors `/api`, garde son secret (2026-10-22).
 - Cookie de session renommé `__Host-organizer_session` : un sous-domaine voisin ne peut plus le poser ni l'écraser. L'ancien cookie est effacé à la connexion ; chaque compte se reconnecte une fois après la mise à jour (2026-10-22).
 - Liaison Telegram : les échecs de `/start <code>` se comptent par chat (5 par 10 min), avec un plafond global relevé à 100. Un intrus ne bloque plus la liaison de tout le monde en dix essais (2026-10-22).
