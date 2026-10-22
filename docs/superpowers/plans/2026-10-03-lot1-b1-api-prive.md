@@ -21,7 +21,7 @@
 - Limitation de débit : **60 requêtes par minute et par IP sur l'API, 10 sur l'authentification**.
 - Envois : type MIME et taille vérifiés (**30 Mo maximum**), audio réencodé par ffmpeg avant stockage.
 - Capture privée : stockée telle quelle, **jamais envoyée, jamais transcrite, jamais classée**, marquée privée avant d'exister en base. Elle naît `prive = true, etat = 'privee'` et n'entre dans aucune file.
-- Visibilité (décision 8, confirmée par djkix le 3 octobre 2026) : **les listes mélangent les deux comptes**. Aucune requête de vue ne filtre par utilisateur ; chacun peut cocher et corriger tout item.
+- Visibilité (décision 8, confirmée par l'administrateur le 3 octobre 2026) : **les listes mélangent les deux comptes**. Aucune requête de vue ne filtre par utilisateur ; chacun peut cocher et corriger tout item.
 - Une vue de plus de **vingt lignes** est un défaut ; Aujourd'hui en a **sept au plus** (actions du jour, puis **1 à 3 suggestions** tirées des fenêtres qui approchent).
 - Zéro culpabilisation : aucune réponse d'API ne porte de compteur de retard, de pourcentage ni de mention « en retard ». Une action dont l'échéance est passée n'apparaît plus dans les vues.
 - Types d'échéance, importance, effort, contexte : des données. Les valeurs admises d'une correction viennent du `response-schema.json` de la version de prompt configurée (décision 21). Seule `nature` est figée.

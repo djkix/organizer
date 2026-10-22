@@ -6,7 +6,7 @@
 #
 # Réseaux : web seul est publié ; api, worker et scheduler n'ont aucune route vers Internet et sortent
 # par le proxy « sortie », qui n'ouvre que leur liste fermée de domaines (infra/sortie/squid.conf).
-# 50 Go maximum pour la stack (décision 12). Pas de sauvegarde avant le lot 2 (décision 11).
+# 50 Go maximum pour la stack (décision 12). Sauvegarde dédiée au lot 2 (décision 11).
 # Le scheduler écrit dans Google Agenda (lot 2-A) ; la rotation de l'audio le rejoindra.
 
 name: organizer

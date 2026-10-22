@@ -2,7 +2,7 @@ import { lireVar } from '@organizer/shared';
 
 export interface ConfigAgendaApi { clientId: string; redirectUri: string; urlAutorisation: string }
 
-/** Le client OAuth (Application Web) de djkix. Hors production sans GOOGLE_CLIENT_ID : Google Agenda indisponible. */
+/** Le client OAuth (Application Web) de l'administrateur. Hors production sans GOOGLE_CLIENT_ID : Google Agenda indisponible. */
 export function lireConfigAgenda(env: NodeJS.ProcessEnv = process.env): ConfigAgendaApi | null {
   const production = env.NODE_ENV === 'production';
   const clientId = lireVar('GOOGLE_CLIENT_ID', env);

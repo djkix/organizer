@@ -4,8 +4,12 @@
 # et vit hors de /opt/stacks : elle n'apparaît jamais dans Dockge à côté de la production « organizer ».
 # Laisser tourner dans un terminal pendant le développement et les tests ; Ctrl-C pour fermer et nettoyer.
 set -eu
-HOTE="${ORGANIZER_SSH:-user@192.168.1.10}"
 ICI="$(cd "$(dirname "$0")" && pwd)"
+# Hôte Docker de dev, « utilisateur@adresse » : variable ORGANIZER_SSH, exportée ou dans le .env racine.
+if [ -z "${ORGANIZER_SSH:-}" ] && [ -f "$ICI/../../.env" ]; then
+  ORGANIZER_SSH="$(sed -n 's/^ORGANIZER_SSH=//p' "$ICI/../../.env" | tail -n 1)"
+fi
+HOTE="${ORGANIZER_SSH:?ORGANIZER_SSH manquant : utilisateur@hôte Docker de dev (ex. user@192.168.1.10), exporté ou dans le .env}"
 PILE=organizer-dev  # dans le dossier personnel de la VM, hors de /opt/stacks : Dockge ne la voit jamais
 
 nettoyer() {

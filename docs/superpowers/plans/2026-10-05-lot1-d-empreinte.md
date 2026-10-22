@@ -8,7 +8,7 @@
 
 **Tech Stack:** `@simplewebauthn/server` 14.0.3 et `@simplewebauthn/browser` 14.0.0 (versions du registre npm au 5 octobre 2026, épinglées par le verrou pnpm), NestJS 11, Prisma 6, ioredis 5 sur Valkey 8, SvelteKit 2 (Svelte 5), Vitest 3, Playwright 1.63 (Chromium).
 
-**Spec:** `docs/cahier-des-charges.md` (Authentification, Exposition et surface d'attaque, Le bouton privé, Trajectoire de livraison), `docs/decisions.md` (décisions 2, 13, 14, 16, 22 et la future 23), `CLAUDE.md` (« La contrainte qui prime sur tout », règles produit 3, 4, 7, conventions, dépôt public), `docs/exploitation.md` (Mettre à jour, Publier une version, Revenir à la version précédente), décision de djkix du 4 octobre 2026 citée en tâche 1.
+**Spec:** `docs/cahier-des-charges.md` (Authentification, Exposition et surface d'attaque, Le bouton privé, Trajectoire de livraison), `docs/decisions.md` (décisions 2, 13, 14, 16, 22 et la future 23), `CLAUDE.md` (« La contrainte qui prime sur tout », règles produit 3, 4, 7, conventions, dépôt public), `docs/exploitation.md` (Mettre à jour, Publier une version, Revenir à la version précédente), décision de l'administrateur du 4 octobre 2026 citée en tâche 1.
 
 **Suite :** lot 2 (rappels et fils), inchangé.
 
@@ -30,7 +30,7 @@
 - En-têtes : CSP stricte **inchangée** (`default-src 'none'`, `connect-src 'self'`…) ; `Permissions-Policy` étendue explicitement à `publickey-credentials-create=(self), publickey-credentials-get=(self)`, identique dans `apps/web/scripts/entetes.mjs` et `infra/caddy/Caddyfile`.
 - « Aucun contenu en clair dans les journaux » : les refus WebAuthn journalisent le message technique de la bibliothèque (origine, type, compteur), jamais un corps de requête.
 - Dépôt public : aucun secret, aucun prénom réel (comptes de test `l`, `f`, `test`), aucune capture réelle. Le domaine `organizer.example.org` est déjà public (décision 14).
-- Chaque commit met à jour `CHANGELOG.md` (rubrique sous « Non publié »), dans le même commit. Sujet en français, 3e personne (« Ajoute… », « Avance… »), puis une ligne vide, puis exactement `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` (les commandes l'écrivent par un second `-m`). Rien n'est poussé sans l'accord de djkix.
+- Chaque commit met à jour `CHANGELOG.md` (rubrique sous « Non publié »), dans le même commit. Sujet en français, 3e personne (« Ajoute… », « Avance… »), puis une ligne vide, puis exactement `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` (les commandes l'écrivent par un second `-m`). Rien n'est poussé sans l'accord de l'administrateur.
 - La CI reste verte : `pnpm lint`, `pnpm typecheck`, `pnpm test`, e2e Playwright, budget du bundle (150 Ko compressés), construction des images, Trivy (critiques corrigeables bloquantes), essai de fumée `infra/image/essai.sh`.
 
 ## Review Focus
@@ -43,7 +43,7 @@
 
 ## Arbitrages du plan
 
-Points que la décision 23 et le cahier ne tranchent pas, arrêtés ici (à rouvrir avec djkix si besoin) :
+Points que la décision 23 et le cahier ne tranchent pas, arrêtés ici (à rouvrir avec l'administrateur si besoin) :
 
 - **Défis dans Valkey, pas en base** : durée de vie courte (`PX 120000`), usage unique atomique par `GETDEL`, aucune table à purger. Un redémarrage de Valkey perd au pire un défi en cours (L réappuie). Clé `organizer:defi:<cérémonie>:<défi>`, distincte des clés `bull:` de BullMQ.
 - **Défi retrouvé par le `clientDataJSON`**, pas par un cookie : la bibliothèque passe le défi reçu à une fonction qui le lit et l'efface ; sans entrée valide, refus.
@@ -61,7 +61,7 @@ Points que la décision 23 et le cahier ne tranchent pas, arrêtés ici (à rouv
 - **Le libellé d'une clé** est « Ce téléphone » ou « Un autre appareil », suivi de « Ajoutée le mardi 6 octobre » ; aucune lecture du user-agent ni de l'AAGUID.
 - **Retour arrière depuis 1.1.0** : la migration n'ajoute qu'une table ; la procédure documentée (restauration de la copie) reste la voie sûre.
 
-## Questions ouvertes pour djkix
+## Questions ouvertes pour l'administrateur
 
 1. Faut-il redemander le mot de passe avant « Activer l'empreinte » ? Le plan dit non (session suffit). Oui ajouterait un champ et une route.
 2. Les clés d'accès du gestionnaire Google se synchronisent sur les autres Android du même compte Google de L : une connexion par empreinte y devient possible. Le plan l'accepte (Android seulement, empreinte exigée) ; à confirmer avec L.
@@ -125,7 +125,7 @@ Après la ligne de la décision 22, ajouter :
 
 1. Tableau « Décisions arrêtées », après la ligne 22 :
 ```markdown
-| 23 | Empreinte digitale | **Avancée du lot 3 à un lot 1-D**, livré juste après la mise en service, décidé par djkix le 4 octobre 2026. WebAuthn (clé d'accès, Credential Manager Android) remplace seulement la saisie du mot de passe à la reconnexion ; le mot de passe reste toujours possible, et aucune invite biométrique ne précède jamais un enregistrement |
+| 23 | Empreinte digitale | **Avancée du lot 3 à un lot 1-D**, livré juste après la mise en service, décidé par l'administrateur le 4 octobre 2026. WebAuthn (clé d'accès, Credential Manager Android) remplace seulement la saisie du mot de passe à la reconnexion ; le mot de passe reste toujours possible, et aucune invite biométrique ne précède jamais un enregistrement |
 ```
 2. Tableau « Authentification », remplacer la ligne Reconnexion par :
 ```markdown
@@ -2678,7 +2678,7 @@ git commit -m "Ajoute la configuration de production de l'empreinte" -m "Co-Auth
 
 ### Task 13: Publication de la version 1.1.0 et mise en service
 
-Cette tâche se fait **avec djkix**. L'étiquette, le push et toute action sur la VM n'ont lieu qu'avec son accord explicite, donné dans la conversation ; à défaut, s'arrêter après l'étape 2 et lui remettre la procédure.
+Cette tâche se fait **avec l'administrateur**. L'étiquette, le push et toute action sur la VM n'ont lieu qu'avec son accord explicite, donné dans la conversation ; à défaut, s'arrêter après l'étape 2 et lui remettre la procédure.
 
 **Files:**
 - Modify: `CHANGELOG.md` (publication)
@@ -2692,7 +2692,7 @@ Cette tâche se fait **avec djkix**. L'étiquette, le push et toute action sur l
 Run: `pnpm lint && pnpm typecheck && pnpm test && pnpm --filter @organizer/web e2e && pnpm --filter @organizer/web budget`
 Expected: tout passe. Puis CI verte sur la branche `lot1-d-empreinte` (jobs `tests` et `images`, Trivy et essai de fumée compris). Si Trivy signale une vulnérabilité critique corrigeable dans une dépendance de `@simplewebauthn/server` (`@peculiar/*`, `@levischuck/tiny-cbor`, `@hexagon/base64`), monter le correctif par `pnpm update` et relancer.
 
-Fusion sur `main` : par le skill `superpowers:finishing-a-development-branch`, au choix de djkix.
+Fusion sur `main` : par le skill `superpowers:finishing-a-development-branch`, au choix de l'administrateur.
 
 - [ ] **Step 2: Préparer la publication dans `CHANGELOG.md`**
 
@@ -2702,7 +2702,7 @@ git add CHANGELOG.md
 git commit -m "Publie la version 1.1.0" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 3: Étiqueter et pousser (djkix, ou avec son accord explicite)**
+- [ ] **Step 3: Étiqueter et pousser (l'administrateur, ou avec son accord explicite)**
 
 ```bash
 git tag -a v1.1.0 -m "Version 1.1.0 : reconnexion par empreinte digitale"
@@ -2734,7 +2734,7 @@ Vérifier :
 
 Retour arrière : la migration n'ajoute qu'une table ; suivre « Revenir à la version précédente », cas « Avec une migration » (restauration de la copie de l'étape ci-dessus), puis `ORGANIZER_VERSION=1.0.0`.
 
-- [ ] **Step 5: Vérification sur Android réel, avec djkix puis avec L**
+- [ ] **Step 5: Vérification sur Android réel, avec l'administrateur puis avec L**
 
 Sur chaque téléphone (Chrome 120 ou plus, `chrome://version` ; écran verrouillé par empreinte ; un fournisseur de clés d'accès actif dans les réglages Android, gestionnaire Google par défaut). La PWA installée est mise à jour : fermer toutes ses fenêtres, la rouvrir.
 
@@ -2745,7 +2745,7 @@ Sur chaque téléphone (Chrome 120 ou plus, `chrome://version` ; écran verrouil
 5. En mode avion, déconnecté : le raccourci privé enregistre toujours ; la capture part au retour du réseau et après la connexion.
 6. Fermer la feuille d'empreinte sans poser le doigt : « Empreinte annulée. Ton mot de passe marche toujours. » ; le mot de passe fonctionne.
 7. Réglages : « Retirer » ; « Empreinte retirée. » ; à la déconnexion, seul le mot de passe est proposé. Supprimer aussi la clé dans le gestionnaire de mots de passe Android (organizer.example.org).
-8. djkix seulement, sur son compte : réactiver, puis `cli retirer-empreintes <son compte>` ; la session du téléphone est fermée, l'empreinte est refusée calmement, le mot de passe marche.
+8. L'administrateur seulement, sur son compte : réactiver, puis `cli retirer-empreintes <son compte>` ; la session du téléphone est fermée, l'empreinte est refusée calmement, le mot de passe marche.
 9. `vm docker compose logs --since 30m api` : aucune ligne de contenu, seulement d'éventuels « Empreinte refusée (…) » techniques.
 
 Noter le résultat (oui ou non par point, modèle de téléphone, version de Chrome, sans prénom) dans le dossier de revue du lot 1-D s'il est rédigé, sinon dans la description de la fusion. Un point en échec bloque l'annonce à L, pas le mot de passe, qui reste en service.
@@ -2758,4 +2758,4 @@ Noter le résultat (oui ou non par point, modèle de téléphone, version de Chr
 - Ressaisie du mot de passe avant l'activation (question ouverte 1).
 - Création de compte, récupération de compte ou changement de mot de passe par l'empreinte.
 - Lecture de l'AAGUID pour nommer le fournisseur de la clé ; iOS et ordinateur (hors cible).
-- Dossier de revue du lot 1-D (`docs/revue/`), à rédiger si djkix le demande, sur le modèle des lots précédents.
+- Dossier de revue du lot 1-D (`docs/revue/`), à rédiger si l'administrateur le demande, sur le modèle des lots précédents.

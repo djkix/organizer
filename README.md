@@ -32,7 +32,7 @@ Le déploiement est prêt (plan 1-C) : images, stack de production, CI. La mise 
 Les règles produit non négociables, résumées (texte complet dans [`CLAUDE.md`](CLAUDE.md)).
 
 - **Deux flux séparés** : les actions (cochables, avec échéance) et les pensées (relues, jamais cochées) ne se mélangent dans aucune vue.
-- **Aucune sollicitation** : le système ne relance jamais de lui-même. Une alarme ne sonne que si L l'a activée sur cet item précis.
+- **Aucune sollicitation** : le système ne relance jamais de lui-même. Une alarme ne sonne que si l'utilisatrice l'a activée sur cet item précis.
 - **Zéro culpabilisation** : ni compteur de retard, ni pourcentage, ni série, ni rouge.
 - **Rien ne se perd** : une capture non classifiable va en « à revoir », sans relance. La transcription est conservée sans limite.
 - **Mode privé décidé par le point d'entrée**, jamais par le contenu : une capture privée n'atteint jamais Gemini.
@@ -93,13 +93,13 @@ docs/             cahier des charges, décisions, guide d'annotation, plans
 - ffmpeg avec libopus, nécessaire aux tests et à l'API (réencodage des captures privées) :
   `brew install ffmpeg`, puis `ffmpeg -hide_banner -encoders | grep libopus` doit répondre.
 - Le dossier `prompts/` : l'API le lit au démarrage (types d'échéance), comme le worker.
-- Accès SSH à l'hôte Docker du homelab, pour la base de dev.
+- Accès SSH à un hôte Docker, pour la base de dev (`ORGANIZER_SSH=utilisateur@adresse` dans le `.env`).
 - Le jeton du bot `@mon_organizer_bot` (décision R10 : pas de bot de dev distinct).
 - Une clé d'API Gemini sur un projet Google Cloud avec facturation activée.
 
 > **Attention.** Ne jamais lancer l'API en mode polling avec le jeton de `@mon_organizer_bot`
 > tant que le banc d'essai (`infra/terrain/`) tourne : les deux processus se disputeraient
-> les messages de L, et des captures du corpus du lot 0 seraient perdues pour le banc.
+> les messages de l'utilisatrice, et des captures du corpus du lot 0 seraient perdues pour le banc.
 > L'essai de bout en bout se fera au déploiement (plan 1-C), en remplaçant le banc d'essai.
 
 ## Démarrage en développement
@@ -287,7 +287,7 @@ Images construites et analysées par la CI à chaque poussée ; publiées sur GH
 Le dépôt GitHub est public et l'historique Git garde tout. N'entrent jamais dans le dépôt :
 
 - les secrets : `.env`, clé d'API Gemini, jeton du bot, clés VAPID, identifiants OAuth Google ;
-- le corpus de L : captures réelles, transcriptions, exemples de corrections (les tests utilisent `fixtures/`) ;
+- le corpus de l'utilisatrice : captures réelles, transcriptions, exemples de corrections (les tests utilisent `fixtures/`) ;
 - les données nominatives : prénoms réels dans les prompts, les fixtures, les captures d'écran.
 
 Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.

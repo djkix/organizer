@@ -17,7 +17,7 @@ mkdir -p corpus/export
 touch corpus/annotations.jsonl
 ```
 
-Copier `corpus/` sur le NAS après chaque séance d'annotation.
+Copier `corpus/` sur un stockage sauvegardé, hors du dépôt, après chaque séance d'annotation.
 
 ## Une ligne par item
 
@@ -55,14 +55,14 @@ incompréhensibles.
 1. **Aucune invention.** Un attribut absent de ce qui a été dit reste `null`.
    Une importance ou une échéance ne se devine pas.
 2. **L'alarme ne se déduit jamais de l'importance.** Elle vaut `true` seulement
-   si L la demande en parlant. Relever chaque formulation dans `alarme_expr` :
+   si l'utilisatrice la demande en parlant. Relever chaque formulation dans `alarme_expr` :
    c'est la liste attendue pour le lot 2.
 3. **Thèmes stables.** Avant d'en créer un, relire la liste existante. Un même
    sujet ne doit pas avoir trois libellés.
 4. **`ambigu` plutôt qu'un classement forcé.** C'est ce que le système fera :
    une question unique, ou `à revoir`.
 5. **Transcription** à la main, avec whisper.cpp en local, ou par Gemini en
-   palier payé : L a donné son accord le 2 octobre 2026.
+   palier payé : l'utilisatrice a donné son accord le 2 octobre 2026.
 
 ## Exemple (énoncés fabriqués)
 
