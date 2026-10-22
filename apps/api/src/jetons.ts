@@ -14,3 +14,4 @@ export const REENCODEUR = Symbol('REENCODEUR');
 export const EMPREINTES = Symbol('EMPREINTES');
 export const AGENDA = Symbol('AGENDA');
 export const QUEUE_AGENDA = Symbol('QUEUE_AGENDA');
+export const VERROU_CONNEXION = Symbol('VERROU_CONNEXION');

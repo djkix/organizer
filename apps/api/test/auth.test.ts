@@ -7,7 +7,8 @@ import { AuthController } from '../src/auth/auth.controller.js';
 import { AuthService } from '../src/auth/auth.service.js';
 import { lireCookie, NOM_COOKIE } from '../src/auth/cookies.js';
 import { SessionGuard } from '../src/auth/session.guard.js';
-import { AUTH } from '../src/jetons.js';
+import { AUTH, VERROU_CONNEXION } from '../src/jetons.js';
+import { FENETRE_VERROU_MS, MAX_ECHECS_COMPTE, VerrouConnexionMemoire } from '../src/auth/verrou.js';
 import { demarrerAppTest } from './aides-http.js';
 
 const prisma = creerPrisma();
@@ -162,6 +163,40 @@ describe('/api/session', () => {
       expect(statuts.slice(0, 10).every((s) => s === 401)).toBe(true);
       expect(statuts[10]).toBe(429);
     } finally {
+      await seule.fermer();
+    }
+  });
+});
+
+describe('verrou par compte', () => {
+  it('dix échecs sur un compte, d\'adresses toutes différentes, le verrouillent quinze minutes, lui seul', async () => {
+    let t = 0;
+    class ModuleVerrou {}
+    Module({
+      controllers: [AuthController],
+      providers: [{ provide: AUTH, useValue: auth }, { provide: VERROU_CONNEXION, useValue: new VerrouConnexionMemoire(() => t) }, SessionGuard],
+    })(ModuleVerrou);
+    await prisma.utilisateur.create({ data: { nom: 'a' } });
+    await auth.definirMotDePasse('a', 'un mot de passe assez long');
+    // Proxy de confiance : chaque essai vient d'une autre adresse, le limiteur par IP ne joue pas.
+    process.env.TRUSTED_PROXY = '127.0.0.1';
+    const seule = await demarrerAppTest(ModuleVerrou);
+    try {
+      let ip = 0;
+      const essai = (nom: string, motDePasse: string) => fetch(`${seule.url}/api/session`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': `203.0.113.${++ip}` },
+        body: JSON.stringify({ nom, motDePasse }),
+      });
+      for (let i = 0; i < MAX_ECHECS_COMPTE; i++) expect((await essai('l', 'mauvais mot de passe !')).status).toBe(401);
+      const bloque = await essai('l', 'un mot de passe assez long');
+      expect(bloque.status).toBe(429);
+      expect((await bloque.json()).message).toBe("Trop d'essais. Réessaie dans un quart d'heure.");
+      expect(bloque.headers.get('set-cookie')).toBeNull();
+      expect((await essai('a', 'un mot de passe assez long')).status).toBe(204);
+      t = FENETRE_VERROU_MS;
+      expect((await essai('l', 'un mot de passe assez long')).status).toBe(204);
+    } finally {
+      delete process.env.TRUSTED_PROXY;
       await seule.fermer();
     }
   });

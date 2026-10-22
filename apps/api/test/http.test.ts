@@ -21,7 +21,8 @@ async function essais(xff: (i: number) => string): Promise<number[]> {
     for (let i = 0; i < 11; i++) {
       const r = await fetch(`${app.url}/api/session`, {
         method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': xff(i) },
-        body: JSON.stringify({ nom: 'l', motDePasse: 'x' }),
+        // Un compte par essai : le verrou par compte (dix échecs) ne se mêle pas au limiteur par IP.
+        body: JSON.stringify({ nom: `l${i}`, motDePasse: 'x' }),
       });
       statuts.push(r.status);
     }

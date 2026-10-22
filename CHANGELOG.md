@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- Verrou par compte à la connexion : 10 mots de passe faux en 15 minutes, toutes adresses confondues, verrouillent le compte jusqu'à la fin de la fenêtre (« Trop d'essais. Réessaie dans un quart d'heure. »). Compteur dans Valkey, remis à zéro par une connexion réussie ; Valkey muet, seul le limiteur par adresse joue. L'empreinte n'est pas verrouillée (2026-10-22).
 - Bandeau « Nouvelle version disponible » et bouton « Recharger » : la mise à jour est proposée, jamais imposée (décision 27). Deux signaux, une coquille téléchargée qui attend d'être activée et un écart avec la version annoncée par l'API, revérifiés toutes les 30 minutes et à chaque retour au premier plan. « Recharger » active la version en attente puis recharge la page dans tous les cas. Jamais sur l'écran de connexion, jamais pendant un enregistrement (2026-10-21).
 
 ### Modifié

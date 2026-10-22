@@ -709,6 +709,7 @@ Le système contient des pensées intimes de L sur elle-même et sur des tiers n
 | Mécanisme | Application |
 | --- | --- |
 | Comptes locaux | Identifiant et mot de passe, haché en Argon2id |
+| Force brute | 10 essais par minute et par adresse ; verrou de 15 minutes par compte après 10 échecs, toutes adresses confondues (compteur dans Valkey). L'empreinte n'est pas verrouillée |
 | Session PWA | Jeton en cookie `__Host-` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sans `Domain`), durée 90 jours |
 | Requêtes qui modifient | Refusées si `Origin` n'est pas celle de la PWA ou si `Sec-Fetch-Site` n'est pas `same-origin` (défense CSRF) |
 | Reconnexion | Empreinte digitale via WebAuthn et Credential Manager Android, au lot 1-D (décision 23). Le mot de passe reste toujours possible ; aucune invite ne précède un enregistrement |

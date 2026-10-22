@@ -1,12 +1,13 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpException, Inject, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpException, Inject, Optional, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { lireVar } from '@organizer/shared';
 import { z } from 'zod';
-import { AUTH } from '../jetons.js';
+import { AUTH, VERROU_CONNEXION } from '../jetons.js';
 import type { AuthService } from './auth.service.js';
 import { ancienCookieEfface, cookieEfface, cookieSession, lireCookie, NOM_COOKIE } from './cookies.js';
 import { LimiteurDebit } from './limiteur.js';
 import { SessionGuard, type RequeteAuthentifiee } from './session.guard.js';
+import { VerrouConnexionMemoire, type VerrouConnexion } from './verrou.js';
 
 export const schemaConnexion = z.object({ nom: z.string().min(1).max(100), motDePasse: z.string().min(1).max(500) });
 
@@ -14,15 +15,27 @@ export const schemaConnexion = z.object({ nom: z.string().min(1).max(100), motDe
 export class AuthController {
   private readonly limiteur = new LimiteurDebit(10, 60_000);
 
-  constructor(@Inject(AUTH) private readonly auth: AuthService) {}
+  private readonly verrou: VerrouConnexion;
+
+  constructor(@Inject(AUTH) private readonly auth: AuthService, @Optional() @Inject(VERROU_CONNEXION) verrou?: VerrouConnexion) {
+    this.verrou = verrou ?? new VerrouConnexionMemoire();
+  }
 
   @Post()
   @HttpCode(204)
   async ouvrir(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() corps: unknown): Promise<void> {
     if (!this.limiteur.autoriser(req.ip ?? 'inconnue')) throw new HttpException({ message: "Trop d'essais. Réessaie dans une minute." }, 429);
     const p = schemaConnexion.safeParse(corps);
-    const s = p.success ? await this.auth.ouvrirSession(p.data.nom, p.data.motDePasse) : null;
-    if (!s) throw new UnauthorizedException('Identifiants invalides.');
+    if (!p.success) throw new UnauthorizedException('Identifiants invalides.');
+    const { nom, motDePasse } = p.data;
+    // Compte verrouillé : refus sans vérifier le mot de passe, même juste.
+    if (await this.verrou.bloque(nom)) throw new HttpException({ message: "Trop d'essais. Réessaie dans un quart d'heure." }, 429);
+    const s = await this.auth.ouvrirSession(nom, motDePasse);
+    if (!s) {
+      await this.verrou.echec(nom);
+      throw new UnauthorizedException('Identifiants invalides.');
+    }
+    await this.verrou.reussite(nom);
     res.setHeader('Set-Cookie', [cookieSession(s.jeton, s.expireLe, this.auth.maintenant()), ancienCookieEfface()]);
   }
 
