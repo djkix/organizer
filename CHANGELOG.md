@@ -12,6 +12,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - `GET /api/session/moi` donne `versionServeur` aux deux comptes, pas seulement à l'administrateur : la PWA la compare à la sienne. Réglages ne l'affiche toujours qu'à l'administrateur (2026-10-21).
 
 ### Corrigé
+- Liaison Telegram : les échecs de `/start <code>` se comptent par chat (5 par 10 min), avec un plafond global relevé à 100. Un intrus ne bloque plus la liaison de tout le monde en dix essais (2026-10-22).
 - L'image `api` ne portait pas `ORGANIZER_VERSION` : l'API annonçait « dev » en production, et Réglages affichait « serveur dev » à côté du vrai numéro de la coquille (2026-10-21).
 
 ## [1.10.0] - 2026-10-15

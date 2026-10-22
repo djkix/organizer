@@ -1,7 +1,7 @@
 import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { LiaisonService } from '../src/telegram/liaison.service.js';
+import { LiaisonService, MAX_ECHECS_CHAT, MAX_ECHECS_TOTAL } from '../src/telegram/liaison.service.js';
 
 const prisma = creerPrisma();
 afterAll(() => prisma.$disconnect());
@@ -40,15 +40,28 @@ describe('LiaisonService', () => {
     expect(await service().utilisateurDuChat(999)).toBeNull();
   });
 
-  it('dix échecs bloquent toute liaison jusqu\'à la fin de la fenêtre', async () => {
+  it('cinq échecs bloquent ce chat seul, jusqu\'à la fin de la fenêtre', async () => {
     horloge = new Date('2026-10-06T08:00:00Z');
-    const code = await service().creerCode('a');
     const s = service();
-    for (let i = 0; i < 10; i++) expect(await s.lier('000000', 100 + i)).toBe('invalide');
+    const code = await s.creerCode('a');
+    for (let i = 0; i < MAX_ECHECS_CHAT; i++) expect(await s.lier('000000', 666)).toBe('invalide');
+    const codeB = await s.creerCode('b');
+    expect(await s.lier(codeB, 666)).toBe('invalide');
+    // Un intrus n'empêche pas l'utilisatrice de lier son propre chat.
+    expect(await s.lier(code, 7)).toBe('lie');
+    horloge = new Date('2026-10-06T08:10:01Z');
+    expect(await s.lier(await s.creerCode('b'), 666)).toBe('lie');
+  });
+
+  it('au-delà du plafond global, toute liaison est refusée jusqu\'à la fin de la fenêtre', async () => {
+    horloge = new Date('2026-10-06T08:00:00Z');
+    const s = service();
+    const code = await s.creerCode('a');
+    // Force brute répartie : chaque chat reste sous son propre plafond.
+    for (let i = 0; i < MAX_ECHECS_TOTAL; i++) expect(await s.lier('000000', 1000 + Math.floor(i / (MAX_ECHECS_CHAT - 1)))).toBe('invalide');
     expect(await s.lier(code, 7)).toBe('invalide');
     horloge = new Date('2026-10-06T08:10:01Z');
-    const code2 = await s.creerCode('a');
-    expect(await s.lier(code2, 7)).toBe('lie');
+    expect(await s.lier(await s.creerCode('a'), 7)).toBe('lie');
   });
 
   it('un compte déjà lié ne peut pas être pris par un autre chat', async () => {
