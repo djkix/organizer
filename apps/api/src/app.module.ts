@@ -16,12 +16,13 @@ import { EmpreintesController } from './auth/empreintes/empreintes.controller.js
 import { MagasinDefisValkey } from './auth/empreintes/defis.js';
 import { EmpreintesService } from './auth/empreintes/empreintes.service.js';
 import { SessionGuard } from './auth/session.guard.js';
+import { VerrouConnexionValkey } from './auth/verrou.js';
 import { lireConfigApi, type ConfigApi } from './config.js';
 import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
 import { TelechargeurTelegram } from './ingestion/telechargeur.js';
-import { AGENDA, AUTH, BOT, CAPTURES, EMPREINTES, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, HISTORIQUE, PENSEES, QUEUE_AGENDA, REDIS, REENCODEUR, VUES } from './jetons.js';
+import { AGENDA, AUTH, BOT, CAPTURES, EMPREINTES, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, HISTORIQUE, PENSEES, QUEUE_AGENDA, REDIS, REENCODEUR, VERROU_CONNEXION, VUES } from './jetons.js';
 import { ItemsController } from './items/items.controller.js';
 import { ItemsService } from './items/items.service.js';
 import { CapturesController } from './captures/captures.controller.js';
@@ -149,6 +150,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
         creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion, alarmes: new Alarmes(prisma, items) }, { client: optionsClientTelegram(c.telegramApiRoot) }),
     },
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
+    { provide: VERROU_CONNEXION, inject: [REDIS], useFactory: (redis: Redis) => new VerrouConnexionValkey(redis) },
     {
       provide: EMPREINTES,
       inject: [CONFIG, PRISMA, REDIS],

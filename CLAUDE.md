@@ -1,18 +1,18 @@
 # Organizer
 
 Outil de capture vocale qui trie automatiquement les notes et les choses à faire.
-Utilisatrice principale : L. Administrateur : djkix. Auto-hébergé, Android uniquement, interface en français.
+Une utilisatrice principale et un administrateur. Auto-hébergé, Android uniquement, interface en français.
 
 ## La contrainte qui prime sur tout
 
-L produit des pensées plus vite qu'elle ne peut les écrire. Toute fonctionnalité qui ajoute
+L'utilisatrice principale produit des pensées plus vite qu'elle ne peut les écrire. Toute fonctionnalité qui ajoute
 une étape avant l'enregistrement est un échec, quelle que soit sa valeur par ailleurs.
 Le classement est **différé** et fait par la machine, jamais par l'utilisatrice.
 
 ## Règles produit non négociables
 
 1. **Deux flux séparés.** Les actions (cochables, avec échéance) et les pensées (relues, jamais cochées) ne se mélangent dans aucune vue.
-2. **Le système ne sollicite jamais de lui-même.** Pas de point du matin, pas de résumé hebdo, pas de relance sur une échéance floue. Une alarme ne sonne que si L l'a activée sur cet item précis.
+2. **Le système ne sollicite jamais de lui-même.** Pas de point du matin, pas de résumé hebdo, pas de relance sur une échéance floue. Une alarme ne sonne que si l'utilisatrice l'a activée sur cet item précis.
 3. **Zéro culpabilisation.** Aucun compteur de retard, aucun pourcentage, aucune série, aucun graphique, aucune mention « en retard », aucune couleur d'alerte.
 4. **Aucun rouge dans l'interface.** Ni retard, ni urgence, ni suppression.
 5. **Rien ne se perd.** Une capture non classifiable va en « à revoir » sans déclencher de relance. La transcription est conservée sans limite. L'audio ordinaire tourne quand il dépasse 40 Go, pour tenir la stack sous 50 Go ; l'audio privé, seule trace de la capture, n'est jamais purgé.
@@ -81,7 +81,7 @@ docs/             cahier des charges, décisions
 Le dépôt GitHub est **public** et l'historique Git garde tout. Une seule fuite est définitive.
 
 - Secrets : `.env`, clé d'API Gemini, jeton du bot, clés VAPID, identifiants OAuth Google.
-- Corpus de L : captures réelles, transcriptions, exemples de corrections. Les tests utilisent `fixtures/`, qui ne contient que des énoncés fabriqués.
+- Corpus de l'utilisatrice : captures réelles, transcriptions, exemples de corrections. Les tests utilisent `fixtures/`, qui ne contient que des énoncés fabriqués.
 - Données nominatives : prénoms réels dans les prompts, les fixtures, les captures d'écran.
 
 Avant tout commit, vérifier qu'aucun de ces éléments n'est indexé.
@@ -106,11 +106,11 @@ et sont branchés sur la typologie validée. Mise en service directe, sans atten
 sortie du lot 0 (décision 22, 4 octobre 2026) : l'application démarre avec le prompt actuel
 (`tri/v1`), affiné à l'usage ; le corpus du lot 0 reste le jeu de test.
 
-Jalon du lot 0 franchi le 2 octobre 2026 : L confirme le besoin et accepte que ses
+Jalon du lot 0 franchi le 2 octobre 2026 : l'utilisatrice confirme le besoin et accepte que ses
 vocaux ordinaires passent par Gemini en palier payé. Le prompt peut donc être testé
 sur le corpus réel une fois l'annotation faite (format : @docs/guide-annotation.md).
 
-Banc d'essai terrain (décidé par djkix le 2 octobre 2026) : `infra/terrain/`, un bot Telegram seul qui envoie chaque
+Banc d'essai terrain (décidé par l'administrateur le 2 octobre 2026) : `infra/terrain/`, un bot Telegram seul qui envoie chaque
 vocal à Gemini avec le prompt de tri et garde audio et résultats sur le serveur. Il sert
 à éprouver le prompt en conditions réelles et à constituer le corpus du lot 0. Ce n'est
 pas l'application : il sera retiré quand le lot 1 sera livré. `compose.yaml` est généré
@@ -122,7 +122,7 @@ Lot 1-D (décision 23, 4 octobre 2026) : reconnexion par empreinte digitale (Web
 livrée juste après la mise en service. Le mot de passe reste toujours possible ; aucune invite biométrique
 ne précède un enregistrement. Plan : `docs/superpowers/plans/2026-10-05-lot1-d-empreinte.md`.
 
-Prompt `tri/v2` (15 octobre 2026), tiré des premières captures de L : intitulés courts au lieu
+Prompt `tri/v2` (15 octobre 2026), tiré des premières captures de l'utilisatrice : intitulés courts au lieu
 d'extraits, consignes (« mets-moi une alarme ») appliquées à l'élément voisin, bruit et annulations
 écartés, thèmes de base. Le worker range en « à revoir » une nature sous 0,5 de confiance et une
 action datée de plus de 24 h avant l'envoi. Enregistrement PWA limité à 1 min 30 (décision 26).

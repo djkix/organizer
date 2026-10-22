@@ -7,7 +7,8 @@ import { AuthController } from '../src/auth/auth.controller.js';
 import { AuthService } from '../src/auth/auth.service.js';
 import { lireCookie, NOM_COOKIE } from '../src/auth/cookies.js';
 import { SessionGuard } from '../src/auth/session.guard.js';
-import { AUTH } from '../src/jetons.js';
+import { AUTH, VERROU_CONNEXION } from '../src/jetons.js';
+import { FENETRE_VERROU_MS, MAX_ECHECS_COMPTE, VerrouConnexionMemoire } from '../src/auth/verrou.js';
 import { demarrerAppTest } from './aides-http.js';
 
 const prisma = creerPrisma();
@@ -87,6 +88,21 @@ describe('/api/session', () => {
     expect(cookie).toMatch(/Max-Age=7776000/);
   });
 
+  it('nomme le cookie avec le préfixe __Host- et efface l\'ancien nom', async () => {
+    const r = await connecter('un mot de passe assez long');
+    const poses = r.headers.getSetCookie();
+    expect(poses[0]).toMatch(/^__Host-organizer_session=[^;]+; Path=\/; HttpOnly; Secure; SameSite=Lax; Max-Age=7776000$/);
+    expect(poses[0]).not.toMatch(/Domain=/i);
+    expect(poses[1]).toBe('organizer_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+  });
+
+  it('l\'ancien cookie, sans préfixe, n\'ouvre plus de session', async () => {
+    const r = await connecter('un mot de passe assez long');
+    const jeton = lireCookie(r.headers.get('set-cookie') ?? '', NOM_COOKIE);
+    const moi = await fetch(`${app.url}/api/session/moi`, { headers: { cookie: `organizer_session=${jeton}` } });
+    expect(moi.status).toBe(401);
+  });
+
   it('même réponse pour un mauvais mot de passe et un compte inconnu', async () => {
     const a = await connecter('mauvais mot de passe !');
     const b = await connecter('un mot de passe assez long', 'inconnu');
@@ -125,7 +141,10 @@ describe('/api/session', () => {
     const jeton = lireCookie(r.headers.get('set-cookie') ?? '', NOM_COOKIE);
     const d = await fetch(`${app.url}/api/session`, { method: 'DELETE', headers: { cookie: `${NOM_COOKIE}=${jeton}` } });
     expect(d.status).toBe(204);
-    expect(d.headers.get('set-cookie')).toMatch(/Max-Age=0/);
+    expect(d.headers.getSetCookie()).toEqual([
+      '__Host-organizer_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
+      'organizer_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
+    ]);
     expect(await prisma.session.count()).toBe(0);
   });
 
@@ -144,6 +163,40 @@ describe('/api/session', () => {
       expect(statuts.slice(0, 10).every((s) => s === 401)).toBe(true);
       expect(statuts[10]).toBe(429);
     } finally {
+      await seule.fermer();
+    }
+  });
+});
+
+describe('verrou par compte', () => {
+  it('dix échecs sur un compte, d\'adresses toutes différentes, le verrouillent quinze minutes, lui seul', async () => {
+    let t = 0;
+    class ModuleVerrou {}
+    Module({
+      controllers: [AuthController],
+      providers: [{ provide: AUTH, useValue: auth }, { provide: VERROU_CONNEXION, useValue: new VerrouConnexionMemoire(() => t) }, SessionGuard],
+    })(ModuleVerrou);
+    await prisma.utilisateur.create({ data: { nom: 'a' } });
+    await auth.definirMotDePasse('a', 'un mot de passe assez long');
+    // Proxy de confiance : chaque essai vient d'une autre adresse, le limiteur par IP ne joue pas.
+    process.env.TRUSTED_PROXY = '127.0.0.1';
+    const seule = await demarrerAppTest(ModuleVerrou);
+    try {
+      let ip = 0;
+      const essai = (nom: string, motDePasse: string) => fetch(`${seule.url}/api/session`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': `203.0.113.${++ip}` },
+        body: JSON.stringify({ nom, motDePasse }),
+      });
+      for (let i = 0; i < MAX_ECHECS_COMPTE; i++) expect((await essai('l', 'mauvais mot de passe !')).status).toBe(401);
+      const bloque = await essai('l', 'un mot de passe assez long');
+      expect(bloque.status).toBe(429);
+      expect((await bloque.json()).message).toBe("Trop d'essais. Réessaie dans un quart d'heure.");
+      expect(bloque.headers.get('set-cookie')).toBeNull();
+      expect((await essai('a', 'un mot de passe assez long')).status).toBe(204);
+      t = FENETRE_VERROU_MS;
+      expect((await essai('l', 'un mot de passe assez long')).status).toBe(204);
+    } finally {
+      delete process.env.TRUSTED_PROXY;
       await seule.fermer();
     }
   });

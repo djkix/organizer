@@ -8,3 +8,8 @@ allowBuilds:
   "@prisma/engines": true
   msgpackr-extract: true
   sharp: true
+# deepmerge-ts < 8 : épuisement de pile sur un graphe récursif (GHSA). @prisma/config 6.19.3, dernière 6.x,
+# le fige en 7.1.5 ; Prisma 7 corrige mais casse l'API (adaptateurs obligatoires). @prisma/config n'appelle
+# que deepmerge(), inchangé en 8. À retirer au passage à Prisma 7.
+overrides:
+  deepmerge-ts: ^8.0.2

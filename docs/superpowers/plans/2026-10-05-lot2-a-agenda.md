@@ -15,7 +15,7 @@
 ## Global Constraints
 
 - Décisions 5 et 6 : « Aucune [sollicitation] par défaut, alarme comprise » ; « Item par item, à la voix ou par bouton ». Un événement est créé pour chaque rendez-vous daté, « mais **sans rappel**, sauf si L a demandé l'alarme sur cet item précis ». L'alarme n'est **jamais** déduite de l'importance.
-- Décision 10 : « Compte Google de L, OAuth porté par elle ». Le client OAuth (type « Application Web ») est créé par djkix dans son projet Google Cloud ; c'est L qui consent, depuis son téléphone.
+- Décision 10 : « Compte Google de L, OAuth porté par elle ». Le client OAuth (type « Application Web ») est créé par l'administrateur dans son projet Google Cloud ; c'est L qui consent, depuis son téléphone.
 - Portée unique : `https://www.googleapis.com/auth/calendar.app.created`. Aucune autre portée, ni `openid`, ni `email`.
 - Pont : « Un agenda dédié, créé par l'application » ; « Uniquement les échéances `datee` du flux Actions, titre court, sans description » ; « Pensées : jamais écrites dans l'agenda, sous aucune forme » ; « Rappels : aucun par défaut … 10 minutes avant si L a activé l'alarme sur l'item » ; « Cocher une action dans l'application supprime l'événement correspondant. Supprimer l'événement dans Google Agenda ne coche rien ». En JSON : `reminders: { useDefault: false, overrides: [] }`, ou `overrides: [{ method: 'popup', minutes: 10 }]` avec l'alarme.
 - Réseaux : le scheduler est sur `core` et `sortie` seulement ; Squid lui ouvre `www.googleapis.com` et `oauth2.googleapis.com`, en `CONNECT` 443, depuis son adresse fixe `10.201.2.12`, rien d'autre. L'API et le worker n'obtiennent **aucun** domaine Google nouveau. « L'API est le seul point d'envoi de messages vers L. »
@@ -29,7 +29,7 @@
 - Aucune dépendance npm nouvelle (ni `googleapis`, ni `google-auth-library`) : `fetch`, `zod`, `node:crypto` suffisent.
 - Tests : aucun appel au vrai Google ; un faux serveur Google (`apps/scheduler/test/faux-google.ts`) sert l'OAuth et l'agenda. L'essai de fumée vérifie la sortie réelle du scheduler par Squid (connexion TCP vers Google, sans requête authentifiée).
 - Dépôt public : aucun secret, aucun prénom réel (comptes de test `l`, `f`, `test`), aucune capture réelle ; l'identifiant du client OAuth ne va que dans le `.env` de la VM.
-- Chaque commit met à jour `CHANGELOG.md` (rubrique sous « Non publié »), dans le même commit. Sujet en français, 3e personne (« Ajoute… », « Branche… »), puis exactement `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` en second `-m`. Rien n'est poussé sans l'accord de djkix.
+- Chaque commit met à jour `CHANGELOG.md` (rubrique sous « Non publié »), dans le même commit. Sujet en français, 3e personne (« Ajoute… », « Branche… »), puis exactement `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` en second `-m`. Rien n'est poussé sans l'accord de l'administrateur.
 - La CI reste verte : `pnpm lint`, `pnpm typecheck`, `pnpm test`, e2e Playwright, budget du bundle, construction des **cinq** images, Trivy, essai de fumée.
 
 ## Review Focus
@@ -42,11 +42,11 @@
 
 ## Arbitrages du plan
 
-Points que les décisions et le cahier ne tranchent pas, arrêtés ici (à rouvrir avec djkix si besoin) :
+Points que les décisions et le cahier ne tranchent pas, arrêtés ici (à rouvrir avec l'administrateur si besoin) :
 
 - **Un service `scheduler` séparé**, pas une boucle dans le worker : le cahier lui donne sa propre liste de sortie, et il porte des secrets (client OAuth, clé de chiffrement) que le worker, qui porte la clé Gemini, n'a pas à voir. Il ne fait au lot 2-A que l'agenda ; la rotation de l'audio le rejoindra au lot 2-B.
 - **L'API ne joint jamais Google.** Le retour OAuth arrive bien sur l'API (`GET /api/agenda/retour`), qui vérifie l'état et la session, puis confie le code et le vérificateur PKCE au scheduler par un job `echanger` (supprimé de Valkey dès la fin, réussie ou non). La liste de sortie de l'API reste celle du cahier. La PWA interroge `GET /api/agenda` jusqu'à l'issue (au plus 30 s).
-- **Un compte, un agenda** : chaque compte (L, et djkix s'il veut essayer d'abord sur le sien) peut connecter son propre Google Agenda ; une action va dans l'agenda du compte qui a fait la capture. Aucune action d'un compte n'atterrit dans l'agenda de l'autre.
+- **Un compte, un agenda** : chaque compte (L, et l'administrateur s'il veut essayer d'abord sur le sien) peut connecter son propre Google Agenda ; une action va dans l'agenda du compte qui a fait la capture. Aucune action d'un compte n'atterrit dans l'agenda de l'autre.
 - **Identifiant d'événement déterministe** : `<UUID de l'item sans tirets>` puis, après une suppression, `g<n>` (caractères `0-9a-v`, admis par Google). Une insertion rejouée reçoit 409 et devient un remplacement : aucun doublon possible. L'identifiant, l'agenda, l'empreinte du contenu et la génération sont stockés avec l'action (colonnes `evenement_*`).
 - **Réconciliation plutôt que commandes** : un job ne dit jamais « crée » ou « supprime » ; il dit « synchronise l'item X ». Le scheduler relit l'action, calcule l'événement voulu, compare son empreinte et ne fait que l'écart (`rien`, `creer`, `remplacer`, `supprimer`). Les doublons de jobs sont inoffensifs ; concurrence 1 ; pas de `jobId`.
 - **Événement supprimé par L dans Google** : rien ne change dans l'application, et l'événement n'est pas recréé tant que l'action ne change pas. Si L modifie ensuite la date, l'heure, le texte ou l'alarme, un nouvel événement est créé (génération suivante) : elle a manifestement encore ce rendez-vous.
@@ -64,7 +64,7 @@ Points que les décisions et le cahier ne tranchent pas, arrêtés ici (à rouvr
 - **Changer `agenda_cle`** rend les jetons stockés illisibles : chaque compte reconnecte Google Agenda (procédure dans `docs/exploitation.md`).
 - **Retour arrière de 1.2.0 à 1.1.0 sans restauration** : la migration n'ajoute qu'un type, une table et des colonnes ; la 1.1.0 les ignore. Les événements restent dans Google, figés.
 
-## Questions ouvertes pour djkix
+## Questions ouvertes pour l'administrateur
 
 1. À la déconnexion, garder l'agenda Organizer dans le Google Agenda de L (plan) ou le supprimer avec ses événements ?
 2. Durée des événements : 30 minutes (plan) ou une heure (défaut de Google) ?
@@ -132,7 +132,7 @@ docs/exploitation.md, CHANGELOG.md
 - [ ] **Step 1: Vérifier la cohérence de départ**
 
 Run: `grep -n "Pont Google Agenda\|calendar.app.created\|Lot 2 —\|scheduler" docs/cahier-des-charges.md CLAUDE.md docs/decisions.md`
-Expected: le pont (section « Pont Google Agenda »), la ligne `scheduler` du tableau des domaines, « Le `scheduler` rejoint la stack au lot 2 », la section « Lot 2 — Rappels et fils ». Aucune contradiction avec les décisions 5, 6, 10 ; sinon s'arrêter et la signaler à djkix.
+Expected: le pont (section « Pont Google Agenda »), la ligne `scheduler` du tableau des domaines, « Le `scheduler` rejoint la stack au lot 2 », la section « Lot 2 — Rappels et fils ». Aucune contradiction avec les décisions 5, 6, 10 ; sinon s'arrêter et la signaler à l'administrateur.
 
 - [ ] **Step 2: Préciser le pont dans `docs/cahier-des-charges.md`**
 
@@ -2967,7 +2967,7 @@ import { lireVar } from '@organizer/shared';
 
 export interface ConfigAgendaApi { clientId: string; redirectUri: string; urlAutorisation: string }
 
-/** Le client OAuth (Application Web) de djkix. Hors production sans GOOGLE_CLIENT_ID : Google Agenda indisponible. */
+/** Le client OAuth (Application Web) de l'administrateur. Hors production sans GOOGLE_CLIENT_ID : Google Agenda indisponible. */
 export function lireConfigAgenda(env: NodeJS.ProcessEnv = process.env): ConfigAgendaApi | null {
   const production = env.NODE_ENV === 'production';
   const clientId = lireVar('GOOGLE_CLIENT_ID', env);
@@ -4291,7 +4291,7 @@ Expected: FAIL : pas de service `scheduler`, pas de règle Squid, quatre images 
 1. En tête, remplacer « Le scheduler (agenda, rotation de l'audio) arrive au lot 2. » par « Le scheduler écrit dans Google Agenda (lot 2-A) ; la rotation de l'audio le rejoindra. » et « api et worker n'ont aucune route… » par « api, worker et scheduler n'ont aucune route… ».
 2. Service `api`, `environment`, après `WEBAUTHN_ORIGIN` :
 ```yaml
-      # Google Agenda (décision 10) : client OAuth de djkix ; l'API prépare le consentement, sans joindre Google.
+      # Google Agenda (décision 10) : client OAuth de l'administrateur ; l'API prépare le consentement, sans joindre Google.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?}
       GOOGLE_REDIRECT_URI: https://${DOMAINE_APP:?}/api/agenda/retour
 ```
@@ -4336,7 +4336,7 @@ Expected: FAIL : pas de service `scheduler`, pas de règle Squid, quatre images 
 
 `infra/.env.example`, après `DOMAINE_APP=…` :
 ```
-# Identifiant du client OAuth « Application Web » de Google Agenda (console Google Cloud de djkix).
+# Identifiant du client OAuth « Application Web » de Google Agenda (console Google Cloud de l'administrateur).
 # Pas un secret, mais propre à ce déploiement : jamais dans le dépôt. Se termine par .apps.googleusercontent.com
 GOOGLE_CLIENT_ID=
 ```
@@ -4446,7 +4446,7 @@ Chaque compte relie son propre Google Agenda depuis Réglages (décision 10). Le
 rendez-vous daté, titre court, 30 minutes, sans description et **sans rappel**, sauf alarme demandée sur
 l'item (rappel 10 minutes avant). Cocher retire l'événement ; ce que L fait dans Google ne change rien ici.
 
-- Client OAuth : type « Application Web » dans la console Google Cloud de djkix, adresse de retour autorisée
+- Client OAuth : type « Application Web » dans la console Google Cloud de l'administrateur, adresse de retour autorisée
   `https://organizer.example.org/api/agenda/retour`, application **publiée** (« En production ») : en « Test »,
   Google fait expirer l'autorisation au bout de 7 jours. Identifiant dans `GOOGLE_CLIENT_ID`, secret dans
   `secrets/google_client_secret`.
@@ -4512,7 +4512,7 @@ git commit -m "Ajoute le scheduler à la stack et documente son exploitation" -m
 ---
 ### Task 15: Publication de la version 1.2.0 et mise en service avec Google
 
-Cette tâche se fait **avec djkix**. L'étiquette, le push, toute action dans la console Google Cloud et sur la VM n'ont lieu qu'avec son accord explicite, donné dans la conversation ; à défaut, s'arrêter après l'étape 2 et lui remettre la procédure. Les libellés de la console Google ci-dessous sont ceux de la « Google Auth Platform » en 2026 tels que connus à la rédaction : **non vérifiés**, ils peuvent avoir bougé ; l'intention de chaque geste prime sur le libellé.
+Cette tâche se fait **avec l'administrateur**. L'étiquette, le push, toute action dans la console Google Cloud et sur la VM n'ont lieu qu'avec son accord explicite, donné dans la conversation ; à défaut, s'arrêter après l'étape 2 et lui remettre la procédure. Les libellés de la console Google ci-dessous sont ceux de la « Google Auth Platform » en 2026 tels que connus à la rédaction : **non vérifiés**, ils peuvent avoir bougé ; l'intention de chaque geste prime sur le libellé.
 
 **Files:**
 - Modify: `CHANGELOG.md` (publication)
@@ -4526,7 +4526,7 @@ Cette tâche se fait **avec djkix**. L'étiquette, le push, toute action dans la
 Run: `pnpm lint && pnpm typecheck && pnpm test && pnpm --filter @organizer/web e2e && pnpm --filter @organizer/web budget`
 Expected: tout passe. Puis CI verte sur la branche `lot2-a-agenda` (jobs `tests` et `images` : cinq images, Trivy, essai de fumée qui éprouve la sortie du scheduler vers les vrais domaines de Google).
 
-Fusion sur `main` : par le skill `superpowers:finishing-a-development-branch`, au choix de djkix.
+Fusion sur `main` : par le skill `superpowers:finishing-a-development-branch`, au choix de l'administrateur.
 
 - [ ] **Step 2: Préparer la publication dans `CHANGELOG.md`**
 
@@ -4536,20 +4536,20 @@ git add CHANGELOG.md
 git commit -m "Publie la version 1.2.0" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 3: djkix crée le client OAuth (console Google Cloud, sur son compte)**
+- [ ] **Step 3: l'administrateur crée le client OAuth (console Google Cloud, sur son compte)**
 
 1. `https://console.cloud.google.com` : créer un projet `organizer-agenda` (sans facturation : l'API Calendar est gratuite à ce volume), ou choisir le projet de Gemini (question ouverte 3).
 2. « API et services », « Bibliothèque » : chercher « Google Calendar API », « Activer ».
 3. « Google Auth Platform » (menu, ou « API et services », « Écran de consentement OAuth ») : « Commencer ».
-   - Informations sur l'application : nom « Organizer », adresse e-mail d'assistance : celle de djkix.
+   - Informations sur l'application : nom « Organizer », adresse e-mail d'assistance : celle de l'administrateur.
    - Audience : **Externe** (un compte Gmail personnel ne peut pas choisir « Interne »).
-   - Coordonnées : l'adresse de djkix. Accepter le règlement des données utilisateur. « Créer ».
+   - Coordonnées : l'adresse de l'administrateur. Accepter le règlement des données utilisateur. « Créer ».
 4. « Branding » (Marque) : domaines autorisés : ajouter `example.org`. **Ne pas** téléverser de logo (un logo déclenche une vérification de la marque par Google). Les liens de page d'accueil et de confidentialité peuvent rester vides pour une application non vérifiée.
 5. « Accès aux données » : « Ajouter ou supprimer des niveaux d'accès », saisir à la main `https://www.googleapis.com/auth/calendar.app.created`, « Ajouter à la table », « Mettre à jour », « Enregistrer ». Aucune autre portée. La console la range probablement parmi les portées « sensibles » ; c'est attendu.
 6. « Clients » : « Créer un client », type **Application Web**, nom « Organizer ». Origines JavaScript : aucune. URI de redirection autorisés : exactement `https://organizer.example.org/api/agenda/retour`. « Créer ». Copier l'identifiant (`….apps.googleusercontent.com`) et **télécharger le JSON** ou copier le secret tout de suite : la console récente ne remontre plus le secret après la création (non vérifié ; sinon, « Ajouter un secret »). Ranger les deux dans le gestionnaire de mots de passe, jamais dans le dépôt ni dans une conversation.
-7. « Audience » : état de publication « Test » → **« Publier l'application »**, confirmer « En production ». **Ne pas** demander la vérification. Pourquoi : une application externe restée « En test » voit chaque autorisation expirer au bout de **7 jours** (le scheduler alerterait chaque semaine « autorisation retirée ou expirée ») ; en production non vérifiée, l'autorisation dure, au prix d'un écran d'avertissement à la connexion et d'un plafond de 100 utilisateurs (deux suffisent). Si djkix préfère rester en « Test » quelques jours pour essayer, ajouter alors son adresse et celle de L dans « Utilisateurs test », puis publier avant de laisser L s'en servir.
+7. « Audience » : état de publication « Test » → **« Publier l'application »**, confirmer « En production ». **Ne pas** demander la vérification. Pourquoi : une application externe restée « En test » voit chaque autorisation expirer au bout de **7 jours** (le scheduler alerterait chaque semaine « autorisation retirée ou expirée ») ; en production non vérifiée, l'autorisation dure, au prix d'un écran d'avertissement à la connexion et d'un plafond de 100 utilisateurs (deux suffisent). Si l'administrateur préfère rester en « Test » quelques jours pour essayer, ajouter alors son adresse et celle de L dans « Utilisateurs test », puis publier avant de laisser L s'en servir.
 
-- [ ] **Step 4: Étiqueter et pousser (djkix, ou avec son accord explicite)**
+- [ ] **Step 4: Étiqueter et pousser (l'administrateur, ou avec son accord explicite)**
 
 ```bash
 git tag -a v1.2.0 -m "Version 1.2.0 : Google Agenda et alarme item par item"
@@ -4567,7 +4567,7 @@ vm 'umask 077; mkdir -p -m 700 ~/sauvegardes; docker compose exec -T db pg_dump 
 ssh -t user@192.168.1.10 'cd /opt/stacks/organizer && umask 077 && read -rs -p "Secret du client OAuth : " s && printf "%s" "$s" > secrets/google_client_secret && unset s && echo'
 vm 'umask 077; head -c 32 /dev/urandom | base64 | tr -d "\n" > secrets/agenda_cle; ls -l secrets/'
 ```
-Recopier aussitôt `agenda_cle` dans le gestionnaire de mots de passe (`vm cat secrets/agenda_cle`, puis effacer l'écran). Les deux fichiers : 600, propriétaire `kix` (uid 1000).
+Recopier aussitôt `agenda_cle` dans le gestionnaire de mots de passe (`vm cat secrets/agenda_cle`, puis effacer l'écran). Les deux fichiers : 600, propriétaire `user` (uid 1000).
 
 3. Dans **Dockge**, stack `organizer` : « Modifier » ; remplacer le contenu du compose par `infra/docker-compose.yml` de l'étiquette `v1.2.0` ; dans l'éditeur du `.env`, ajouter `GOOGLE_CLIENT_ID=<identifiant du client>` et passer `ORGANIZER_VERSION=1.2.0` ; « Enregistrer », puis **« Mettre à jour »** (tire les images et relance la stack). Sans `GOOGLE_CLIENT_ID`, Dockge affiche le refus du compose (« required variable GOOGLE_CLIENT_ID is missing a value ») : le corriger avant de relancer.
    Repli en ligne de commande : `scp infra/docker-compose.yml user@192.168.1.10:/opt/stacks/organizer/compose.yaml`, ajout de la variable au `.env`, `sed` de `ORGANIZER_VERSION`, `vm docker compose pull`, `vm docker compose up -d --wait` (repli documenté si `--wait` bute sur `migrate`).
@@ -4583,7 +4583,7 @@ Vérifier :
 
 Retour arrière : la migration est additive ; remettre le compose de la 1.1.0 et `ORGANIZER_VERSION=1.1.0` dans Dockge, « Mettre à jour » (le conteneur `scheduler`, absent du compose, est retiré ; en ligne de commande : `vm docker compose up -d --remove-orphans`). Aucune restauration. Les événements déjà écrits restent dans Google, figés ; le webhook peut garder `callback_query` (la 1.1.0 ignore ces mises à jour).
 
-- [ ] **Step 6: Essai réel, d'abord par djkix sur son propre compte**
+- [ ] **Step 6: Essai réel, d'abord par l'administrateur sur son propre compte**
 
 Sur son téléphone Android, PWA installée et mise à jour (fermer toutes ses fenêtres, la rouvrir). Énoncés fabriqués seulement.
 
@@ -4602,7 +4602,7 @@ Sur son téléphone Android, PWA installée et mise à jour (fermer toutes ses f
 13. Journaux sans contenu ni jeton : `vm docker compose logs --since 1h scheduler api worker | grep -c -i -E 'rendez-vous test|ya29\.|1//'` donne `0`.
 14. Réglages : « Déconnecter Google Agenda » : « L'agenda Organizer reste dans ton Google Agenda. » ; dans le compte Google (« Sécurité », « Vos connexions à des applications et services tiers »), Organizer n'apparaît plus. Reconnecter : le même agenda « Organizer » est repris (pas de second agenda).
 
-- [ ] **Step 7: Mise en service pour L, sur son téléphone, avec djkix à côté**
+- [ ] **Step 7: Mise en service pour L, sur son téléphone, avec l'administrateur à côté**
 
 Prévenir L avant : l'écran « Google n'a pas validé cette application » est normal (application personnelle, non vérifiée par Google) ; Organizer ne voit que son agenda « Organizer », jamais ses autres agendas ni ses contacts.
 1. L ouvre Réglages, « Connecter Google Agenda », choisit **son** compte Google, passe l'avertissement comme à l'étape 6.2, laisse la case cochée, « Continuer ». Réglages : « Tes rendez-vous datés vont dans Google Agenda. ».
@@ -4623,4 +4623,4 @@ Noter le résultat (oui ou non par point, modèle de téléphone, sans prénom n
 - Vérification de l'application par Google, logo, page de confidentialité publique.
 - Report d'une action (« demain », « la semaine prochaine ») : il n'existe pas encore ; quand il arrivera, il changera la date et le balayage suivra sans code de plus.
 - Suppression d'un item (aucun chemin ne l'offre) : son événement resterait dans Google.
-- Dossier de revue du lot 2-A (`docs/revue/`), à rédiger si djkix le demande.
+- Dossier de revue du lot 2-A (`docs/revue/`), à rédiger si l'administrateur le demande.

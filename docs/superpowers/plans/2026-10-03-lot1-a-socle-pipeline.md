@@ -2804,7 +2804,7 @@ Expected: toute la suite PASS (environ 72 tests), aucune erreur de type ni de li
 
 - [ ] **Step 10: Essai de bout en bout avec un bot de dev**
 
-Prérequis manuels, par djkix :
+Prérequis manuels, par l'administrateur :
 1. Créer un bot de dev distinct auprès de @BotFather (le banc d'essai garde `@mon_organizer_bot` : deux processus en long polling sur le même jeton se bloquent).
 2. Compléter le `.env` racine (ignoré par Git) avec `TELEGRAM_BOT_TOKEN` du bot de dev, `GEMINI_API_KEY`, `TELEGRAM_MODE=polling`, `AUDIO_STORAGE_PATH=../../data/audio`, `PROMPTS_DIR=../../prompts`, et les URL du tunnel.
 

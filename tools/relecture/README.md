@@ -21,11 +21,12 @@ Python 3 seul, aucune dépendance.
 
 ## Accès SSH
 
-La récupération passe par `ssh user@192.168.1.10` (autre hôte : variable
-`ORGANIZER_SSH`). Une seule fois, autoriser la clé du Mac :
+La récupération passe par `ssh` vers l'hôte Docker nommé par la variable
+`ORGANIZER_SSH` (`utilisateur@adresse`, exportée ou dans le `.env` racine,
+par exemple `ORGANIZER_SSH=user@192.168.1.10`). Une seule fois, autoriser la clé du Mac :
 
 ```bash
-ssh-copy-id user@192.168.1.10
+ssh-copy-id "$ORGANIZER_SSH"
 ```
 
 L'utilisateur distant doit pouvoir lancer `docker` sans `sudo`.

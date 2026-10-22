@@ -1,6 +1,6 @@
 # Cahier des charges — Bloc-notes vocal à tri automatique (self-hosted)
 
-Sep 21, 2026 · @djkix
+Sep 21, 2026
 
 > **Source de vérité.** Ce fichier fait foi pour tout le projet.
 > Le document de cadrage initial (Claude Docs) est archivé au 1er octobre 2026
@@ -10,9 +10,9 @@ Sep 21, 2026 · @djkix
 
 L'outil doit encaisser une pensée en moins de cinq secondes, puis la ranger sans que son auteure ait à décider quoi que ce soit. Tout le reste du système découle de cette contrainte.
 
-Le besoin vient de L : ses idées arrivent plus vite qu'elle ne peut les écrire, et le temps de choisir où les noter, elles sont perdues. Les outils de notes classiques échouent parce qu'ils demandent de classer au moment de la saisie. Ici, le classement est différé et automatique.
+Le besoin vient de l'utilisatrice principale : ses idées arrivent plus vite qu'elle ne peut les écrire, et le temps de choisir où les noter, elles sont perdues. Les outils de notes classiques échouent parce qu'ils demandent de classer au moment de la saisie. Ici, le classement est différé et automatique.
 
-L'hébergement est entièrement auto-hébergé sur le homelab hyperviseur existant (nœud hôte), derrière le Nginx Proxy Manager déjà en place, avec une consultation mobile quotidienne.
+L'application est entièrement auto-hébergée : un hôte Docker derrière un reverse proxy (Nginx Proxy Manager), avec une consultation mobile quotidienne.
 
 ### Objectifs et critères de succès
 
@@ -46,27 +46,27 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 3 | Retrouver une pensée privée | Par date et heure. Pas de transcription, pas de recherche texte |
 | 4 | Garde-fou de longueur | Seuils par défaut retenus : 30 s, 60 s, 180 s |
 | 5 | Sollicitations | Aucune par défaut, alarme comprise |
-| 6 | Activation d'une alarme | Item par item, à la voix ou par un bouton, au choix de L sur le moment |
+| 6 | Activation d'une alarme | Item par item, à la voix ou par un bouton, au choix de l'utilisatrice sur le moment |
 | 7 | Ressortir une pensée | Autorisé, mais seulement dans l'application, jamais en notification |
-| 8 | Visibilité des pensées | ~~Visibles aussi par djkix~~ Remplacée par la décision 25 |
-| 9 | Compte de l'API Gemini | Compte Google personnel de djkix, avec facturation Cloud activée |
-| 10 | Agenda | Compte Google de L, OAuth porté par elle |
-| 11 | Sauvegarde | Aucune au démarrage, pour rester simple. Sauvegarde vers le NAS au lot 2 |
+| 8 | Visibilité des pensées | ~~Visibles aussi par l'administrateur~~ Remplacée par la décision 25 |
+| 9 | Compte de l'API Gemini | Compte Google personnel de l'administrateur, avec facturation Cloud activée |
+| 10 | Agenda | Compte Google de l'utilisatrice, OAuth porté par elle |
+| 11 | Sauvegarde | Sauvegarde dédiée (dump chiffré vers un stockage hors de l'hôte) au lot 2 |
 | 12 | Disque et audio | 50 Go maximum pour toute la stack, en volumes Docker simples. Rotation de l'audio ordinaire déjà transcrit au-delà de 40 Go, du plus ancien au plus récent. Audio privé jamais purgé |
-| 13 | Hébergement | Hôte Docker existant du homelab, stack pilotée par Dockge |
+| 13 | Hébergement | Un hôte Docker existant, derrière un reverse proxy, stack pilotée par Dockge |
 | 14 | Publication | `organizer.example.org` |
 | 15 | Dépôt | GitHub personnel djkix, **public** |
-| 16 | Comptes | Deux : L et djkix |
+| 16 | Comptes | Deux : l'utilisatrice principale et l'administrateur |
 | 17 | Widget d'accueil | Home Assistant, silencieux, surface principale de rappel, livré au lot 2 |
 | 18 | Modèle | `gemini-3.1-flash-lite` par défaut |
 | 19 | Nom | Organizer |
 | 20 | Bot Telegram | `@mon_organizer_bot` |
-| 21 | Lots 0 et 1 | **Menés en parallèle**, décidé par djkix le 3 octobre 2026. Thèmes, types d'échéance et prompt sont des données et de la configuration, branchées en fin de lot 1 |
-| 22 | Mise en service | **Directe, sans attendre la sortie du lot 0**, décidé par djkix le 4 octobre 2026. L'application démarre en production avec le prompt actuel (`tri/v1`) ; le classement est affiné à l'usage, sur les captures réelles et les corrections. Le corpus du lot 0 continue de servir de jeu de test, sans bloquer la mise en service. Motif : le banc d'essai classe déjà les vraies captures de L avec le même prompt, et chaque élément garde la version du prompt et le modèle, donc une capture se reclasse après un changement de prompt |
-| 23 | Empreinte digitale | **Avancée du lot 3 à un lot 1-D**, livrée juste après la mise en service, décidée par djkix le 4 octobre 2026. WebAuthn (clé d'accès, Credential Manager Android) remplace seulement la saisie du mot de passe à la reconnexion ; le mot de passe reste toujours possible, et aucune invite biométrique ne précède jamais un enregistrement. Précisions de djkix le 5 octobre 2026 : le mot de passe n'est pas redemandé avant « Activer l'empreinte » (la session suffit), et la synchronisation des clés d'accès Google sur les autres appareils Android de L est acceptée |
-| 24 | Capture ordinaire dans la PWA | **Avancée du lot 3 au lot 2-B**, décidée par djkix le 5 octobre 2026. Un bouton « Enregistrer » ordinaire (envoyé à Gemini, classé) à côté du bouton « Privé », un appui pour démarrer, un appui pour arrêter. Telegram reste un point d'entrée. Le mode reste décidé par le point d'entrée : deux boutons, deux écrans, deux routes d'API, jamais de bascule après coup |
-| 26 | Durée d'un enregistrement dans la PWA | **1 min 30 au plus**, en ordinaire comme en privé : un minuteur affiche le temps écoulé sur 1:30, l'enregistrement s'arrête seul et garde ce qui a été dit. Telegram n'est pas limité. Décidé par djkix le 15 octobre 2026 |
-| 27 | Mise à jour de la PWA | **Proposée, jamais imposée**, décidée par djkix le 21 octobre 2026. Un bandeau discret « Nouvelle version disponible » et son bouton « Recharger », affiché quand une nouvelle coquille attend d'être activée ou que le serveur annonce un autre numéro publié. Jamais sur l'écran de connexion ni pendant un enregistrement. Ce n'est pas une sollicitation au sens de la décision 5 : rien ne sort de l'application, aucune notification n'est émise, et le contenu de L n'est pas en cause |
+| 21 | Lots 0 et 1 | **Menés en parallèle**, décidé par l'administrateur le 3 octobre 2026. Thèmes, types d'échéance et prompt sont des données et de la configuration, branchées en fin de lot 1 |
+| 22 | Mise en service | **Directe, sans attendre la sortie du lot 0**, décidé par l'administrateur le 4 octobre 2026. L'application démarre en production avec le prompt actuel (`tri/v1`) ; le classement est affiné à l'usage, sur les captures réelles et les corrections. Le corpus du lot 0 continue de servir de jeu de test, sans bloquer la mise en service. Motif : le banc d'essai classe déjà les vraies captures de l'utilisatrice avec le même prompt, et chaque élément garde la version du prompt et le modèle, donc une capture se reclasse après un changement de prompt |
+| 23 | Empreinte digitale | **Avancée du lot 3 à un lot 1-D**, livrée juste après la mise en service, décidée par l'administrateur le 4 octobre 2026. WebAuthn (clé d'accès, Credential Manager Android) remplace seulement la saisie du mot de passe à la reconnexion ; le mot de passe reste toujours possible, et aucune invite biométrique ne précède jamais un enregistrement. Précisions de l'administrateur le 5 octobre 2026 : le mot de passe n'est pas redemandé avant « Activer l'empreinte » (la session suffit), et la synchronisation des clés d'accès Google sur les autres appareils Android de l'utilisatrice est acceptée |
+| 24 | Capture ordinaire dans la PWA | **Avancée du lot 3 au lot 2-B**, décidée par l'administrateur le 5 octobre 2026. Un bouton « Enregistrer » ordinaire (envoyé à Gemini, classé) à côté du bouton « Privé », un appui pour démarrer, un appui pour arrêter. Telegram reste un point d'entrée. Le mode reste décidé par le point d'entrée : deux boutons, deux écrans, deux routes d'API, jamais de bascule après coup |
+| 26 | Durée d'un enregistrement dans la PWA | **1 min 30 au plus**, en ordinaire comme en privé : un minuteur affiche le temps écoulé sur 1:30, l'enregistrement s'arrête seul et garde ce qui a été dit. Telegram n'est pas limité. Décidé par l'administrateur le 15 octobre 2026 |
+| 27 | Mise à jour de la PWA | **Proposée, jamais imposée**, décidée par l'administrateur le 21 octobre 2026. Un bandeau discret « Nouvelle version disponible » et son bouton « Recharger », affiché quand une nouvelle coquille attend d'être activée ou que le serveur annonce un autre numéro publié. Jamais sur l'écran de connexion ni pendant un enregistrement. Ce n'est pas une sollicitation au sens de la décision 5 : rien ne sort de l'application, aucune notification n'est émise, et le contenu de l'utilisatrice n'est pas en cause |
 
 ## Périmètre fonctionnel
 
@@ -76,8 +76,8 @@ Deux utilisatrices, deux flux de contenu, un périmètre volontairement étroit 
 
 | Rôle | Qui | Usage |
 | --- | --- | --- |
-| Utilisatrice principale | L | Capture vocale quotidienne, consultation mobile, cochage |
-| Administrateur | djkix | Déploiement, mises à jour, sauvegardes, réglage des prompts de tri |
+| Utilisatrice principale | Un compte | Capture vocale quotidienne, consultation mobile, cochage |
+| Administrateur | Un compte, admin | Déploiement, mises à jour, sauvegardes, réglage des prompts de tri |
 | Comptes supplémentaires | — | Prévus techniquement (multi-utilisateur), non ouverts à la v1 |
 
 ### Les deux flux
@@ -105,7 +105,7 @@ Deux utilisatrices, deux flux de contenu, un périmètre volontairement étroit 
 ### Hors périmètre
 
 - Partage entre plusieurs personnes, listes collaboratives, attribution de tâches
-- Lecture de l'agenda existant de L : l'application écrit dans un agenda dédié mais ne lit pas ses créneaux avant le lot 3
+- Lecture de l'agenda existant de l'utilisatrice : l'application écrit dans un agenda dédié mais ne lit pas ses créneaux avant le lot 3
 - Gestion de projet : dépendances complexes, diagrammes, estimation de charge
 - Pièces jointes photo ou fichier (hors audio de capture)
 - Analyse psychologique automatisée ou conseil thérapeutique généré par l'IA
@@ -154,7 +154,7 @@ Une capture entre par Telegram, revient classée dans la PWA, et ressort en noti
 
 ### Flux nominal d'une capture
 
-1. L envoie un vocal dans la conversation Telegram dédiée. Le bot accuse réception immédiatement.
+1. L'utilisatrice envoie un vocal dans la conversation Telegram dédiée. Le bot accuse réception immédiatement.
 2. L'API télécharge l'audio, crée une entrée brute en base, empile un job et répond.
 3. Le worker envoie l'audio à Gemini, qui renvoie en un appel la transcription, le découpage et le classement.
 4. Les items produits sont écrits en base et rattachés à un fil existant si la similarité le justifie.
@@ -193,9 +193,9 @@ Android rend toutefois la PWA nettement plus capable que sur iOS : notifications
 
 ### Le widget d'écran d'accueil
 
-C'est la seule exigence de L qu'aucune technologie web ne couvre : Android n'expose pas de widget d'écran d'accueil à une PWA. Trois réponses possibles, par ordre de préférence :
+C'est la seule exigence de l'utilisatrice qu'aucune technologie web ne couvre : Android n'expose pas de widget d'écran d'accueil à une PWA. Trois réponses possibles, par ordre de préférence :
 
-1. **Home Assistant.** L'application compagnon Android fournit des widgets d'écran d'accueil et des notifications actionnables. Le serveur HA existe déjà sur le homelab (VM N). Une liste `todo` HA est alimentée par l'API via webhook, et le widget natif l'affiche.
+1. **Home Assistant.** L'application compagnon Android fournit des widgets d'écran d'accueil et des notifications actionnables. Un serveur HA existant suffit. Une liste `todo` HA est alimentée par l'API via webhook, et le widget natif l'affiche.
 2. **KWGT ou Tasker** interrogeant une URL JSON signée exposée par l'API. Spécifique à Android, entièrement personnalisable, mais dépend d'une application tierce à configurer sur le téléphone.
 3. **Notification persistante** à faible priorité, épinglée en haut du volet de notifications, plus le compteur sur l'icône de la PWA via la Badging API.
 
@@ -207,7 +207,7 @@ L'option 1 est retenue au lot 2, puisque le widget devient la seule surface de r
 - HTTPS avec certificat valide exigé pour le service worker et le push. Le Nginx Proxy Manager existant s'en charge.
 - Stockage durable demandé explicitement (`navigator.storage.persist`) pour que la file hors ligne survive à la pression mémoire.
 - Background Sync pour vider la file de captures dès le retour du réseau, sans ouvrir l'application.
-- Web Share Target déclaré dans le manifeste : L peut partager un texte ou un audio depuis n'importe quelle application vers l'outil.
+- Web Share Target déclaré dans le manifeste : l'utilisatrice peut partager un texte ou un audio depuis n'importe quelle application vers l'outil.
 - Raccourcis d'application dans le manifeste : appui long sur l'icône pour « Capturer » ou « Aujourd'hui ».
 - Mise à jour proposée, jamais appliquée d'elle-même (décision 27). Deux signaux : une coquille téléchargée qui attend d'être activée, et un écart entre la version de la coquille chargée et celle que l'API annonce. Les deux sont revérifiés toutes les 30 minutes et à chaque retour au premier plan, sans quoi une version publiée en journée n'arriverait qu'au prochain démarrage à froid. « Recharger » active la version en attente puis recharge la page dans tous les cas : sur un simple écart de version, aucun service worker n'attend.
 - Les deux versions comparées viennent du même `docker build` (`ORGANIZER_VERSION`), coquille et API : sinon l'écart serait permanent. Deux numéros publiés seulement (`1.2.0`), jamais `dev` ni `essai`.
@@ -216,7 +216,7 @@ L'option 1 est retenue au lot 2, puisque le widget devient la seule surface de r
 
 ### Alternative écartée
 
-WhatsApp a été écarté malgré l'habitude de L. L'API Business impose un compte vérifié, une facturation à la conversation et interdit ce type d'usage personnel automatisé. Les passerelles non officielles exposent à un bannissement du numéro. Signal n'offre pas d'API bot stable. Telegram est le seul canal grand public avec une API bot gratuite, documentée et sans risque de blocage du compte.
+WhatsApp a été écarté malgré l'habitude de l'utilisatrice. L'API Business impose un compte vérifié, une facturation à la conversation et interdit ce type d'usage personnel automatisé. Les passerelles non officielles exposent à un bannissement du numéro. Signal n'offre pas d'API bot stable. Telegram est le seul canal grand public avec une API bot gratuite, documentée et sans risque de blocage du compte.
 
 ## Capture
 
@@ -242,7 +242,7 @@ Toute capture est acceptée, sans exception, sans question préalable et sans ch
 
 ### Garde-fou de longueur
 
-L a explicitement demandé une limite pour ne plus se perdre dans les détails. Cette limite avertit mais ne détruit jamais.
+Une limite est demandée pour ne pas se perdre dans les détails. Cette limite avertit mais ne détruit jamais.
 
 | Seuil | Valeur par défaut | Comportement |
 | --- | --- | --- |
@@ -323,7 +323,7 @@ Chaque item reçoit une nature, puis les attributs de sa nature.
 | Importance | `haute`, `normale`, `basse` |
 | Effort | `moins_5min`, `moins_30min`, `plus_1h`, `multi_session` |
 | Contexte | `appel`, `achat`, `maison`, `administratif`, `avec_quelquun`, `autre` |
-| Alarme (actions `datee`) | `true` si L la demande en parlant, sinon `false` ; jamais déduite de l'importance |
+| Alarme (actions `datee`) | `true` si l'utilisatrice la demande en parlant, sinon `false` ; jamais déduite de l'importance |
 | Personnes | liste de prénoms détectés |
 | Thème | libellé court, réutilisé s'il existe déjà |
 | Tonalité (pensées) | `constat`, `question`, `inquietude`, `elan` |
@@ -400,16 +400,16 @@ erDiagram
 stateDiagram-v2
   [*] --> Active
   Active --> Faite: cochee
-  Active --> Reportee: repoussee par L
+  Active --> Reportee: repoussee par l'utilisatrice
   Reportee --> Active
   Active --> Dormante: echeance depassee sans action
-  Dormante --> Active: rouverte par L dans l application
+  Dormante --> Active: rouverte par l'utilisatrice dans l application
   Dormante --> Abandonnee: 90 jours sans reprise
   Faite --> [*]
   Abandonnee --> [*]
 ```
 
-Une action dormante disparaît des listes mais reste consultable et recherchable. Aucune relance n'est envoyée : seule L peut la rouvrir, depuis l'application. Rien n'est jamais supprimé automatiquement.
+Une action dormante disparaît des listes mais reste consultable et recherchable. Aucune relance n'est envoyée : seule l'utilisatrice peut la rouvrir, depuis l'application. Rien n'est jamais supprimé automatiquement.
 
 ### Règles de conservation
 
@@ -435,7 +435,7 @@ Décision 12 : la stack ne dépasse pas 50 Go, avec des volumes Docker ordinaire
 | Éligible | Capture ordinaire dont la transcription est stockée, émise il y a plus de 30 jours |
 | Jamais éligible | Capture privée ; capture en `a_transcrire`, en file ou en échec |
 | Effet | Fichier supprimé, `audio_path` mis à nul, `audio_purge_le` renseigné. Transcription et items intacts |
-| Côté L | Rien. Aucun message ; le bouton de réécoute disparaît simplement |
+| Côté utilisatrice | Rien. Aucun message ; le bouton de réécoute disparaît simplement |
 | Côté admin | Alerte si l'audio reste au-dessus de 40 Go faute d'éligible, ou si la base dépasse 8 Go |
 
 Aux volumes estimés (20 à 45 Go d'audio par an), la rotation garde environ un à deux ans d'audio ordinaire.
@@ -481,9 +481,9 @@ La règle de restitution est de montrer peu. Une vue qui dépasse cinq lignes su
 | Relance sur échéance floue | — | — | Supprimée |
 | Point du matin et point hebdomadaire | — | — | Supprimés |
 
-Décisions 5 et 6 : une alarme de rendez-vous est elle aussi une sollicitation. Le système ne sonne donc jamais de lui-même. Un événement est bien créé dans Google Agenda pour chaque rendez-vous daté, mais **sans rappel**, sauf si L a demandé l'alarme sur cet item précis.
+Décisions 5 et 6 : une alarme de rendez-vous est elle aussi une sollicitation. Le système ne sonne donc jamais de lui-même. Un événement est bien créé dans Google Agenda pour chaque rendez-vous daté, mais **sans rappel**, sauf si l'utilisatrice a demandé l'alarme sur cet item précis.
 
-Activer l'alarme se fait de trois façons, au choix de L sur le moment : en le disant à la capture (« avec alarme », « faut vraiment que je le rate pas », détecté par Gemini), en appuyant sur un bouton « avec alarme » proposé par le bot juste après la capture d'un rendez-vous daté, ou en basculant un interrupteur sur l'item dans l'application.
+Activer l'alarme se fait de trois façons, au choix de l'utilisatrice sur le moment : en le disant à la capture (« avec alarme », « faut vraiment que je le rate pas », détecté par Gemini), en appuyant sur un bouton « avec alarme » proposé par le bot juste après la capture d'un rendez-vous daté, ou en basculant un interrupteur sur l'item dans l'application.
 
 Le bouton du bot est la voie sûre : il ne dépend pas de la reconnaissance d'une formulation. Il n'apparaît que sur les captures où une date et une heure ont été comprises, donc jamais en dehors du moment où il sert.
 
@@ -494,16 +494,16 @@ Conséquence à assumer : sans alarme et sans relance, c'est le widget qui porte
 ### Règles de non-harcèlement
 
 1. Le système ne prend jamais l'initiative d'une notification, alarme comprise.
-2. Seule une alarme explicitement demandée par L sur un item précis peut l'interrompre.
+2. Seule une alarme explicitement demandée par l'utilisatrice sur un item précis peut l'interrompre.
 3. Aucun rituel, aucun résumé spontané, aucune relance sur une échéance floue.
 4. Aucun compteur de retard, aucun pourcentage d'accomplissement, aucune couleur d'alerte sur une liste.
-5. Une période sans usage n'est jamais signalée, ni à L ni dans l'interface.
+5. Une période sans usage n'est jamais signalée, ni à l'utilisatrice ni dans l'interface.
 6. Le widget informe sans interrompre : c'est la seule surface où l'information vient à elle.
 
 ### Notifications push : contraintes techniques
 
 - Protocole Web Push avec clés VAPID générées au déploiement et stockées en secret Docker.
-- Deux canaux de notification Android distincts : `alarme` (haute priorité, son, vibration) et `rappel` (par défaut, silencieux). L règle le son et l'insistance de chacun dans les paramètres Android, sans passer par l'application. Aucun canal de rituel : le système n'en émet pas.
+- Deux canaux de notification Android distincts : `alarme` (haute priorité, son, vibration) et `rappel` (par défaut, silencieux). L'utilisatrice règle le son et l'insistance de chacun dans les paramètres Android, sans passer par l'application. Aucun canal de rituel : le système n'en émet pas.
 - Notifications actionnables : boutons « Fait » et « Demain » directement dans le volet, traités par le service worker sans ouvrir la PWA.
 - Badging API pour afficher le nombre d'urgences sur l'icône de l'application.
 - Le push Android transite par les serveurs FCM de Google : le contenu utile est chiffré par le protocole, mais le libellé reste volontairement générique pour les pensées.
@@ -513,23 +513,23 @@ Conséquence à assumer : sans alarme et sans relance, c'est le widget qui porte
 
 ### Pont Google Agenda
 
-L utilise Google Agenda : l'application y écrit directement, via l'API Google Calendar, plutôt que d'exposer un flux iCalendar. La différence est déterminante : un événement créé par l'API apparaît sur le téléphone en quelques secondes et déclenche l'alarme native, alors qu'un abonnement iCalendar n'est rafraîchi par Google que toutes les quelques heures.
+L'utilisatrice utilise Google Agenda : l'application y écrit directement, via l'API Google Calendar, plutôt que d'exposer un flux iCalendar. La différence est déterminante : un événement créé par l'API apparaît sur le téléphone en quelques secondes et déclenche l'alarme native, alors qu'un abonnement iCalendar n'est rafraîchi par Google que toutes les quelques heures.
 
 | Élément | Choix |
 | --- | --- |
-| Agenda cible | Un agenda dédié, créé par l'application, séparé de l'agenda personnel de L |
+| Agenda cible | Un agenda dédié, créé par l'application, séparé de l'agenda personnel de l'utilisatrice |
 | Autorisation | OAuth 2.0, portée `calendar.app.created` uniquement : l'application ne voit que les événements qu'elle a créés |
 | Contenu écrit | Uniquement les échéances `datee` du flux Actions, titre court, sans description |
 | Pensées | Jamais écrites dans l'agenda, sous aucune forme |
-| Rappels | **Aucun par défaut** : l'événement est créé sans notification. 10 minutes avant si L a activé l'alarme sur l'item |
+| Rappels | **Aucun par défaut** : l'événement est créé sans notification. 10 minutes avant si l'utilisatrice a activé l'alarme sur l'item |
 | Événement | Titre : texte de l'action, 60 caractères au plus. Durée 30 minutes. Fuseau `Europe/Paris`. Ni description, ni lieu, ni invité |
 | Autorisation, côté serveur | Seul le scheduler parle à Google : échange du code, jeton de rafraîchissement chiffré au repos (AES-256-GCM, clé en secret Docker), révocation à la déconnexion. L'API reçoit le retour OAuth (état et PKCE) sans joindre Google |
 | Synchronisation | À la création, à la modification, à la suppression ; l'identifiant d'événement est stocké avec l'action. Identifiant déterministe tiré de l'item : une écriture rejouée ne crée jamais de doublon. Après un cochage, l'écriture attend 15 s (le temps d'annuler). Un balayage toutes les 10 minutes rattrape tout écart |
-| Sens de lecture | Écriture seule au lot 2. La lecture des créneaux occupés de L est envisagée au lot 3 |
+| Sens de lecture | Écriture seule au lot 2. La lecture des créneaux occupés de l'utilisatrice est envisagée au lot 3 |
 
 Cocher une action dans l'application supprime l'événement correspondant. Supprimer l'événement dans Google Agenda ne coche rien : l'agenda est une sortie, pas une source. Le flux iCalendar reste documenté comme repli si l'autorisation OAuth pose problème.
 
-Un événement supprimé par L dans Google n'est pas recréé tant que l'action ne change pas ; si elle change (date, heure, texte, alarme), un nouvel événement est créé. Un agenda Organizer supprimé par L n'est pas recréé de lui-même : Réglages propose de le recréer. La déconnexion depuis Réglages révoque l'autorisation et laisse l'agenda et ses événements dans Google.
+Un événement supprimé par l'utilisatrice dans Google n'est pas recréé tant que l'action ne change pas ; si elle change (date, heure, texte, alarme), un nouvel événement est créé. Un agenda Organizer supprimé par l'utilisatrice n'est pas recréé de lui-même : Réglages propose de le recréer. La déconnexion depuis Réglages révoque l'autorisation et laisse l'agenda et ses événements dans Google.
 
 Le bouton « avec alarme » du bot part dans un message silencieux, juste après le classement, une seule fois par rendez-vous, seulement si la capture a moins de 15 minutes, le rendez-vous est à venir et l'agenda est connecté. Ignoré, il n'est jamais relancé. Quand l'alarme est comprise à la voix, le bot le confirme avec un bouton « Sans alarme ».
 
@@ -555,8 +555,8 @@ Le back-end reste en TypeScript/NestJS, par cohérence avec le projet d'inventai
 | Enregistrement privé | MediaRecorder, format Opus | — | Enregistreur natif du navigateur, envoi direct à l'API |
 | PWA | Workbox | 7.x | Service worker, cache, file hors ligne, raccourcis Android |
 | Serveur front | Caddy | 2.x | Image légère, en-têtes et compression par défaut |
-| Reverse proxy | Nginx Proxy Manager existant | — | Déjà en place (conteneur N), certificats Let's Encrypt automatiques |
-| Supervision | Uptime Kuma + Loki | — | Déjà pertinent à l'échelle du homelab |
+| Reverse proxy | Nginx Proxy Manager existant | — | Certificats Let's Encrypt automatiques |
+| Supervision | Uptime Kuma + Loki | — | Outils légers, déjà courants en auto-hébergement |
 
 ### Avertissement : l'abonnement Gemini ne donne pas l'API
 
@@ -582,7 +582,7 @@ Deux plafonds se superposent, tous deux bloquants :
 1. **Prépaiement, sans recharge automatique.** Le projet est au palier payé en mode Prépaiement : le crédit est versé à l'avance et la consommation y est déduite en temps quasi réel. À zéro, toutes les clés des projets liés au compte de facturation répondent HTTP 402 jusqu'au prochain versement. Le crédit versé est donc un plafond strict. Il expire au bout de 12 mois : on verse peu, de l'ordre d'une année d'usage. Seul le projet Organizer est lié à ce compte de facturation, pour qu'un épuisement ne coupe rien d'autre.
 2. **Budget Cloud avec plafond de dépenses appliqué**, à 9 € par mois (environ 10 $), sur le seul service Gemini API du projet, avec alertes à 50, 80 et 100 %. Il met l'API en pause une fois le montant atteint. La fonction est en Preview chez Google : si elle disparaît, le repli est un quota de requêtes par jour sur le palier du projet.
 
-Un plafond atteint n'est pas une erreur de classement : le worker traite HTTP 402 et la pause du budget comme une indisponibilité temporaire. Les captures restent en file, dans l'ordre, sans passer en `à revoir` ni déclencher de relance, et repartent dès le crédit rétabli. L'administrateur est alerté ; L ne l'est jamais. Un dépassement signale une boucle de reprise, pas un usage réel.
+Un plafond atteint n'est pas une erreur de classement : le worker traite HTTP 402 et la pause du budget comme une indisponibilité temporaire. Les captures restent en file, dans l'ordre, sans passer en `à revoir` ni déclencher de relance, et repartent dès le crédit rétabli. L'administrateur est alerté ; l'utilisatrice ne l'est jamais. Un dépassement signale une boucle de reprise, pas un usage réel.
 
 ### Ce que ce choix fait gagner et perdre
 
@@ -602,13 +602,13 @@ Le pipeline reste écrit derrière une interface `ClassificationProvider`. Bascu
 | Environnement | Hébergement | Données |
 | --- | --- | --- |
 | Local | Docker Compose sur poste de dev | Jeu de données fictif |
-| Production | Hôte Docker existant du homelab | Données réelles |
+| Production | Hôte Docker existant | Données réelles |
 
 Pas d'environnement de recette intermédiaire : le volume ne le justifie pas. Les migrations sont testées en local sur une copie anonymisée.
 
 ## Déploiement Docker
 
-Une seule stack Docker Compose, déployée via Dockge sur l'hôte Docker existant du homelab (VM N, décision 13), publiée par le Nginx Proxy Manager existant (conteneur N). Seul le conteneur `web` publie un port (7070, sur l'adresse de la VM, port choisi parce que 8080 risque d'être déjà pris sur l'hôte partagé), pour le reverse proxy ; rien n'est exposé à l'extérieur.
+Une seule stack Docker Compose, déployée via Dockge sur un hôte Docker existant (décision 13), publiée par le Nginx Proxy Manager existant. Seul le conteneur `web` publie un port (7070, sur l'adresse de la VM, port choisi parce que 8080 risque d'être déjà pris sur l'hôte partagé), pour le reverse proxy ; rien n'est exposé à l'extérieur.
 
 Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dockge `organizer` (`/opt/stacks/organizer/`), à côté de son `.env` et du dossier `secrets/` (le Caddyfile est dans l'image `web`).
 
@@ -642,7 +642,7 @@ Le `scheduler` rejoint la stack au lot 2-A, avec Google Agenda ; la rotation de 
 | `worker` | `generativelanguage.googleapis.com` | Appel Gemini |
 | `scheduler` | `www.googleapis.com`, `oauth2.googleapis.com` | Écriture dans Google Agenda, rafraîchissement du jeton OAuth |
 
-L'API est le seul point d'envoi de messages vers L : le scheduler déclenche une alarme en empilant un job, que l'API transforme en notification push ou en message Telegram. La base et la file n'ont aucune route vers Internet : une faille applicative ne peut pas joindre un domaine arbitraire, seulement ceux de cette liste.
+L'API est le seul point d'envoi de messages vers l'utilisatrice : le scheduler déclenche une alarme en empilant un job, que l'API transforme en notification push ou en message Telegram. La base et la file n'ont aucune route vers Internet : une faille applicative ne peut pas joindre un domaine arbitraire, seulement ceux de cette liste.
 
 ### Volumes persistants
 
@@ -663,14 +663,14 @@ Des volumes Docker nommés, sans préparation sur l'hôte. Le plafond de 50 Go e
 | `organizer.example.org` | `web:8080` (Caddy), qui relaie `/api` vers `api:3000` | Publique, HTTPS |
 | `organizer-bot.example.org` | `web:8080`, qui ne relaie que `/telegram/webhook` | Publique, restreinte aux plages IP Telegram |
 
-Bot Telegram : `@mon_organizer_bot`. API Gemini : projet Google Cloud sur le compte Google personnel de djkix, palier payé en Prépaiement sans recharge automatique, plus un plafond de dépenses appliqué à 9 € par mois sur la Gemini API, alertes à 50, 80 et 100 %. Les identifiants de compte restent hors du dépôt.
+Bot Telegram : `@mon_organizer_bot`. API Gemini : projet Google Cloud sur le compte Google personnel de l'administrateur, palier payé en Prépaiement sans recharge automatique, plus un plafond de dépenses appliqué à 9 € par mois sur la Gemini API, alertes à 50, 80 et 100 %. Les identifiants de compte restent hors du dépôt.
 
 Certificats Let's Encrypt gérés par le Nginx Proxy Manager. HSTS activé, HTTP/2, redirection HTTP vers HTTPS, taille de requête plafonnée à 30 Mo pour les envois audio.
 
 ### Principes de configuration
 
 1. Aucun secret dans le fichier Compose : un fichier `.env` hors dépôt, plus les secrets Docker pour les clés VAPID, le jeton du bot, la clé d'API Gemini, le secret du client OAuth Google et la clé de chiffrement des jetons de l'agenda.
-2. Images tierces épinglées par version majeure et mineure. Les images Organizer suivent `latest`, publiée par la CI avec chaque étiquette `v*` ; la mise à jour reste manuelle (`pull` depuis Dockge) et `ORGANIZER_VERSION` dans le `.env` fige une version pour revenir en arrière (décidé par djkix le 15 octobre 2026).
+2. Images tierces épinglées par version majeure et mineure. Les images Organizer sont publiées par la CI avec chaque étiquette `v*` ; la mise à jour reste manuelle (`pull` depuis Dockge). `ORGANIZER_VERSION` est obligatoire dans le `.env` : le compose refuse de démarrer sans elle et ne suit jamais `latest` par défaut. Mettre à jour, c'est changer ce numéro ; revenir en arrière, remettre l'ancien (15 octobre 2026, version épinglée le 22 octobre 2026).
 3. `restart: unless-stopped` sur tous les services applicatifs.
 4. Sondes de santé sur `api`, `db` et `queue`, avec dépendance conditionnée à l'état sain.
 5. Limites mémoire explicites par service, et plafond de concurrence sur le worker pour ne pas saturer le quota d'API en rattrapage.
@@ -685,7 +685,7 @@ Certificats Let's Encrypt gérés par le Nginx Proxy Manager. HSTS activé, HTTP
 Le dépôt GitHub personnel djkix est public. Trois catégories doivent rester dehors, et une seule fuite est définitive puisque l'historique Git garde tout :
 
 1. **Secrets** : `.env`, clé d'API Gemini, jeton du bot, clés VAPID, identifiants OAuth Google. Un fichier `.env.example` sans valeurs les documente.
-2. **Corpus de L** : les captures annotées du lot 0, les exemples de corrections, tout énoncé réel. Les tests du pipeline utilisent des énoncés fabriqués.
+2. **Corpus de l'utilisatrice** : les captures annotées du lot 0, les exemples de corrections, tout énoncé réel. Les tests du pipeline utilisent des énoncés fabriqués.
 3. **Données nominatives** : les prénoms réels dans les prompts, les fixtures, les captures d'écran de la documentation.
 
 Mesures : `.gitignore` strict dès le premier commit, analyse de secrets activée sur le dépôt, et relecture du premier `git push` avant publication.
@@ -698,18 +698,20 @@ flowchart LR
   DOCKGE --> STACK[Stack organizer]
 ```
 
-Build multi-étages, images publiées sur GHCR en public (décidé par djkix le 4 octobre 2026 : le code est déjà public, les images ne contiennent ni secret ni donnée), déploiement déclenché manuellement depuis Dockge. Une fois publié par une étiquette `v*`, chaque paquet `organizer-*` est créé en privé par GHCR : il faut passer chaque paquet organizer-* en public (page du paquet, Package settings, Change visibility) après la première publication, faute de quoi la VM, sans authentification, ne peut pas le tirer. Pas de déploiement automatique : le volume de changements ne le justifie pas et une régression sur la capture serait invisible jusqu'à la prochaine pensée perdue.
+Build multi-étages, images publiées sur GHCR en public (décidé par l'administrateur le 4 octobre 2026 : le code est déjà public, les images ne contiennent ni secret ni donnée), déploiement déclenché manuellement depuis Dockge. Une fois publié par une étiquette `v*`, chaque paquet `organizer-*` est créé en privé par GHCR : il faut passer chaque paquet organizer-* en public (page du paquet, Package settings, Change visibility) après la première publication, faute de quoi la VM, sans authentification, ne peut pas le tirer. Pas de déploiement automatique : le volume de changements ne le justifie pas et une régression sur la capture serait invisible jusqu'à la prochaine pensée perdue.
 
 ## Sécurité et confidentialité
 
-Le système contient des pensées intimes de L sur elle-même et sur des tiers nommés. Le niveau d'exigence est celui d'un journal personnel, pas celui d'une liste de courses.
+Le système contient des pensées intimes sur soi et sur des tiers nommés. Le niveau d'exigence est celui d'un journal personnel, pas celui d'une liste de courses.
 
 ### Authentification
 
 | Mécanisme | Application |
 | --- | --- |
 | Comptes locaux | Identifiant et mot de passe, haché en Argon2id |
-| Session PWA | Jeton en cookie `HttpOnly`, `Secure`, `SameSite=Lax`, durée 90 jours |
+| Force brute | 10 essais par minute et par adresse ; verrou de 15 minutes par compte après 10 échecs, toutes adresses confondues (compteur dans Valkey). L'empreinte n'est pas verrouillée |
+| Session PWA | Jeton en cookie `__Host-` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sans `Domain`), durée 90 jours |
+| Requêtes qui modifient | Refusées si `Origin` n'est pas celle de la PWA ou si `Sec-Fetch-Site` n'est pas `same-origin` (défense CSRF) |
 | Reconnexion | Empreinte digitale via WebAuthn et Credential Manager Android, au lot 1-D (décision 23). Le mot de passe reste toujours possible ; aucune invite ne précède un enregistrement |
 | Bot Telegram | Liaison du `chat_id` à un compte par code à usage unique, expirant en 10 minutes |
 | Webhook Telegram | Jeton secret dans l'en-tête, vérifié à chaque appel |
@@ -719,7 +721,7 @@ Aucune inscription libre : les comptes sont créés en ligne de commande par l'a
 
 ### Cloisonnement des données sensibles
 
-Le recours à Gemini change la nature de cette section : les pensées de L transitent désormais par un service tiers. C'est le seul arbitrage du projet qui ne relève pas de la technique, et il appartient à L.
+Le recours à Gemini change la nature de cette section : les pensées de l'utilisatrice transitent désormais par un service tiers. C'est le seul arbitrage du projet qui ne relève pas de la technique, et il appartient à l'utilisatrice.
 
 1. **Palier payé obligatoire, dès le premier appel.** Le palier gratuit utilise le contenu pour améliorer les produits Google et autorise la relecture humaine. La facturation Cloud est activée avant le premier test, y compris avec des énoncés fabriqués. Un contrôle au démarrage du worker vérifie que le projet est bien facturé et refuse de tourner sinon.
 2. **Trois conteneurs sortent, chacun vers une liste fermée.** Le `worker` vers l'API Gemini, le `scheduler` vers l'API Google Agenda et son serveur OAuth, l'`api` vers Telegram et FCM. La base et la file sont isolées.
@@ -734,8 +736,8 @@ Le recours à Gemini change la nature de cette section : les pensées de L trans
 
 | Position | Ce qui sort du réseau | Coût | Condition |
 | --- | --- | --- | --- |
-| Tout Gemini | Actions et pensées | 1 à 3 $ par mois | Accord explicite de L, palier payé |
-| Hybride | Actions seulement, pensées en local | Moins de 1 $ par mois | Mode privé activé par L à la capture |
+| Tout Gemini | Actions et pensées | 1 à 3 $ par mois | Accord explicite de l'utilisatrice, palier payé |
+| Hybride | Actions seulement, pensées en local | Moins de 1 $ par mois | Mode privé activé par l'utilisatrice à la capture |
 | Tout local | Rien | 0 $ | 16 Go de RAM, classement plus lent et moins bon |
 
 La position retenue est **Gemini pour tout, en palier payé, avec un bouton d'enregistrement privé séparé**.
@@ -751,7 +753,7 @@ Séparer les deux captures par le point d'entrée, et non par le contenu, suppri
 | Distinction visuelle | Écran d'enregistrement privé de couleur distincte, cadenas permanent, mention « reste sur le serveur » avant et pendant l'enregistrement |
 | Traitement | Stockée telle quelle, jamais envoyée, jamais transcrite, jamais classée |
 | Restitution | Vue Privé : liste antichronologique groupée par jour, avec heure et durée, lecteur audio intégré, navigation par calendrier |
-| Étiquette facultative | L peut ajouter après coup quelques mots tapés pour se repérer, sans obligation |
+| Étiquette facultative | L'utilisatrice peut ajouter après coup quelques mots tapés pour se repérer, sans obligation |
 | Repli Telegram | Un bouton « prochaine capture privée » dans le clavier du bot, pour les moments où la PWA n'est pas à portée |
 | Correction | Un item ordinaire peut être basculé en privé après coup, mais l'envoi déjà fait ne peut pas être annulé ; l'interface le dit |
 
@@ -767,13 +769,13 @@ Décision 3 : se repérer par la date et l'heure suffit. C'est ce qui permet de 
 | En-têtes | CSP stricte, `X-Content-Type-Options`, `Referrer-Policy: no-referrer` |
 | Envois | Type MIME et taille vérifiés, audio réencodé par ffmpeg avant stockage |
 | Dépendances | Analyse automatisée des vulnérabilités à chaque build |
-| Accès administrateur | Uniquement par le réseau local ou le VPN du homelab |
+| Accès administrateur | Uniquement par le réseau local ou un VPN |
 
 ### Chiffrement
 
 - En transit : TLS 1.2 minimum, 1.3 privilégié, sur toutes les surfaces publiques.
 - Au repos : chiffrement du disque qui porte les volumes de la stack sur l'hôte Docker.
-- Sauvegardes, au lot 2 : chiffrement GPG avant dépôt sur le NAS, clé conservée hors du serveur.
+- Sauvegardes, au lot 2 : chiffrement GPG avant dépôt hors de l'hôte, clé conservée hors du serveur.
 - Chiffrement applicatif colonne par colonne écarté : il empêcherait la recherche vectorielle, pour un gain faible face au chiffrement disque.
 
 ### Données concernant des tiers
@@ -790,9 +792,7 @@ L'exploitation doit être nulle en régime normal : aucune action mensuelle, auc
 
 ### Sauvegarde
 
-Décision 11 : aucune sauvegarde dédiée au démarrage, pour garder une stack simple. Seule protection : le snapshot hyperviseur de la VM N, s'il est en place. Une panne de disque avant le lot 2 peut donc perdre des données ; c'est un risque accepté pour démarrer.
-
-Prévu au lot 2 : dump PostgreSQL quotidien chiffré GPG vers le NAS (VM N), copie de l'audio, test de restauration complète. Les fichiers de configuration et les secrets sont conservés dans le gestionnaire de mots de passe dès maintenant.
+Décision 11 : sauvegarde dédiée au lot 2. Dump PostgreSQL quotidien chiffré GPG vers un stockage hors de l'hôte, copie de l'audio, test de restauration complète. Les fichiers de configuration et les secrets sont conservés dans le gestionnaire de mots de passe dès maintenant.
 
 Objectifs de reprise, à partir du lot 2 : RPO de 24 heures, RTO de 4 heures. Un test de restauration complète est réalisé au lot 2, puis une fois par an.
 
@@ -808,7 +808,7 @@ Objectifs de reprise, à partir du lot 2 : RPO de 24 heures, RTO de 4 heures. Un
 | Crédit Gemini épuisé | Première réponse HTTP 402 | Réglages › Alertes techniques (admin) |
 | Aucune capture reçue | 10 jours | Information, sans alerte |
 
-La dernière ligne est volontairement passive : l'absence d'usage n'est pas un incident et ne doit jamais être signalée à L.
+La dernière ligne est volontairement passive : l'absence d'usage n'est pas un incident et ne doit jamais être signalée à l'utilisatrice.
 
 ### Indicateurs de qualité du tri
 
@@ -819,7 +819,7 @@ La dernière ligne est volontairement passive : l'absence d'usage n'est pas un i
 | Taux d'items en `à revoir` | Moins de 8 % | Items bloqués sur items reçus |
 | Erreur de transcription perçue | Moins de 5 % | Corrections de texte sur items vocaux |
 
-Ces indicateurs sont consultés par l'administrateur uniquement. Aucune statistique d'usage n'est montrée à L : un compteur de productivité contredirait le principe de non-culpabilisation.
+Ces indicateurs sont consultés par l'administrateur uniquement. Aucune statistique d'usage n'est montrée à l'utilisatrice : un compteur de productivité contredirait le principe de non-culpabilisation.
 
 ### Exploitation courante
 
@@ -886,7 +886,7 @@ Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo p
 ### Maintenabilité
 
 - Code en TypeScript strict, sans `any` implicite.
-- Tests automatisés sur le pipeline de classification. Le jeu de référence est le corpus annoté de L, conservé **hors du dépôt public** ; les tests versionnés n'utilisent que des énoncés fabriqués.
+- Tests automatisés sur le pipeline de classification. Le jeu de référence est le corpus annoté de l'utilisatrice, conservé **hors du dépôt public** ; les tests versionnés n'utilisent que des énoncés fabriqués.
 - Documentation d'exploitation dans le dépôt : démarrage, restauration, rotation des secrets.
 - Aucune dépendance à un service payant pour le fonctionnement nominal.
 
@@ -896,11 +896,11 @@ Quatre lots. Le lot 1-D, avancé du lot 3 (décision 23), s'intercale entre les 
 
 ### Lot 0 — Collecte et validation
 
-- Validation de la note de synthèse par L.
+- Validation de la note de synthèse par l'utilisatrice.
 - Création du canal Telegram dédié, sans automatisation.
 - Sept jours de captures réelles, sans consigne de forme.
 - Annotation manuelle de ces captures : nature, échéance, thème. Ce corpus devient le jeu de test du pipeline.
-- Réponses de L aux questions de cadrage.
+- Réponses de l'utilisatrice aux questions de cadrage.
 
 Critère de sortie : au moins 60 énoncés réels annotés (un nombre d'énoncés, pas de jours) et une typologie de thèmes stabilisée. Ce critère ne conditionne plus la mise en service (décision 22) : il alimente le jeu de test et l'affinage du prompt.
 
@@ -915,7 +915,7 @@ Critère de sortie : au moins 60 énoncés réels annotés (un nombre d'énoncé
 
 Mise en service : directe, sans attendre la sortie du lot 0 (décision 22). L'application démarre avec le prompt actuel (`tri/v1`), affiné à l'usage sur les captures réelles et les corrections ; chaque élément garde la version du prompt et le modèle, ce qui permet de reclasser une capture après un changement de prompt.
 
-Critère de sortie : L utilise l'outil pendant deux semaines sans revenir à ses anciennes habitudes.
+Critère de sortie : l'utilisatrice utilise l'outil pendant deux semaines sans revenir à ses anciennes habitudes.
 
 ### Lot 1-D — Reconnexion par empreinte
 
@@ -926,7 +926,7 @@ Avancé du lot 3 (décision 23), livré juste après la mise en service, en vers
 - Le mot de passe reste toujours possible ; l'enregistreur privé et sa file ne demandent jamais l'empreinte.
 - Retrait de toutes les clés d'un compte en ligne de commande, pour un téléphone perdu.
 
-Critère de sortie : L se reconnecte par l'empreinte sur son téléphone, et le raccourci privé enregistre toujours sans invite.
+Critère de sortie : l'utilisatrice se reconnecte par l'empreinte sur son téléphone, et le raccourci privé enregistre toujours sans invite.
 
 ### Lot 2 — Rappels et fils
 
@@ -935,7 +935,7 @@ Critère de sortie : L se reconnecte par l'empreinte sur son téléphone, et le 
 - **Widget Home Assistant**, remonté du lot 3 : sans lui, plus rien ne rappelle quoi que ce soit.
 - Fils de pensées, rattachement vectoriel, vue Pensées avec filtres.
 - Question de désambiguïsation dans Telegram.
-- Sauvegarde vers le NAS et test de restauration complète.
+- Sauvegarde hors de l'hôte et test de restauration complète.
 
 - **Lot 2-B** (décision 24) : bouton « Enregistrer » ordinaire dans la PWA à côté du bouton privé (`POST /api/captures`, canal `pwa`, même classement que Telegram), raccourci Android, file hors ligne typée : une capture privée en file ne part jamais vers la route ordinaire.
 
@@ -945,14 +945,14 @@ Le lot 2 est livré en sous-lots. **Lot 2-A** (version 1.2.0) : scheduler, écri
 
 - Recherche sémantique globale.
 - Apprentissage par exemples issus des corrections.
-- Lecture des créneaux occupés de l'agenda de L, pour proposer un moment.
-- Transcription locale des captures privées, si L veut les retrouver par le texte.
+- Lecture des créneaux occupés de l'agenda de l'utilisatrice, pour proposer un moment.
+- Transcription locale des captures privées, si l'utilisatrice veut les retrouver par le texte.
 
 ### Jalons de décision
 
 | Fin de lot | Décision à prendre | Résultat |
 | --- | --- | --- |
-| Lot 0 | Le besoin est-il confirmé par L, et accepte-t-elle que ses pensées transitent par Gemini ? | Oui aux deux, validé par L le 2 octobre 2026 |
+| Lot 0 | Le besoin est-il confirmé par l'utilisatrice, et accepte-t-elle que ses pensées transitent par Gemini ? | Oui aux deux, validé par l'utilisatrice le 2 octobre 2026 |
 | Lot 1 | Le classement par Gemini est-il assez bon et assez stable pour se passer de relecture ? | — |
 | Lot 2 | Les rappels sont-ils utiles ou vécus comme une pression ? | — |
 | Lot 3 | Les fonctions de confort ont-elles trouvé leur usage, ou faut-il en retirer ? | — |
@@ -966,24 +966,24 @@ Le risque principal n'est pas technique : c'est l'abandon après deux semaines s
 | Risque | Impact | Parade |
 | --- | --- | --- |
 | Abandon par manque de fluidité | Projet inutile | Lot 0 de collecte réelle, mesure du délai de capture dès le lot 1 |
-| Tri jugé mauvais par L | Perte de confiance immédiate | Corriger en deux gestes, jeu de test issu de ses propres énoncés |
+| Tri jugé mauvais par l'utilisatrice | Perte de confiance immédiate | Corriger en deux gestes, jeu de test issu de ses propres énoncés |
 | Rappels vécus comme une pression | Rejet émotionnel de l'outil | Silence par défaut, alarme uniquement sur demande, aucun compteur |
-| Refus de L d'envoyer ses pensées à Gemini | Retour au tout local, 16 Go de RAM | Question tranchée le 2 octobre 2026 : L accepte. Interface `ClassificationProvider` gardée interchangeable si elle change d'avis |
+| Refus de l'utilisatrice d'envoyer ses pensées à Gemini | Retour au tout local, 16 Go de RAM | Question tranchée le 2 octobre 2026 : l'utilisatrice accepte. Interface `ClassificationProvider` gardée interchangeable si elle change d'avis |
 | Démarrage par erreur en palier gratuit | Contenu intime utilisé pour entraîner des modèles | Vérification de la facturation avant la première requête, test au déploiement |
 | Changement de tarif ou d'API Gemini | Coût ou réécriture | Modèle épinglé, plafond de dépense, abstraction du fournisseur |
 | Panne ou quota de l'API Gemini | Classement en retard | File conservée, reprise automatique, captures jamais perdues |
 | Transcription fautive sur phrases courtes | Items incompréhensibles | Conservation de l'audio, réécoute d'un geste, seuil de confiance |
 | Dépendance à Telegram | Capture indisponible si blocage | Capture PWA en secours dès le lot 3, format d'export ouvert |
-| Panne du homelab | Service indisponible | Telegram tamponne les captures, RTO de 4 h |
-| Surcharge d'exploitation pour djkix | Projet non maintenu | Aucune action mensuelle, alertes seulement en cas d'anomalie |
+| Panne de l'hôte | Service indisponible | Telegram tamponne les captures, RTO de 4 h |
+| Surcharge d'exploitation pour l'administrateur | Projet non maintenu | Aucune action mensuelle, alertes seulement en cas d'anomalie |
 
 ### Points ouverts
 
 | Point | Qui tranche | Quand |
 | --- | --- | --- |
 | Formulations exactes qui déclenchent l'alarme à la voix | À collecter sur le corpus du lot 0 | Lot 2 |
-| Sans alarme ni relance, le widget suffit-il vraiment à lui rappeler les choses ? | L, à l'usage | Lot 2, c'est le test central du lot |
-| Basculer sur un compte Google dédié si les factures ou les quotas deviennent gênants | djkix | À l'usage |
+| Sans alarme ni relance, le widget suffit-il vraiment à lui rappeler les choses ? | L'utilisatrice, à l'usage | Lot 2, c'est le test central du lot |
+| Basculer sur un compte Google dédié si les factures ou les quotas deviennent gênants | Administrateur | À l'usage |
 
 Tous les autres arbitrages sont fermés. Le cahier des charges est complet pour attaquer les lots 0 et 1.
 
@@ -998,4 +998,4 @@ Tous les autres arbitrages sont fermés. Le cahier des charges est complet pour 
 | Let's Encrypt | Certificats | Expiration du TLS sous 90 jours |
 | GHCR | Registre d'images | Déploiement bloqué, service en place non affecté |
 
-Quatre de ces six dépendances sont chez Google. C'est le prix du choix Gemini et de Google Agenda, et c'est assumé : la base, l'audio et les pensées restent chez djkix, et l'export complet permet de partir sans rien perdre.
+Quatre de ces six dépendances sont chez Google. C'est le prix du choix Gemini et de Google Agenda, et c'est assumé : la base, l'audio et les pensées restent chez l'administrateur, et l'export complet permet de partir sans rien perdre.

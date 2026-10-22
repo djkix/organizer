@@ -6,12 +6,20 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- Verrou par compte à la connexion : 10 mots de passe faux en 15 minutes, toutes adresses confondues, verrouillent le compte jusqu'à la fin de la fenêtre (« Trop d'essais. Réessaie dans un quart d'heure. »). Compteur dans Valkey, remis à zéro par une connexion réussie ; Valkey muet, seul le limiteur par adresse joue. L'empreinte n'est pas verrouillée (2026-10-22).
 - Bandeau « Nouvelle version disponible » et bouton « Recharger » : la mise à jour est proposée, jamais imposée (décision 27). Deux signaux, une coquille téléchargée qui attend d'être activée et un écart avec la version annoncée par l'API, revérifiés toutes les 30 minutes et à chaque retour au premier plan. « Recharger » active la version en attente puis recharge la page dans tous les cas. Jamais sur l'écran de connexion, jamais pendant un enregistrement (2026-10-21).
 
 ### Modifié
+- Documentation et exemples sans donnée personnelle ni inventaire d'hébergement : domaines en `example.org`, bot en `@mon_organizer_bot`, adresse et identifiant SSH en `user@192.168.1.10`, plus de prénom de l'administrateur ni de description personnelle de l'utilisatrice principale, hébergement décrit comme « un hôte Docker derrière un reverse proxy » (2026-10-22).
+- `infra/dev/tunnel.sh` et `tools/relecture` lisent l'hôte SSH dans `ORGANIZER_SSH` (`utilisateur@adresse`, exportée ou dans le `.env` racine), sans valeur par défaut : plus d'adresse ni d'identifiant réels dans le dépôt (2026-10-22).
+- `ORGANIZER_VERSION` devient obligatoire dans le `.env` : le compose ne suit plus `latest` par défaut et refuse de démarrer sans numéro. **Avant cette mise à jour**, ajouter `ORGANIZER_VERSION=<numéro>` au `.env` (2026-10-22).
 - `GET /api/session/moi` donne `versionServeur` aux deux comptes, pas seulement à l'administrateur : la PWA la compare à la sienne. Réglages ne l'affiche toujours qu'à l'administrateur (2026-10-21).
 
 ### Corrigé
+- `deepmerge-ts` forcé en 8.0.2 (épuisement de pile sur un graphe récursif, corrigé en 8.0.0). Prisma 6.19.3 est la dernière 6.x et le fige en 7.1.5 ; Prisma 7, qui corrige, casse l'API. Dérogation à retirer au passage à Prisma 7 (2026-10-22).
+- Défense CSRF : une requête `/api` qui modifie (POST, PUT, PATCH, DELETE) est refusée (403) si son `Origin` n'est pas celle de la PWA (`WEBAUTHN_ORIGIN`) ou si le navigateur la dit d'un autre site (`Sec-Fetch-Site`). Le webhook Telegram, hors `/api`, garde son secret (2026-10-22).
+- Cookie de session renommé `__Host-organizer_session` : un sous-domaine voisin ne peut plus le poser ni l'écraser. L'ancien cookie est effacé à la connexion ; chaque compte se reconnecte une fois après la mise à jour (2026-10-22).
+- Liaison Telegram : les échecs de `/start <code>` se comptent par chat (5 par 10 min), avec un plafond global relevé à 100. Un intrus ne bloque plus la liaison de tout le monde en dix essais (2026-10-22).
 - L'image `api` ne portait pas `ORGANIZER_VERSION` : l'API annonçait « dev » en production, et Réglages affichait « serveur dev » à côté du vrai numéro de la coquille (2026-10-21).
 
 ## [1.10.0] - 2026-10-15
@@ -227,7 +235,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [1.0.0] - 2026-10-04
 
 ### Ajouté
-- Le dossier de revue du lot 1-C (déploiement), pour un relecteur externe, avec l'état final de la CI et les choix de mise en service de djkix (2026-10-04).
+- Le dossier de revue du lot 1-C (déploiement), pour un relecteur externe, avec l'état final de la CI et les choix de mise en service de l'administrateur (2026-10-04).
 - La documentation d'exploitation : stack, commandes, Nginx Proxy Manager, mise à jour, retour arrière, changement des secrets, supervision et sauvegarde manuelle (2026-10-04).
 - Les images api, worker, web (Caddy, coquille et CSP du build) et sortie (Squid, liste fermée de domaines), et la CI GitHub Actions : tests avec base et file, e2e, construction et analyse des images (2026-10-04).
 - L'API et le worker s'empaquettent avec esbuild en `dist/*.mjs`, dépendances externes vérifiées par un test ; Prisma devient une dépendance de production pour les migrations (2026-10-04).
@@ -279,7 +287,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - L'ordre des vues est stable à égalité, le libellé d'un horizon vient de la première expression connue, et À revoir exclut les items privés (2026-10-03).
 
 ### Ajouté
-- Le plan du lot 1-C : déploiement sur le homelab et mise en service (2026-10-05).
+- Le plan du lot 1-C : déploiement sur l'hôte Docker et mise en service (2026-10-05).
 - Le dossier de revue du lot 1-B2, à transmettre à un relecteur externe (2026-10-04).
 - L'installation de la PWA sur Android : manifeste aux couleurs des tokens, icônes, raccourcis « Enregistrement privé » et « Aujourd'hui », service worker hors ligne avec synchronisation en arrière-plan, budget du bundle vérifié (2026-10-04).
 - L'enregistreur privé de la PWA, utilisable hors ligne et sans session, et la vue Privé : par mois et par jour, lecteur audio, étiquette facultative (2026-10-04).
@@ -343,4 +351,4 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Les erreurs de schéma ne contiennent plus le contenu du modèle (2026-10-03).
 - Les fichiers embarqués du banc d'essai sont lisibles par l'utilisateur du bot (2026-10-02).
 - Les fixtures et le schéma de sortie sont alignés sur l'alarme et le contexte (2026-10-01).
-- Les identifiants hyperviseur du cahier des charges sont corrigés (2026-10-02).
+- Les identifiants d'hébergement du cahier des charges sont corrigés (2026-10-02).

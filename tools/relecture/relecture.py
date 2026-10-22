@@ -28,7 +28,21 @@ ANNOTATIONS = CORPUS / "annotations.jsonl"
 PAGE = Path(__file__).with_name("relecture.html")
 TOKENS = RACINE / "design" / "tokens.css"
 
-HOTE = os.environ.get("ORGANIZER_SSH", "user@192.168.1.10")
+
+
+def hote_ssh():
+    """« utilisateur@adresse » de l'hôte Docker : ORGANIZER_SSH, exportée ou dans le .env racine."""
+    hote = os.environ.get("ORGANIZER_SSH")
+    env = RACINE / ".env"
+    if not hote and env.exists():
+        for ligne in env.read_text(encoding="utf-8").splitlines():
+            if ligne.startswith("ORGANIZER_SSH="):
+                hote = ligne.split("=", 1)[1].strip()
+    if not hote:
+        sys.exit("ORGANIZER_SSH manquant : utilisateur@hôte Docker (ex. user@192.168.1.10), exporté ou dans le .env.")
+    return hote
+
+
 VOLUME = "organizer-terrain_donnees"
 
 # Champs d'une ligne d'annotation, dans l'ordre du guide.
@@ -41,9 +55,10 @@ CHAMPS_ITEM = [
 
 def recuperer():
     TERRAIN.mkdir(parents=True, exist_ok=True)
-    print(f"Récupération depuis {HOTE}, volume {VOLUME}…")
+    hote = hote_ssh()
+    print(f"Récupération depuis {hote}, volume {VOLUME}…")
     distant = f"docker run --rm -v {VOLUME}:/d:ro alpine tar -C /d/data -cf - ."
-    ssh = subprocess.Popen(["ssh", HOTE, distant], stdout=subprocess.PIPE)
+    ssh = subprocess.Popen(["ssh", hote, distant], stdout=subprocess.PIPE)
     subprocess.run(["tar", "-xf", "-", "-C", str(TERRAIN)], stdin=ssh.stdout, check=True)
     if ssh.wait() != 0:
         sys.exit("Échec de la récupération. Voir tools/relecture/README.md, section Accès SSH.")
