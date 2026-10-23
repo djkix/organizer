@@ -115,6 +115,10 @@
     min-height: 100dvh; display: flex; flex-direction: column; justify-content: flex-end; gap: 24px;
     padding: 24px 20px calc(120px + env(safe-area-inset-bottom));
   }
+  /* Sur ordinateur, pas de pouce à servir : l'écran est centré en hauteur. */
+  @media (min-width: 720px) {
+    .connexion { justify-content: center; }
+  }
   h1 { font-size: var(--font-title); font-weight: 700; line-height: 36px; letter-spacing: -0.02em; }
   form { display: flex; flex-direction: column; gap: 16px; }
   label { display: flex; flex-direction: column; gap: 6px; font-size: var(--font-meta); font-weight: 600; color: var(--muted); }

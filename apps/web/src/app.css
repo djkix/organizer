@@ -31,6 +31,17 @@ body {
   line-height: var(--line-height);
   -webkit-tap-highlight-color: transparent;
 }
+/*
+ * Sur ordinateur : une colonne de 480 px au centre, la PWA restant pensée pour le téléphone.
+ * Les éléments fixes (barre du bas, boutons, bandeaux, panneaux) se calent sur --cote, la marge de chaque côté.
+ * La gouttière de défilement des deux côtés garde le centre de la page au centre de la fenêtre.
+ */
+:root { --colonne: 100%; --cote: 0px; }
+@media (min-width: 720px) {
+  html { scrollbar-gutter: stable both-edges; }
+  :root { --colonne: 480px; --cote: calc((100vw - 480px) / 2); }
+  body { max-width: var(--colonne); margin: 0 auto; }
+}
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: default; opacity: 0.6; }

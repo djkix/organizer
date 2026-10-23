@@ -18,7 +18,7 @@
 
 <style>
   .boutons {
-    position: fixed; left: 20px; right: 20px; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 5;
+    position: fixed; left: calc(var(--cote) + 20px); right: calc(var(--cote) + 20px); bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 5;
     display: grid; grid-template-columns: 2fr 1fr; gap: 10px;
   }
   /* Relief sobre : un liseré bas plus foncé (pas d'ombre). Appuyé, le bouton descend et le liseré s'amincit. */

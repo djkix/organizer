@@ -102,6 +102,50 @@ for (const schema of ['light', 'dark'] as const) {
   }
 }
 
+// Sur ordinateur : une colonne de 480 px au centre, barre du bas et boutons fixes compris ; le téléphone ne change pas.
+const ORDINATEUR = { width: 1280, height: 800 };
+const COLONNE = 480;
+
+async function dansLaColonne(page: Page, selecteur: string): Promise<void> {
+  const elements = await page.locator(selecteur).all();
+  expect(elements.length, selecteur).toBeGreaterThan(0);
+  for (const el of elements) {
+    const b = (await el.boundingBox())!;
+    const milieu = ORDINATEUR.width / 2;
+    expect(b.x, selecteur).toBeGreaterThanOrEqual(milieu - COLONNE / 2 - 1);
+    expect(b.x + b.width, selecteur).toBeLessThanOrEqual(milieu + COLONNE / 2 + 1);
+  }
+}
+
+test('ordinateur : l\'accueil, la barre du bas et les boutons tiennent dans une colonne centrée', async ({ page }) => {
+  await page.setViewportSize(ORDINATEUR);
+  await page.clock.install({ time: new Date('2026-10-06T07:00:00Z') });
+  await simuler(page, table);
+  await page.goto('/');
+  await expect(page.getByText(/Penser à rappeler la mutuelle/)).toBeVisible();
+  const main = (await page.locator('main').first().boundingBox())!;
+  expect(main.width).toBeLessThanOrEqual(COLONNE + 1);
+  expect(Math.abs(main.x + main.width / 2 - ORDINATEUR.width / 2)).toBeLessThanOrEqual(1);
+  await dansLaColonne(page, 'nav[aria-label="Navigation"]');
+  await dansLaColonne(page, '[aria-label="Enregistrer, rangé tout seul"], [aria-label="Enregistrement privé"]');
+  await page.getByRole('button', { name: /Penser à rappeler la mutuelle/ }).click();
+  await expect(page.getByRole('button', { name: 'Lire tout' })).toBeVisible();
+  await dansLaColonne(page, '[role="dialog"]');
+});
+
+test('ordinateur : la connexion est centrée, en largeur comme en hauteur', async ({ page }) => {
+  await page.setViewportSize(ORDINATEUR);
+  await servirGis(page);
+  await simuler(page, SANS_SESSION_GOOGLE);
+  await page.goto('/connexion');
+  await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
+  await dansLaColonne(page, 'main');
+  await dansLaColonne(page, 'main button');
+  await dansLaColonne(page, '[aria-label="Enregistrement privé"]');
+  const titre = (await page.getByRole('heading', { name: 'Organizer' }).boundingBox())!;
+  expect(titre.y).toBeLessThan(ORDINATEUR.height / 2);
+});
+
 test('le thème sombre forcé par data-theme prend les jetons sombres', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await simuler(page, table);

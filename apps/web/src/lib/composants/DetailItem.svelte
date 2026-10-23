@@ -120,7 +120,7 @@
 
 <style>
   .panneau {
-    position: fixed; inset: 0; z-index: 10; overflow-y: auto; display: flex; flex-direction: column;
+    position: fixed; inset: 0 var(--cote); z-index: 10; overflow-y: auto; display: flex; flex-direction: column;
     background: var(--bg); padding: 12px 0 env(safe-area-inset-bottom);
   }
   header { padding: 0 12px; }

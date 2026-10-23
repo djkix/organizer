@@ -23,9 +23,9 @@
 
 <style>
   /* Feuille basse : la question monte du bas de l'écran, à portée du pouce. */
-  .voile { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; background: color-mix(in srgb, var(--text) 35%, transparent); }
+  .voile { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: color-mix(in srgb, var(--text) 35%, transparent); }
   .boite {
-    width: 100%; background: var(--surface); border-radius: 24px 24px 0 0;
+    width: 100%; max-width: var(--colonne); background: var(--surface); border-radius: 24px 24px 0 0;
     padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
   }
   h2 { font-size: 20px; font-weight: 700; }

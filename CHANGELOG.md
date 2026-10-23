@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Modifié
+- Sur ordinateur (720 px de large et plus), l'application tient dans une colonne centrée de 480 px : barre du bas, boutons d'enregistrement, cadenas, bandeaux et panneaux compris ; l'écran de connexion est centré en hauteur. Rien ne change sur le téléphone (2026-10-23).
+
 ## [1.13.0] - 2026-10-23
 
 ### Modifié

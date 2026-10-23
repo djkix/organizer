@@ -214,7 +214,7 @@ L'option 1 est retenue au lot 2, puisque le widget devient la seule surface de r
 - Mise à jour proposée, jamais appliquée d'elle-même (décision 27). Deux signaux : une coquille téléchargée qui attend d'être activée, et un écart entre la version de la coquille chargée et celle que l'API annonce. Les deux sont revérifiés toutes les 30 minutes et à chaque retour au premier plan, sans quoi une version publiée en journée n'arriverait qu'au prochain démarrage à froid. « Recharger » active la version en attente puis recharge la page dans tous les cas : sur un simple écart de version, aucun service worker n'attend.
 - Les deux versions comparées viennent du même `docker build` (`ORGANIZER_VERSION`), coquille et API : sinon l'écart serait permanent. Deux numéros publiés seulement (`1.2.0`), jamais `dev` ni `essai`.
 - Cible de compatibilité : Chrome Android 120 et plus, Android 12 et plus. Aucun développement ni test iOS.
-- La cible est un mobile en mode portrait, utilisable d'une seule main et en marchant.
+- La cible est un mobile en mode portrait, utilisable d'une seule main et en marchant. Sur un écran de 720 px de large et plus (ordinateur), l'application s'affiche dans une colonne centrée de 480 px, barre du bas et boutons compris ; l'écran de connexion y est centré en hauteur.
 
 ### Alternative écartée
 

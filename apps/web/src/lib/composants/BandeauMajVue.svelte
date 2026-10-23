@@ -15,7 +15,7 @@
 <style>
   /* En haut, à l'écart du bas de l'écran déjà pris par l'enregistrement et la navigation. */
   .maj {
-    position: fixed; left: 0; right: 0; top: 0; z-index: 6;
+    position: fixed; left: var(--cote); right: var(--cote); top: 0; z-index: 6;
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     padding: env(safe-area-inset-top) 8px 0 16px;
     min-height: 52px; background: var(--surface); border-bottom: 1px solid var(--line);

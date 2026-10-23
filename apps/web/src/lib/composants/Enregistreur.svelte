@@ -208,7 +208,7 @@
 <style>
   /* Écran clair et calme ; le mode se lit à la teinte (violet privé, bleu-vert ordinaire), au pictogramme et aux mots. */
   .enregistreur {
-    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; text-align: center;
+    position: fixed; inset: 0 var(--cote); display: flex; flex-direction: column; align-items: center; text-align: center;
     padding: 96px 32px calc(48px + env(safe-area-inset-bottom)); background: var(--private-bg); color: var(--text);
     --teinte: var(--private); --teinte-douce: var(--private-soft); --encre: var(--private-ink);
   }

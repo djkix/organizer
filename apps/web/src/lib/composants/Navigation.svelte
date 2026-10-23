@@ -32,7 +32,7 @@
 
 <style>
   nav {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    position: fixed; left: var(--cote); right: var(--cote); bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
     background: var(--surface); border-top: 1px solid var(--line); padding: 6px 0 env(safe-area-inset-bottom);
   }
   nav a {
