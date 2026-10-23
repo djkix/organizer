@@ -131,7 +131,7 @@ Mise à jour de la PWA proposée, jamais imposée (décision 27, 21 octobre 2026
 et bouton « Recharger », sur coquille en attente ou écart de version publiée. Coquille et API portent le même
 `ORGANIZER_VERSION`, étiqueté au même build : sans cela l'écart serait permanent.
 
-Lot 2-A : Google Agenda et alarme item par item, par un service `apps/scheduler` (seul à joindre Google), en version 1.2.0.
+Lot 2-A : Google Agenda et alarme item par item, par un service `apps/scheduler` (seul à joindre Google Agenda), en version 1.2.0.
 Plan : `docs/superpowers/plans/2026-10-05-lot2-a-agenda.md`.
 
 Sauvegarde vers le NAS (décision 28, 23 octobre 2026), en version 1.11.0 : un service `sauvegarde` copie

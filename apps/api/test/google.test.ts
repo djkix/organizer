@@ -1,6 +1,6 @@
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JWTPayload } from 'jose';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { creerVerificateurGoogle, type VerificateurGoogle } from '../src/auth/google.js';
+import { clesGoogle, creerVerificateurGoogle, GoogleIndisponible, type VerificateurGoogle } from '../src/auth/google.js';
 
 const CLIENT = 'client-essai.apps.googleusercontent.com';
 let v: VerificateurGoogle;
@@ -54,5 +54,21 @@ describe('vérificateur Google', () => {
   });
   it('charabia : null', async () => {
     expect(await v.verifier('pas-un-jeton')).toBeNull();
+  });
+});
+
+describe('certificats de Google injoignables', () => {
+  const avec = (f: typeof fetch) => creerVerificateurGoogle(CLIENT, clesGoogle(f));
+  it('réseau en échec : GoogleIndisponible, pas null', async () => {
+    const v2 = avec(async () => { throw new TypeError('fetch failed'); });
+    await expect(v2.verifier(await jeton(bon))).rejects.toBeInstanceOf(GoogleIndisponible);
+  });
+  it('réponse autre que 200 (proxy) : GoogleIndisponible', async () => {
+    const v2 = avec(async () => new Response('refusé', { status: 403 }));
+    await expect(v2.verifier(await jeton(bon))).rejects.toMatchObject({ code: 'ERR_JOSE_GENERIC' });
+  });
+  it('certificats joignables mais clé absente : null', async () => {
+    const v2 = avec(async () => Response.json({ keys: [] }));
+    expect(await v2.verifier(await jeton(bon))).toBeNull();
   });
 });

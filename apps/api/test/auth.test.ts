@@ -4,7 +4,7 @@ import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
 import { Logger } from '@nestjs/common';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { VerificateurGoogle } from '../src/auth/google.js';
+import { GoogleIndisponible, type VerificateurGoogle } from '../src/auth/google.js';
 import { AuthController } from '../src/auth/auth.controller.js';
 import { AuthService } from '../src/auth/auth.service.js';
 import { lireCookie, NOM_COOKIE } from '../src/auth/cookies.js';
@@ -21,6 +21,7 @@ const verificateur: VerificateurGoogle = {
   async verifier(jeton) {
     if (jeton === 'bon') return { sub: 'sub-1', email: 'l@exemple.org', emailVerifie: true };
     if (jeton === 'autre') return { sub: 'sub-2', email: 'autre@exemple.org', emailVerifie: true };
+    if (jeton === 'jeton-panne') throw new GoogleIndisponible('ERR_JWKS_TIMEOUT');
     return null;
   },
 };
@@ -216,6 +217,16 @@ describe('connexion Google', () => {
     const delie = await prisma.utilisateur.findUnique({ where: { nom: 'l' } });
     expect([delie?.googleEmail, delie?.googleSub]).toEqual([null, null]);
   });
+  it('delierGoogle ferme les sessions du compte', async () => {
+    await auth.ouvrirSessionGoogle(profil);
+    await auth.ouvrirSession('l', 'un mot de passe assez long');
+    await prisma.utilisateur.create({ data: { nom: 'f' } });
+    const autre = await auth.ouvrirSessionPour((await prisma.utilisateur.findUniqueOrThrow({ where: { nom: 'f' } })).id);
+    await auth.delierGoogle('l');
+    expect(await prisma.session.count({ where: { utilisateur: { nom: 'l' } } })).toBe(0);
+    expect(await auth.utilisateurDeSession(autre.jeton)).not.toBeNull();
+    await expect(auth.delierGoogle('absent')).rejects.toThrow('Compte introuvable.');
+  });
   it('le mot de passe marche toujours après une liaison Google', async () => {
     expect(await auth.ouvrirSession('l', 'un mot de passe assez long')).not.toBeNull();
   });
@@ -277,6 +288,19 @@ describe('/api/session/google', () => {
     } finally { await seule.fermer(); }
   });
 
+  it('certificats injoignables : 503, message, journal sans jeton', async () => {
+    const espion = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    const seule = await demarrerAppTest(ModuleTest);
+    try {
+      const r = await poster(seule.url, { jeton: 'jeton-panne' });
+      expect(r.status).toBe(503);
+      expect(await r.json()).toMatchObject({ message: 'Google indisponible. Utilise ton mot de passe.' });
+      const tout = JSON.stringify(espion.mock.calls);
+      expect(tout).toContain('Connexion Google : certificats injoignables (ERR_JWKS_TIMEOUT)');
+      expect(tout).not.toContain('jeton-panne');
+    } finally { espion.mockRestore(); await seule.fermer(); }
+  });
+
   it('aucun jeton ni adresse dans les journaux', async () => {
     const espions = [
       ...(['log', 'info', 'warn', 'error', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => {})),
@@ -286,8 +310,9 @@ describe('/api/session/google', () => {
       await poster(app.url, { jeton: 'bon' });
       await poster(app.url, { jeton: 'jeton-secret-mauvais' });
       await poster(app.url, { jeton: 'autre' });
+      await poster(app.url, { jeton: 'jeton-panne' });
       const tout = JSON.stringify(espions.flatMap((e) => e.mock.calls));
-      for (const interdit of ['bon', 'jeton-secret-mauvais', 'l@exemple.org', 'autre@exemple.org']) expect(tout).not.toContain(interdit);
+      for (const interdit of ['bon', 'jeton-secret-mauvais', 'jeton-panne', 'l@exemple.org', 'autre@exemple.org']) expect(tout).not.toContain(interdit);
     } finally { espions.forEach((e) => e.mockRestore()); }
   });
 });

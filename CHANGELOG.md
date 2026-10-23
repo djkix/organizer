@@ -15,6 +15,12 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Connexion par Google, côté serveur : vérification du jeton d'identité, adresse reliée par `cli lier-google` et `cli delier-google`, sub mémorisé au premier passage ; aucune inscription (2026-10-23).
 - Conception et plan de la connexion par Google : `docs/superpowers/specs/2026-10-23-connexion-google-design.md`, `docs/superpowers/plans/2026-10-23-connexion-google.md` (2026-10-23).
 
+### Corrigé
+- Le script de Google ne survit plus à l'écran de connexion : la connexion et le cadenas privé rechargent la page ; la file privée part au démarrage (2026-10-23).
+- Certificats de Google injoignables : `503` « Google indisponible. Utilise ton mot de passe. », formulaire déplié et une ligne de journal sans jeton ni adresse, au lieu de « compte non reconnu » (2026-10-23).
+- `cli delier-google` ferme aussi les sessions du compte, dans la même transaction (2026-10-23).
+- Cahier des charges et `CLAUDE.md` alignés sur la décision 29 : l'`api` joint aussi `www.googleapis.com`, le `scheduler` est seul à joindre Google Agenda, quatre dépendances sur sept chez Google (2026-10-23).
+
 ## [1.12.0] - 2026-10-23
 
 ### Ajouté

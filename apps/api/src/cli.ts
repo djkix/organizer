@@ -99,7 +99,7 @@ const COMMANDES: Record<string, Commande> = {
     async lancer([nom], prisma) {
       if (!nom) throw new Usage();
       await new AuthService(prisma).delierGoogle(nom);
-      console.log(`Compte ${nom} délié de Google.`);
+      console.log(`Compte ${nom} délié de Google, sessions fermées.`);
     },
   },
   'mot-de-passe': {

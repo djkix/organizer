@@ -87,6 +87,8 @@ test('Google : le jeton part à l\'API et ouvre Aujourd\'hui', async ({ page }) 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
   expect(corpsDe(appels, 'POST /api/session/google')).toEqual({ jeton: 'jeton-essai' });
+  // Vrai rechargement : le script de Google ne survit pas à l'écran de connexion.
+  expect(await page.evaluate(() => 'google' in window)).toBe(false);
 });
 
 test('Google : compte non reconnu, le message unique', async ({ page }) => {
@@ -134,4 +136,26 @@ test('le cadenas privé reste sur l\'écran de connexion', async ({ page }) => {
   await page.goto('/connexion');
   await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Enregistrement privé' })).toBeVisible();
+});
+
+test('le cadenas depuis la connexion laisse le script Google derrière lui', async ({ page }) => {
+  await servirGis(page);
+  await simuler(page, SANS_SESSION);
+  await page.goto('/connexion');
+  await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
+  await page.getByRole('link', { name: 'Enregistrement privé' }).click();
+  await expect(page).toHaveURL(/\/prive\/enregistrer$/);
+  await expect(page.getByText('Ça reste à la maison.')).toBeVisible();
+  expect(await page.evaluate(() => 'google' in window)).toBe(false);
+});
+
+test('Google : certificats injoignables, message et formulaire déplié', async ({ page }) => {
+  await servirGis(page);
+  await simuler(page, { ...SANS_SESSION, 'POST /api/session/google': json(503, { message: 'Google indisponible. Utilise ton mot de passe.' }) });
+  await page.goto('/connexion');
+  await expect(page.getByLabel('Nom')).toBeHidden();
+  await page.getByRole('button', { name: 'Continuer avec Google' }).click();
+  await expect(page.getByText('Google indisponible. Utilise ton mot de passe.')).toHaveCount(1);
+  await expect(page.getByLabel('Nom')).toBeVisible();
+  await expect(page).toHaveURL(/\/connexion$/);
 });

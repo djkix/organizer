@@ -77,7 +77,11 @@ export class AuthService {
 
   async delierGoogle(nom: string): Promise<void> {
     try {
-      await this.prisma.utilisateur.update({ where: { nom }, data: { googleEmail: null, googleSub: null } });
+      // Délier ferme aussi les sessions : un compte Google compromis ne garde aucune porte ouverte.
+      await this.prisma.$transaction([
+        this.prisma.utilisateur.update({ where: { nom }, data: { googleEmail: null, googleSub: null } }),
+        this.prisma.session.deleteMany({ where: { utilisateur: { nom } } }),
+      ]);
     } catch (err) {
       if ((err as { code?: string }).code === 'P2025') throw new Error('Compte introuvable.');
       throw err;

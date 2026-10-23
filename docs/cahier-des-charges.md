@@ -525,7 +525,7 @@ L utilise Google Agenda : l'application y écrit directement, via l'API Google C
 | Pensées | Jamais écrites dans l'agenda, sous aucune forme |
 | Rappels | **Aucun par défaut** : l'événement est créé sans notification. 10 minutes avant si L a activé l'alarme sur l'item |
 | Événement | Titre : texte de l'action, 60 caractères au plus. Durée 30 minutes. Fuseau `Europe/Paris`. Ni description, ni lieu, ni invité |
-| Autorisation, côté serveur | Seul le scheduler parle à Google : échange du code, jeton de rafraîchissement chiffré au repos (AES-256-GCM, clé en secret Docker), révocation à la déconnexion. L'API reçoit le retour OAuth (état et PKCE) sans joindre Google |
+| Autorisation, côté serveur | Seul le scheduler parle à Google Agenda et à son serveur OAuth : échange du code, jeton de rafraîchissement chiffré au repos (AES-256-GCM, clé en secret Docker), révocation à la déconnexion. L'API reçoit le retour OAuth (état et PKCE) sans joindre Google |
 | Synchronisation | À la création, à la modification, à la suppression ; l'identifiant d'événement est stocké avec l'action. Identifiant déterministe tiré de l'item : une écriture rejouée ne crée jamais de doublon. Après un cochage, l'écriture attend 15 s (le temps d'annuler). Un balayage toutes les 10 minutes rattrape tout écart |
 | Sens de lecture | Écriture seule au lot 2. La lecture des créneaux occupés de L est envisagée au lot 3 |
 
@@ -618,7 +618,7 @@ Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dock
 
 | Service | Image | Ports internes | Volumes | Dépendances |
 | --- | --- | --- | --- | --- |
-| `api` | `ghcr.io/djkix/organizer-api` (Node 22, ffmpeg) | 3000 | `audio` | `db`, `queue`, API Telegram, FCM |
+| `api` | `ghcr.io/djkix/organizer-api` (Node 22, ffmpeg) | 3000 | `audio` | `db`, `queue`, API Telegram, FCM, certificats publics de Google (`www.googleapis.com`, connexion par Google) |
 | `worker` | `ghcr.io/djkix/organizer-worker` (Node 22) | — | `audio` (lecture seule) | `db`, `queue`, API Gemini |
 | `scheduler` | `ghcr.io/djkix/organizer-scheduler` (Node 22) | — | — | `db`, `queue`, API Google Agenda et OAuth |
 | `web` | `ghcr.io/djkix/organizer-web` (Caddy 2.11, coquille de la PWA incluse) | 8080 | — | `api` |
@@ -726,7 +726,7 @@ Aucune inscription libre : les comptes sont créés en ligne de commande par l'a
 Le recours à Gemini change la nature de cette section : les pensées de L transitent désormais par un service tiers. C'est le seul arbitrage du projet qui ne relève pas de la technique, et il appartient à L.
 
 1. **Palier payé obligatoire, dès le premier appel.** Le palier gratuit utilise le contenu pour améliorer les produits Google et autorise la relecture humaine. La facturation Cloud est activée avant le premier test, y compris avec des énoncés fabriqués. Un contrôle au démarrage du worker vérifie que le projet est bien facturé et refuse de tourner sinon.
-2. **Trois conteneurs sortent, chacun vers une liste fermée.** Le `worker` vers l'API Gemini, le `scheduler` vers l'API Google Agenda et son serveur OAuth, l'`api` vers Telegram et FCM. La base et la file sont isolées. La sauvegarde ne sort pas vers Internet : elle écrit sur le NAS du réseau local, monté en NFS (décision 28).
+2. **Trois conteneurs sortent, chacun vers une liste fermée.** Le `worker` vers l'API Gemini, le `scheduler` vers l'API Google Agenda et son serveur OAuth, l'`api` vers Telegram, FCM et `www.googleapis.com` (certificats de la connexion par Google, décision 29). La base et la file sont isolées. La sauvegarde ne sort pas vers Internet : elle écrit sur le NAS du réseau local, monté en NFS (décision 28).
 3. **Rien d'autre ne part.** Hors la sauvegarde vers le NAS du réseau local (décision 28), rien ne quitte la VM. Les embeddings sont calculés en local. Aucune donnée n'est envoyée à un service d'analyse, de télémétrie ou de journalisation externe.
 4. **Pas de rétention côté modèle.** Aucun fichier n'est laissé sur l'API Files : l'audio est envoyé en ligne dans la requête et existe ensuite uniquement sur le volume local.
 5. **Mode privé par point d'entrée.** Une capture faite par le bouton privé est marquée privée avant même d'exister en base. Le code ne connaît pas de chemin qui envoie une capture privée vers Gemini.
@@ -1006,4 +1006,4 @@ Tous les autres arbitrages sont fermés. Le cahier des charges est complet pour 
 | Let's Encrypt | Certificats | Expiration du TLS sous 90 jours |
 | GHCR | Registre d'images | Déploiement bloqué, service en place non affecté |
 
-Quatre de ces six dépendances sont chez Google. C'est le prix du choix Gemini et de Google Agenda, et c'est assumé : la base, l'audio et les pensées restent chez djkix, et l'export complet permet de partir sans rien perdre.
+Quatre de ces sept dépendances sont chez Google. C'est le prix du choix Gemini, de Google Agenda et de la connexion par Google, et c'est assumé : la base, l'audio et les pensées restent chez djkix, et l'export complet permet de partir sans rien perdre.

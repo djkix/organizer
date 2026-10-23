@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpException, Inject, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpException, Inject, Logger, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { lireVar } from '@organizer/shared';
 import { z } from 'zod';
 import { AUTH, CLIENT_GOOGLE, VERIFICATEUR_GOOGLE } from '../jetons.js';
 import type { AuthService } from './auth.service.js';
 import { cookieEfface, cookieSession, lireCookie, NOM_COOKIE } from './cookies.js';
-import type { VerificateurGoogle } from './google.js';
+import { GoogleIndisponible, type VerificateurGoogle } from './google.js';
 import { LimiteurDebit } from './limiteur.js';
 import { SessionGuard, type RequeteAuthentifiee } from './session.guard.js';
 
@@ -16,6 +16,7 @@ export const schemaConnexion = z.object({ nom: z.string().min(1).max(100), motDe
 @Controller('api/session')
 export class AuthController {
   private readonly limiteur = new LimiteurDebit(10, 60_000);
+  private readonly journal = new Logger('AuthController');
 
   constructor(
     @Inject(AUTH) private readonly auth: AuthService,
@@ -28,13 +29,19 @@ export class AuthController {
     return { clientId: this.clientId };
   }
 
-  /** Même limiteur, même session que le mot de passe. Un seul message de refus, quelle qu'en soit la cause. */
+  /** Même limiteur, même session que le mot de passe. Un seul message de refus, quelle qu'en soit la cause.
+   *  Certificats de Google injoignables : 503, pour que L passe au mot de passe et que djkix en ait trace. */
   @Post('google')
   @HttpCode(204)
   async ouvrirGoogle(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() corps: unknown): Promise<void> {
     if (!this.limiteur.autoriser(req.ip ?? 'inconnue')) throw new HttpException({ message: "Trop d'essais. Réessaie dans une minute." }, 429);
     const p = schemaConnexionGoogle.safeParse(corps);
-    const profil = p.success && this.google ? await this.google.verifier(p.data.jeton) : null;
+    const profil = p.success && this.google ? await this.google.verifier(p.data.jeton).catch((err: unknown) => {
+      if (!(err instanceof GoogleIndisponible)) throw err;
+      // Ni jeton, ni adresse, ni sub : seulement le code de jose.
+      this.journal.warn(`Connexion Google : certificats injoignables (${err.code})`);
+      throw new HttpException({ message: 'Google indisponible. Utilise ton mot de passe.' }, 503);
+    }) : null;
     const s = profil ? await this.auth.ouvrirSessionGoogle(profil) : null;
     if (!s) throw new UnauthorizedException("Ce compte Google n'est pas reconnu.");
     res.setHeader('Set-Cookie', cookieSession(s.jeton, s.expireLe, this.auth.maintenant()));

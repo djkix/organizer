@@ -73,7 +73,8 @@ test('session expirée, empreinte active : le raccourci privé enregistre sans i
 
   await page.getByRole('button', { name: BOUTON_EMPREINTE }).click();
   await expect(page).toHaveURL(/\/$/);
-  expect(await invites(page)).toBe(1);
+  // L'entrée recharge la page (compteur remis à zéro) : une seule invite, donc une seule vérification.
+  expect(appels.filter((a) => a.cle === 'POST /api/session/empreinte')).toHaveLength(1);
   await expect.poll(() => appels.filter((a) => a.cle === DEPOT).length).toBeGreaterThanOrEqual(2);
   expect(new Set(appels.filter((a) => a.cle === DEPOT).map((a) => a.entetes['x-capture-id'])).size).toBe(1);
   expect(s.erreurs).toEqual([]);

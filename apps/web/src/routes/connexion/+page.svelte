@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
   import { ErreurApi } from '$lib/api';
   import { api, garde } from '$lib/client';
   import { CHEMINS } from '$lib/config';
@@ -8,7 +7,7 @@
   import { ceremoniesNavigateur } from '$lib/empreinte-navigateur';
   import BoutonGoogle from '$lib/composants/BoutonGoogle.svelte';
   import { MESSAGES } from '$lib/messages';
-  import { filePrivee, videur } from '$lib/prive/demarrage';
+  import { filePrivee } from '$lib/prive/demarrage';
 
   const memo = memoLocal();
   let nom = $state('');
@@ -33,11 +32,11 @@
     }
   });
 
-  async function entrer(): Promise<void> {
+  function entrer(): void {
     garde.oublier();
-    // Des enregistrements ont pu attendre la session : ils partent maintenant.
-    void videur.vider().catch(() => undefined);
-    await goto(CHEMINS.accueil);
+    // Vrai chargement : le script de Google ne survit jamais à cet écran (règle 6, CAP-09).
+    // La coquille vient du cache ; au démarrage, la file privée part (demarrerPrive).
+    location.assign(CHEMINS.accueil);
   }
 
   async function connecter(e: SubmitEvent): Promise<void> {
@@ -46,7 +45,7 @@
     message = null;
     try {
       await api.connecter({ nom: nom.trim(), motDePasse });
-      await entrer();
+      entrer();
     } catch (err) {
       if (err instanceof ErreurApi && (err.statut === 401 || err.statut === 400 || err.statut === 422)) message = MESSAGES.identifiantsInvalides;
       else if (err instanceof ErreurApi && err.statut === 429) message = MESSAGES.tropDeRequetes;
@@ -62,9 +61,10 @@
     message = null;
     try {
       await api.connecterGoogle(jeton);
-      await entrer();
+      entrer();
     } catch (err) {
       if (err instanceof ErreurApi && err.statut === 401) message = MESSAGES.googleInconnu;
+      else if (err instanceof ErreurApi && err.statut === 503) sansGoogle();
       else if (err instanceof ErreurApi && err.statut === 429) message = MESSAGES.tropDeRequetes;
       else if (err instanceof ErreurApi) message = MESSAGES.serveurIndisponible;
       else message = MESSAGES.horsLigne;
@@ -83,7 +83,7 @@
     message = null;
     try {
       const r = await connecterParEmpreinte(api, ceremoniesNavigateur, memo);
-      if (r.ok) await entrer();
+      if (r.ok) entrer();
       else message = r.message;
     } finally {
       envoi = false;

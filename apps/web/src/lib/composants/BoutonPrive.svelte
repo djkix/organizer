@@ -6,7 +6,8 @@
   let { sansNavigation = false }: { sansNavigation?: boolean } = $props();
 </script>
 
-<a class="fab" class:bas={sansNavigation} href={CHEMINS.enregistreur} aria-label="Enregistrement privé"><Icone nom="cadenas" taille={26} /></a>
+<!-- Depuis la connexion, vrai chargement : le script de Google reste derrière (règle 6). -->
+<a class="fab" class:bas={sansNavigation} href={CHEMINS.enregistreur} data-sveltekit-reload={sansNavigation || undefined} aria-label="Enregistrement privé"><Icone nom="cadenas" taille={26} /></a>
 
 <style>
   .fab {
