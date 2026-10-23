@@ -22,6 +22,10 @@ describe('en-têtes de la coquille', () => {
     expect(csp).not.toContain('unsafe');
   });
 
+  it('sans empreinte, script-src n\'a pas de double espace', () => {
+    expect(politiqueCsp([])).toContain("script-src 'self' https://accounts.google.com/gsi/client; style-src");
+  });
+
   it('micro et empreinte limités à l\'origine, aucun référent, pas de devinette de type', () => {
     expect(entetesCoquille('<html></html>')).toMatchObject({
       'Permissions-Policy': 'microphone=(self), camera=(), geolocation=(), publickey-credentials-create=(self), publickey-credentials-get=(self), identity-credentials-get=(self "https://accounts.google.com")',

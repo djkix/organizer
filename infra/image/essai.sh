@@ -102,7 +102,8 @@ entete "$IMMUABLE" cache-control | grep -q immutable || echec "_app/immutable do
 entete /manifest.webmanifest content-type | grep -q '^application/manifest+json' || echec "type du manifeste"
 entete / permissions-policy | grep -qF 'microphone=(self)' || echec "Permissions-Policy"
 entete / permissions-policy | grep -qF 'publickey-credentials-get=(self)' || echec "Permissions-Policy : empreinte"
-[ "$(entete / referrer-policy)" = "no-referrer" ] || echec "Referrer-Policy"
+entete / permissions-policy | grep -qF 'identity-credentials-get=(self "https://accounts.google.com")' || echec "Permissions-Policy : Google"
+[ "$(entete / referrer-policy)" = "strict-origin-when-cross-origin" ] || echec "Referrer-Policy"
 [ "$(entete / x-content-type-options)" = "nosniff" ] || echec "nosniff"
 
 # API derrière Caddy

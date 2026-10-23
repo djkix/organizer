@@ -28,7 +28,7 @@ export function empreintesScripts(html) {
 export function politiqueCsp(empreintes) {
   return [
     "default-src 'none'",
-    `script-src 'self' ${empreintes.join(' ')} https://accounts.google.com/gsi/client`.replace('  ', ' '),
+    ['script-src', "'self'", ...empreintes, 'https://accounts.google.com/gsi/client'].join(' '),
     "style-src 'self' https://accounts.google.com/gsi/style",
     "img-src 'self'",
     "font-src 'self'",
