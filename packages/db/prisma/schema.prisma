@@ -54,6 +54,8 @@ model Utilisateur {
   sessions        Session[]
   clesAcces       CleAcces[]
   agenda          AgendaGoogle?
+  googleEmail     String?   @unique @map("google_email")
+  googleSub       String?   @unique @map("google_sub")
 
   @@map("utilisateur")
 }

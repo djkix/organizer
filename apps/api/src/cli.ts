@@ -86,6 +86,22 @@ const COMMANDES: Record<string, Commande> = {
       console.log(`Compte ${nom} délié.`);
     },
   },
+  'lier-google': {
+    usage: 'lier-google <nom> <adresse>',
+    async lancer([nom, adresse], prisma) {
+      if (!nom || !adresse || !adresse.includes('@')) throw new Usage();
+      await new AuthService(prisma).lierGoogle(nom, adresse);
+      console.log(`Compte ${nom} relié à ${adresse}.`);
+    },
+  },
+  'delier-google': {
+    usage: 'delier-google <nom>',
+    async lancer([nom], prisma) {
+      if (!nom) throw new Usage();
+      await new AuthService(prisma).delierGoogle(nom);
+      console.log(`Compte ${nom} délié de Google.`);
+    },
+  },
   'mot-de-passe': {
     usage: 'mot-de-passe <nom>',
     async lancer([nom], prisma) {

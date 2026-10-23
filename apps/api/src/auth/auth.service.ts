@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 import type { PrismaClient } from '@organizer/db';
+import type { ProfilGoogle } from './google.js';
 
 const DUREE_SESSION_MS = 90 * 24 * 3600_000;
 
@@ -41,6 +42,46 @@ export class AuthService {
     const ok = await verify(u?.motDePasseHash ?? (await factice()), motDePasse);
     if (!u?.motDePasseHash || !ok) return null;
     return this.ouvrirSessionPour(u.id);
+  }
+
+  /** Connexion par Google : seule une adresse vérifiée, reliée par l'administrateur, ouvre une session. */
+  async ouvrirSessionGoogle(profil: ProfilGoogle): Promise<{ jeton: string; expireLe: Date } | null> {
+    if (!profil.emailVerifie) return null;
+    const u = await this.prisma.utilisateur.findUnique({ where: { googleEmail: profil.email.toLowerCase() } });
+    if (!u) return null;
+    if (u.googleSub === null) {
+      try {
+        await this.prisma.utilisateur.update({ where: { id: u.id }, data: { googleSub: profil.sub } });
+      } catch (err) {
+        // Ce sub appartient déjà à un autre compte.
+        if ((err as { code?: string }).code === 'P2002') return null;
+        throw err;
+      }
+    } else if (u.googleSub !== profil.sub) {
+      return null;
+    }
+    return this.ouvrirSessionPour(u.id);
+  }
+
+  /** Relie une adresse Google au compte ; le sub est mémorisé au premier passage. */
+  async lierGoogle(nom: string, adresse: string): Promise<void> {
+    try {
+      await this.prisma.utilisateur.update({ where: { nom }, data: { googleEmail: adresse.toLowerCase(), googleSub: null } });
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === 'P2025') throw new Error('Compte introuvable.');
+      if (code === 'P2002') throw new Error('Adresse déjà reliée à un autre compte.');
+      throw err;
+    }
+  }
+
+  async delierGoogle(nom: string): Promise<void> {
+    try {
+      await this.prisma.utilisateur.update({ where: { nom }, data: { googleEmail: null, googleSub: null } });
+    } catch (err) {
+      if ((err as { code?: string }).code === 'P2025') throw new Error('Compte introuvable.');
+      throw err;
+    }
   }
 
   /** Session de 90 jours d'un compte déjà authentifié, par mot de passe ou par empreinte. */

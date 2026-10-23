@@ -160,3 +160,48 @@ describe('purge des sessions', () => {
     expect((await prisma.session.findMany()).map((s) => s.jetonHash)).toEqual(['b'.repeat(64)]);
   });
 });
+
+describe('connexion Google', () => {
+  const profil = { sub: 's1', email: 'l@exemple.org', emailVerifie: true };
+  beforeEach(async () => { await auth.lierGoogle('l', 'L@Exemple.org'); });
+
+  it('adresse reliée : session de 90 jours, sub mémorisé', async () => {
+    const s = await auth.ouvrirSessionGoogle(profil);
+    expect(s?.expireLe).toEqual(new Date(horloge.getTime() + 90 * 24 * 3600_000));
+    expect((await prisma.utilisateur.findUnique({ where: { nom: 'l' } }))?.googleSub).toBe('s1');
+  });
+  it('adresse comparée en minuscules', async () => {
+    expect(await auth.ouvrirSessionGoogle(profil)).not.toBeNull();
+  });
+  it('adresse non vérifiée : refusée', async () => {
+    expect(await auth.ouvrirSessionGoogle({ ...profil, emailVerifie: false })).toBeNull();
+  });
+  it('adresse inconnue : refusée', async () => {
+    expect(await auth.ouvrirSessionGoogle({ ...profil, email: 'x@exemple.org' })).toBeNull();
+  });
+  it('sub changé : refusé', async () => {
+    expect(await auth.ouvrirSessionGoogle(profil)).not.toBeNull();
+    expect(await auth.ouvrirSessionGoogle({ ...profil, sub: 's2' })).toBeNull();
+  });
+  it('sub déjà pris : refusé sans erreur', async () => {
+    await prisma.utilisateur.create({ data: { nom: 'f', googleSub: 's1' } });
+    expect(await auth.ouvrirSessionGoogle(profil)).toBeNull();
+  });
+  it('lierGoogle : adresse déjà reliée à un autre compte refusée', async () => {
+    await prisma.utilisateur.create({ data: { nom: 'f' } });
+    await expect(auth.lierGoogle('f', 'l@exemple.org')).rejects.toThrow('Adresse déjà reliée');
+    await expect(auth.lierGoogle('absent', 'z@exemple.org')).rejects.toThrow('Compte introuvable.');
+  });
+  it('lierGoogle : remet le sub à vide ; delierGoogle retire adresse et sub', async () => {
+    await auth.ouvrirSessionGoogle(profil);
+    await auth.lierGoogle('l', 'autre@exemple.org');
+    const relie = await prisma.utilisateur.findUnique({ where: { nom: 'l' } });
+    expect([relie?.googleEmail, relie?.googleSub]).toEqual(['autre@exemple.org', null]);
+    await auth.delierGoogle('l');
+    const delie = await prisma.utilisateur.findUnique({ where: { nom: 'l' } });
+    expect([delie?.googleEmail, delie?.googleSub]).toEqual([null, null]);
+  });
+  it('le mot de passe marche toujours après une liaison Google', async () => {
+    expect(await auth.ouvrirSession('l', 'un mot de passe assez long')).not.toBeNull();
+  });
+});
