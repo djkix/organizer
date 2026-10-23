@@ -10,6 +10,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ### Modifié
 - `GET /api/session/moi` donne `versionServeur` aux deux comptes, pas seulement à l'administrateur : la PWA la compare à la sienne. Réglages ne l'affiche toujours qu'à l'administrateur (2026-10-21).
+- README réécrit sur le modèle de wealthnexus : en-tête, aperçu de l'écran, fonctionnalités, architecture, déploiement, variables, API, historique résumé ; le détail reste dans `docs/exploitation.md` et `CHANGELOG.md` (2026-10-22).
 
 ### Corrigé
 - L'image `api` ne portait pas `ORGANIZER_VERSION` : l'API annonçait « dev » en production, et Réglages affichait « serveur dev » à côté du vrai numéro de la coquille (2026-10-21).
