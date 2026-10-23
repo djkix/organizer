@@ -4,7 +4,7 @@
 
 **Bloc-notes vocal à tri automatique — Telegram · PWA Android · Gemini · Google Agenda**
 
-[![Version](https://img.shields.io/badge/version-1.12.0-teal?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.13.0-teal?style=for-the-badge)](CHANGELOG.md)
 [![Stack](https://img.shields.io/badge/stack-NestJS_·_SvelteKit_·_PostgreSQL-blue?style=for-the-badge)](#stack-technique)
 [![License](https://img.shields.io/badge/license-Tous_droits_réservés-slate?style=for-the-badge)](#licence)
 
@@ -368,6 +368,7 @@ Détail complet dans [`CHANGELOG.md`](CHANGELOG.md).
 
 | Version | Date | Essentiel |
 |---------|------|-----------|
+| 1.13.0 | 2026-10-23 | Connexion par Google, à côté du mot de passe et de l'empreinte |
 | 1.12.0 | 2026-10-23 | « Sauvegarder maintenant » dans Réglages, pour l'admin |
 | 1.11.1 | 2026-10-23 | La sauvegarde attend l'API, délais d'attente sur la base |
 | 1.11.0 | 2026-10-23 | Sauvegarde quotidienne vers le NAS, bandeau de nouvelle version |
@@ -392,6 +393,6 @@ Aucune licence accordée : tous droits réservés.
 
 <div align="center">
 
-**Organizer** · v1.12.0 · Développé par [djkix](https://github.com/djkix)
+**Organizer** · v1.13.0 · Développé par [djkix](https://github.com/djkix)
 
 </div>
