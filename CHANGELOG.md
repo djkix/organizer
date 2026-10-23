@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.12.0] - 2026-10-23
+
 ### Ajouté
 - Réglages › Sauvegarde, pour l'administrateur : dernière sauvegarde réussie et bouton « Sauvegarder maintenant ». L'API écrit une demande (table `demande_sauvegarde`, migration additive) que le service `sauvegarde` prend dans les 5 minutes ; deux appuis ne font qu'une sauvegarde (2026-10-23).
 
