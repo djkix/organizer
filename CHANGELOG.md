@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.11.1] - 2026-10-23
+
 ### Ajouté
 - `docs/exploitation.md` consigne l'essai de restauration de la 1.11.0 : base et audio restaurés depuis le NAS, identiques à la production (2026-10-23).
 
