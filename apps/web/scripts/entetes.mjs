@@ -20,18 +20,21 @@ export function empreintesScripts(html) {
 
 /**
  * CSP stricte : rien hors de l'origine, aucun style ni script en ligne hors empreinte, aucun cadre.
+ * Seule ouverture : Google Identity Services (bouton « Se connecter avec Google », décision 29),
+ * limitée à ses chemins /gsi/ ; le cadre de la page reste interdit.
  * @param {string[]} empreintes
  * @returns {string}
  */
 export function politiqueCsp(empreintes) {
   return [
     "default-src 'none'",
-    `script-src 'self' ${empreintes.join(' ')}`.trim(),
-    "style-src 'self'",
+    `script-src 'self' ${empreintes.join(' ')} https://accounts.google.com/gsi/client`.replace('  ', ' '),
+    "style-src 'self' https://accounts.google.com/gsi/style",
     "img-src 'self'",
     "font-src 'self'",
     "media-src 'self'",
-    "connect-src 'self'",
+    'frame-src https://accounts.google.com/gsi/',
+    "connect-src 'self' https://accounts.google.com/gsi/",
     "worker-src 'self'",
     "manifest-src 'self'",
     "base-uri 'none'",
@@ -48,8 +51,9 @@ export function politiqueCsp(empreintes) {
 export function entetesCoquille(html) {
   return {
     'Content-Security-Policy': politiqueCsp(empreintesScripts(html)),
-    'Permissions-Policy': 'microphone=(self), camera=(), geolocation=(), publickey-credentials-create=(self), publickey-credentials-get=(self)',
-    'Referrer-Policy': 'no-referrer',
+    'Permissions-Policy': 'microphone=(self), camera=(), geolocation=(), publickey-credentials-create=(self), publickey-credentials-get=(self), identity-credentials-get=(self "https://accounts.google.com")',
+    // Google Identity Services refuse un référent absent (décision 29) : origine seule hors du site.
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
     'X-Content-Type-Options': 'nosniff',
   };
 }

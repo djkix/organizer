@@ -101,9 +101,11 @@ describe('Caddyfile', () => {
 
   it('mêmes en-têtes que ceux sous lesquels la PWA est testée', () => {
     const e = entetesCoquille('<html></html>');
-    expect(c).toContain(`Permissions-Policy "${e['Permissions-Policy']}"`);
+    expect(c).toContain(`Permissions-Policy \`${e['Permissions-Policy']}\``);
     expect(c).toContain(`Referrer-Policy ${e['Referrer-Policy']}`);
     expect(c).toContain(`X-Content-Type-Options ${e['X-Content-Type-Options']}`);
+    expect(c).toContain('Referrer-Policy strict-origin-when-cross-origin');
+    expect(c).not.toContain('no-referrer');
     expect(c).toContain('import /etc/caddy/csp.caddy');
   });
 
@@ -143,7 +145,7 @@ describe('squid.conf', () => {
   it('liste fermée : Telegram pour l\'API, Gemini pour le worker, CONNECT 443 seulement, refus du reste', () => {
     expect(s).toContain('acl depuis_api src 10.201.2.10/32');
     expect(s).toContain('acl depuis_worker src 10.201.2.11/32');
-    expect(s).toContain('acl vers_api dstdomain -n api.telegram.org');
+    expect(s).toContain('acl vers_api dstdomain -n api.telegram.org www.googleapis.com');
     expect(s).toContain('acl vers_worker dstdomain -n generativelanguage.googleapis.com');
     expect(s).toContain('acl depuis_scheduler src 10.201.2.12/32');
     expect(s).toContain('acl vers_scheduler dstdomain -n www.googleapis.com oauth2.googleapis.com');

@@ -20,8 +20,8 @@
 :8080 {
 	header {
 		X-Content-Type-Options nosniff
-		Referrer-Policy no-referrer
-		Permissions-Policy "microphone=(self), camera=(), geolocation=(), publickey-credentials-create=(self), publickey-credentials-get=(self)"
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy `microphone=(self), camera=(), geolocation=(), publickey-credentials-create=(self), publickey-credentials-get=(self), identity-credentials-get=(self "https://accounts.google.com")`
 		-Server
 	}
 
