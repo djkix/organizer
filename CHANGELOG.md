@@ -5,6 +5,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- Conception et plan de la connexion par Google : `docs/superpowers/specs/2026-10-23-connexion-google-design.md`, `docs/superpowers/plans/2026-10-23-connexion-google.md` (2026-10-23).
+
 ## [1.12.0] - 2026-10-23
 
 ### Ajouté
