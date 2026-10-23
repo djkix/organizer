@@ -231,7 +231,7 @@ docker compose up -d --wait
 | Service | Rôle | Sortie Internet |
 |---------|------|-----------------|
 | `web` | Caddy : coquille de la PWA, CSP, relais de `/api`. Seul port publié (7070) | — |
-| `api` | Migrations au démarrage, puis PWA, webhook Telegram, ingestion | `api.telegram.org` |
+| `api` | Migrations au démarrage, puis PWA, webhook Telegram, ingestion | `api.telegram.org`, `www.googleapis.com` |
 | `worker` | Classement Gemini | `generativelanguage.googleapis.com` |
 | `scheduler` | Google Agenda | `www.googleapis.com`, `oauth2.googleapis.com` |
 | `sortie` | Squid, seule route vers Internet | — |

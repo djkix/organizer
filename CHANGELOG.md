@@ -16,6 +16,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - Conception et plan de la connexion par Google : `docs/superpowers/specs/2026-10-23-connexion-google-design.md`, `docs/superpowers/plans/2026-10-23-connexion-google.md` ; exemples d'adresses en `exemple.org` uniquement (2026-10-23).
 
 ### Corrigé
+- `docs/exploitation.md` et README : la sortie de l'`api` comprend `www.googleapis.com` (décision 29) ; `.superpowers/` ignoré par git, pour que les dossiers de travail n'entrent jamais dans le dépôt (2026-10-23).
 - Le script de Google ne survit plus à l'écran de connexion : la connexion et le cadenas privé rechargent la page ; la file privée part au démarrage (2026-10-23).
 - Certificats de Google injoignables : `503` « Google indisponible. Utilise ton mot de passe. », formulaire déplié et une ligne de journal sans jeton ni adresse, au lieu de « compte non reconnu » (2026-10-23).
 - `cli delier-google` ferme aussi les sessions du compte, dans la même transaction (2026-10-23).

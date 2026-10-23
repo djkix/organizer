@@ -30,3 +30,6 @@ playwright-report/
 
 # Secrets de la stack de production
 infra/secrets/
+
+# Dossiers de travail des outils de Claude (maquettes, suivi des plans) : jamais dans le dépôt public
+.superpowers/
