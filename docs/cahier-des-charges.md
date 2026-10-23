@@ -796,6 +796,8 @@ Décision 11 : aucune sauvegarde dédiée au démarrage, pour garder une stack s
 
 Depuis la 1.11.0 (décision 28) : un service `sauvegarde` copie chaque jour après 3 h, heure de Paris, la base (`pg_dump` complet), l'audio (privé compris) et la configuration de la stack (`compose.yaml`, `.env`, `secrets/`) dans un dossier daté du NAS `<IP du NAS>`, monté en NFS. Les fichiers audio inchangés sont des liens physiques vers la veille : sept jours tiennent à peu près dans la place d'un seul. Sept dossiers sont gardés ; une tentative ratée ne supprime rien. Sans chiffrement. Les fichiers de configuration et les secrets restent aussi dans le gestionnaire de mots de passe.
 
+Depuis la 1.12.0 : Réglages › Sauvegarde, pour l'administrateur seul, montre la dernière sauvegarde réussie et propose « Sauvegarder maintenant ». L'API n'écrit qu'une demande ; le service `sauvegarde` la prend dans les 5 minutes et remplace la sauvegarde du jour. L ne voit rien de tout cela.
+
 Objectifs de reprise, à partir du lot 2 : RPO de 24 heures, RTO de 4 heures. Un test de restauration complète est réalisé au lot 2, puis une fois par an.
 
 ### Supervision

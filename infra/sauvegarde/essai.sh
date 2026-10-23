@@ -19,6 +19,7 @@ EOF
 cat > "$R/bin/psql" <<EOF
 #!/bin/sh
 [ "\${FAUX_PSQL_ECHEC:-0}" = 1 ] && exit 2
+case "\$*" in *demande_sauvegarde*) [ "\${FAUX_DEMANDE:-0}" = 1 ] && echo 1; exit 0 ;; esac
 echo "\$*" >> "$R/sql.log"
 EOF
 chmod +x "$R/bin/pg_dump" "$R/bin/psql"
@@ -99,6 +100,19 @@ grep -q 'déjà en cours' "$R/out.log" || echec "déjà en cours : message"
 [ -d "$R/nas/.en-cours/temoin" ] || echec "déjà en cours : .en-cours supprimé"
 [ ! -e "$R/nas/2026-10-13" ] || echec "déjà en cours : dossier créé"
 [ "$(wc -l < "$R/sql.log")" = "$lignes" ] || echec "déjà en cours : tentative inscrite"
+
+# planifier : une demande depuis Réglages lance une sauvegarde à toute heure ; sans demande, rien avant HEURE
+printf '#!/bin/sh\necho fait >> "%s/fait"\n' "$R" > "$R/bin/faux-sauvegarder"
+chmod +x "$R/bin/faux-sauvegarder"
+planifier() {
+  HEURE=24 CIBLE="$R/nas" DATABASE_URL=postgresql://faux PATH="$R/bin:$PATH" SAUVEGARDER="$R/bin/faux-sauvegarder" \
+    timeout 2 /app/planifier.sh > "$R/out.log" 2>&1
+}
+FAUX_DEMANDE=1 planifier
+[ "$(cat "$R/fait" 2>/dev/null)" = fait ] || echec "planifier : demande non prise"
+rm -f "$R/fait"
+planifier
+[ ! -e "$R/fait" ] || echec "planifier : sauvegarde sans demande avant l'heure"
 
 rm -rf "$R"
 echo "Essai de la sauvegarde réussi."

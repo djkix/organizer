@@ -251,3 +251,11 @@ model Sauvegarde {
   @@index([fin])
   @@map("sauvegarde")
 }
+
+/// Sauvegarde demandée depuis Réglages ; le service sauvegarde la prend et efface la ligne.
+model DemandeSauvegarde {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  demandeeLe DateTime @default(now()) @map("demandee_le")
+
+  @@map("demande_sauvegarde")
+}

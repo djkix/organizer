@@ -1,5 +1,5 @@
 import type {
-  CorpsConnexion, CorpsCorrection, CorpsEtiquette, DetailEnvoi, ElementEfface, PriveeEffacee, JourHistorique, JourPrive, ReponseAgenda, ReponseAlertes, VuePensees, ReponseConnexionAgenda, ReponseErreur,
+  CorpsConnexion, CorpsCorrection, CorpsEtiquette, DetailEnvoi, ElementEfface, PriveeEffacee, JourHistorique, JourPrive, ReponseAgenda, ReponseAlertes, ReponseSauvegarde, VuePensees, ReponseConnexionAgenda, ReponseErreur,
   ResumeEmpreinte, VueARevoir, VueAujourdhui, VueHorizons, VueSemaine,
 } from '@organizer/shared/api';
 import type {
@@ -53,6 +53,8 @@ export interface ClientApi {
   pensees(mois: string, filtre?: { theme?: string; personne?: string }): Promise<VuePensees>;
   alertes(): Promise<ReponseAlertes>;
   marquerAlertesVues(): Promise<void>;
+  sauvegarde(): Promise<ReponseSauvegarde>;
+  demanderSauvegarde(): Promise<void>;
   envoi(captureId: string): Promise<DetailEnvoi>;
   agenda(): Promise<ReponseAgenda>;
   connecterAgenda(): Promise<ReponseConnexionAgenda>;
@@ -157,6 +159,8 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
       sansCorps(appeler('PATCH', `/api/captures/privees/${id(captureId)}`, { etiquette } satisfies CorpsEtiquette)),
     alertes: () => json(appeler('GET', '/api/alertes')),
     marquerAlertesVues: () => sansCorps(appeler('POST', '/api/alertes/vues')),
+    sauvegarde: () => json(appeler('GET', '/api/sauvegarde')),
+    demanderSauvegarde: () => sansCorps(appeler('POST', '/api/sauvegarde/demande')),
     pensees: (mois, filtre = {}) => {
       const q = new URLSearchParams({ mois });
       if (filtre.theme) q.set('theme', filtre.theme);

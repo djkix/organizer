@@ -27,6 +27,7 @@ import { ItemsService } from './items/items.service.js';
 import { CapturesController } from './captures/captures.controller.js';
 import { CapturesOrdinairesService } from './captures/captures.service.js';
 import { AlertesController } from './alertes/alertes.controller.js';
+import { SauvegardeController } from './veille/sauvegarde.controller.js';
 import { HistoriqueController } from './historique/historique.controller.js';
 import { HistoriqueService } from './historique/historique.service.js';
 import { PenseesController } from './pensees/pensees.controller.js';
@@ -128,7 +129,7 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
 }
 
 @Module({
-  controllers: [TelegramController, AgendaController, AuthController, EmpreintesController, VuesController, ItemsController, PriveesController, CapturesController, HistoriqueController, AlertesController, PenseesController, SanteController],
+  controllers: [TelegramController, AgendaController, AuthController, EmpreintesController, VuesController, ItemsController, PriveesController, CapturesController, HistoriqueController, AlertesController, SauvegardeController, PenseesController, SanteController],
   providers: [
     { provide: CONFIG, useFactory: lireConfigApi },
     { provide: PRISMA, useFactory: () => creerPrisma() },

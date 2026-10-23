@@ -26,6 +26,14 @@ describe('client API', () => {
     expect(appels.map((a) => `${a.init.method} ${a.url}`)).toEqual(['GET /api/alertes', 'POST /api/alertes/vues']);
   });
 
+  it('sauvegarde : état et demande sur les bonnes routes', async () => {
+    const { f, appels } = fauxFetch([new Response(JSON.stringify({ derniereReussie: null, demandee: false }), { status: 200, headers: { 'content-type': 'application/json' } }), vide()]);
+    const api = creerClientApi({ fetch: f });
+    expect(await api.sauvegarde()).toEqual({ derniereReussie: null, demandee: false });
+    await api.demanderSauvegarde();
+    expect(appels.map((a) => `${a.init.method} ${a.url}`)).toEqual(['GET /api/sauvegarde', 'POST /api/sauvegarde/demande']);
+  });
+
   it('historique : liste par mois et détail, sur les bonnes routes', async () => {
     const corps = (x: unknown) => new Response(JSON.stringify(x), { status: 200, headers: { 'content-type': 'application/json' } });
     const { f, appels } = fauxFetch([corps([]), corps({ id: 'x' })]);

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
-  import type { AlerteTechnique, ResumeEmpreinte } from '@organizer/shared/api';
+  import type { AlerteTechnique, ReponseSauvegarde, ResumeEmpreinte } from '@organizer/shared/api';
   import { etatAlertes } from '$lib/alertes.svelte';
   import { attendreIssue, lireRetour, messageRetour, vueAgenda, type VueAgenda } from '$lib/agenda';
   import { api, garde } from '$lib/client';
@@ -38,6 +38,25 @@
       await chargerAlertes();
     } catch {
       // Réessayable : le bouton reste là.
+    }
+  }
+
+  // Sauvegarde à la demande : l'admin seul ; le service sauvegarde la prend dans les 5 minutes.
+  let sauvegarde = $state<ReponseSauvegarde | null>(null);
+  let messageSauvegarde = $state<string | null>(null);
+  async function chargerSauvegarde(): Promise<void> {
+    try {
+      sauvegarde = await api.sauvegarde();
+    } catch {
+      messageSauvegarde = MESSAGES.serveurIndisponible;
+    }
+  }
+  async function demanderSauvegarde(): Promise<void> {
+    try {
+      await api.demanderSauvegarde();
+      if (sauvegarde) sauvegarde = { ...sauvegarde, demandee: true };
+    } catch {
+      messageSauvegarde = MESSAGES.serveurIndisponible;
     }
   }
 
@@ -99,7 +118,10 @@
   }
 
   onMount(async () => {
-    if (admin) void chargerAlertes();
+    if (admin) {
+      void chargerAlertes();
+      void chargerSauvegarde();
+    }
     void chargerAgenda();
     disponible = ceremoniesNavigateur.disponible();
     ici = memo.lire();
@@ -186,6 +208,16 @@
       </ul>
       {#if alertes.some((a) => !a.vue)}<button class="bouton activer" onclick={marquerVues}>{MESSAGES.toutMarquerVu}</button>{/if}
     {/if}
+    <h2 class="groupe">{MESSAGES.sauvegardeTitre}</h2>
+    {#if sauvegarde}
+      <div class="carte reglage">
+        {#if sauvegarde.derniereReussie}<span>{MESSAGES.derniereSauvegarde}</span><span class="discret">{momentEnClair(sauvegarde.derniereReussie, FUSEAU)}</span>
+        {:else}<span class="discret">{MESSAGES.aucuneSauvegarde}</span>{/if}
+      </div>
+      {#if sauvegarde.demandee}<p class="discret message">{MESSAGES.sauvegardeDemandee}</p>
+      {:else}<button class="bouton activer" onclick={demanderSauvegarde}>{MESSAGES.sauvegarderMaintenant}</button>{/if}
+    {/if}
+    <p class="discret message" aria-live="polite">{messageSauvegarde ?? ''}</p>
   {/if}
   <h2 class="groupe">Empreinte</h2>
   {#each cles as c (c.id)}
