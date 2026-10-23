@@ -5,6 +5,7 @@ const GO = 1024 ** 3;
 const T = new Date('2026-10-16T09:00:00Z');
 const BASE: Mesures = {
   enAttente: 0, echecsHeure: 0, audioOctets: 0, baseOctets: 0, latenceMoyenneS: null, derniereCapture: new Date('2026-10-16T08:00:00Z'),
+  derniereSauvegarde: null, derniereSauvegardeReussie: null,
 };
 const cles = (m: Partial<Mesures>): string[] => constater({ ...BASE, ...m }, T).map((c) => c.cle);
 
@@ -32,6 +33,35 @@ describe('constater', () => {
     expect(cles({ derniereCapture: new Date('2026-10-06T09:01:00Z') })).toEqual([]);
     expect(cles({ derniereCapture: null })).toEqual([]);
     expect(constater({ ...BASE, derniereCapture: new Date('2026-10-01T00:00:00Z') }, T)[0]!.message).toMatch(/^Information :/);
+  });
+});
+
+describe('constater : sauvegarde', () => {
+  const ok = { fin: new Date('2026-10-16T01:05:00Z'), reussie: true, message: '' };
+  it('table vide : rien', () => {
+    expect(cles({ derniereSauvegarde: null, derniereSauvegardeReussie: null })).toEqual([]);
+  });
+  it('dernière tentative en échec : une alerte avec son message', () => {
+    const [c] = constater({ ...BASE, derniereSauvegarde: { fin: T, reussie: false, message: 'étape audio (code 23)' }, derniereSauvegardeReussie: ok.fin }, T);
+    expect(c).toEqual({ cle: 'sauvegarde-echec', message: 'Sauvegarde en échec : étape audio (code 23).' });
+  });
+  it('aucune réussite depuis 36 h', () => {
+    const il36h = new Date(T.getTime() - 36 * 3600_000);
+    expect(cles({ derniereSauvegarde: { ...ok, fin: il36h }, derniereSauvegardeReussie: il36h })).toEqual([]);
+    const plus = new Date(il36h.getTime() - 60_000);
+    const [c] = constater({ ...BASE, derniereSauvegarde: { ...ok, fin: plus }, derniereSauvegardeReussie: plus }, T);
+    expect(c).toEqual({ cle: 'sauvegarde-absente', message: 'Aucune sauvegarde réussie depuis 36 h.' });
+  });
+  it('échecs répétés sans réussite : les deux constats', () => {
+    expect(cles({ derniereSauvegarde: { fin: T, reussie: false, message: 'x' }, derniereSauvegardeReussie: new Date('2026-10-10T00:00:00Z') }))
+      .toEqual(['sauvegarde-echec', 'sauvegarde-absente']);
+  });
+  it('jamais réussie, dernière tentative ratée il y a plus de 36 h', () => {
+    const vieux = new Date(T.getTime() - 37 * 3600_000);
+    expect(cles({ derniereSauvegarde: { fin: vieux, reussie: false, message: 'x' }, derniereSauvegardeReussie: null }))
+      .toEqual(['sauvegarde-echec', 'sauvegarde-absente']);
+    expect(cles({ derniereSauvegarde: { fin: T, reussie: false, message: 'x' }, derniereSauvegardeReussie: null }))
+      .toEqual(['sauvegarde-echec']);
   });
 });
 

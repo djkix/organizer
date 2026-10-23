@@ -22,7 +22,7 @@ L'hébergement est entièrement auto-hébergé sur le homelab hyperviseur exista
 | Aucun classement manuel | Plus de 85 % des entrées classées sans question posée à l'utilisatrice |
 | Rien ne se perd | 100 % des captures conservées, même hors ligne et même non classifiables |
 | Restitution lisible | Jamais plus de 5 lignes sur l'écran d'accueil, phrases de moins de 12 mots |
-| Confidentialité | Les captures faites avec le bouton privé ne quittent jamais le serveur |
+| Confidentialité | Les captures faites avec le bouton privé ne quittent jamais le réseau local et ne partent jamais vers Gemini |
 | Exploitation légère | Mise à jour et sauvegarde sans intervention manuelle mensuelle |
 
 ### Principes directeurs
@@ -51,7 +51,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 8 | Visibilité des pensées | ~~Visibles aussi par djkix~~ Remplacée par la décision 25 |
 | 9 | Compte de l'API Gemini | Compte Google personnel de djkix, avec facturation Cloud activée |
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
-| 11 | Sauvegarde | Aucune au démarrage, pour rester simple. Sauvegarde vers le NAS au lot 2 |
+| 11 | Sauvegarde | Aucune au démarrage, pour rester simple. Sauvegarde vers le NAS au lot 2 (décision 28) |
 | 12 | Disque et audio | 50 Go maximum pour toute la stack, en volumes Docker simples. Rotation de l'audio ordinaire déjà transcrit au-delà de 40 Go, du plus ancien au plus récent. Audio privé jamais purgé |
 | 13 | Hébergement | Hôte Docker existant du homelab, stack pilotée par Dockge |
 | 14 | Publication | `organizer.example.org` |
@@ -67,6 +67,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 24 | Capture ordinaire dans la PWA | **Avancée du lot 3 au lot 2-B**, décidée par djkix le 5 octobre 2026. Un bouton « Enregistrer » ordinaire (envoyé à Gemini, classé) à côté du bouton « Privé », un appui pour démarrer, un appui pour arrêter. Telegram reste un point d'entrée. Le mode reste décidé par le point d'entrée : deux boutons, deux écrans, deux routes d'API, jamais de bascule après coup |
 | 26 | Durée d'un enregistrement dans la PWA | **1 min 30 au plus**, en ordinaire comme en privé : un minuteur affiche le temps écoulé sur 1:30, l'enregistrement s'arrête seul et garde ce qui a été dit. Telegram n'est pas limité. Décidé par djkix le 15 octobre 2026 |
 | 27 | Mise à jour de la PWA | **Proposée, jamais imposée**, décidée par djkix le 21 octobre 2026. Un bandeau discret « Nouvelle version disponible » et son bouton « Recharger », affiché quand une nouvelle coquille attend d'être activée ou que le serveur annonce un autre numéro publié. Jamais sur l'écran de connexion ni pendant un enregistrement. Ce n'est pas une sollicitation au sens de la décision 5 : rien ne sort de l'application, aucune notification n'est émise, et le contenu de L n'est pas en cause |
+| 28 | Sauvegarde | **Chaque jour après 3 h, vers le NAS** `<IP du NAS>` (dossier partagé `<partage>`, `<dossier>`), en NFS : base, audio (privé compris) et configuration de la stack (secrets compris), sept jours gardés, fichiers inchangés en liens physiques. **Sans chiffrement** ; L a accepté que ses enregistrements privés y soient copiés en clair. Décidé par djkix le 23 octobre 2026 |
 
 ## Périmètre fonctionnel
 
@@ -132,7 +133,7 @@ flowchart LR
   API --> HA[Home Assistant<br/>widget silencieux]
 ```
 
-Une capture privée s'arrête à l'API : elle est écrite sur le volume audio et en base, sans jamais entrer dans la file de traitement.
+Une capture privée s'arrête à l'API : elle est écrite sur le volume audio et en base, sans jamais entrer dans la file de traitement. Seule la sauvegarde quotidienne la copie, sur le NAS du réseau local (décision 28).
 
 Une capture entre par Telegram, revient classée dans la PWA, et ressort en notification au moment utile.
 
@@ -234,7 +235,7 @@ Toute capture est acceptée, sans exception, sans question préalable et sans ch
 | CAP-06 | Offrir un bouton d'enregistrement privé distinct dans la PWA, à côté d'un bouton « Enregistrer » ordinaire (décision 24) | Vitale |
 | CAP-07 | Exposer ces deux boutons en raccourcis Android sur l'écran d'accueil | Haute |
 | CAP-08 | Signaler visuellement le mode privé avant, pendant et après l'enregistrement | Vitale |
-| CAP-09 | Ne jamais envoyer une capture privée hors du serveur, quel que soit le chemin de code | Vitale |
+| CAP-09 | Ne jamais envoyer une capture privée hors du réseau local ni vers Gemini, quel que soit le chemin de code ; seule la sauvegarde la copie, sur le NAS (décision 28) | Vitale |
 | CAP-10 | Mettre en file locale une capture PWA faite hors ligne | Haute |
 | CAP-11 | Ne jamais exiger de catégorie, de titre ou de date à la saisie | Vitale |
 | CAP-12 | Appliquer le garde-fou de longueur paramétrable | Moyenne |
@@ -621,18 +622,19 @@ Le fichier `infra/docker-compose.yml` devient le `compose.yaml` de la stack Dock
 | `scheduler` | `ghcr.io/djkix/organizer-scheduler` (Node 22) | — | — | `db`, `queue`, API Google Agenda et OAuth |
 | `web` | `ghcr.io/djkix/organizer-web` (Caddy 2.11, coquille de la PWA incluse) | 8080 | — | `api` |
 | `sortie` | `ghcr.io/djkix/organizer-sortie` (Squid) | 3128 | — | Internet, liste fermée |
+| `sauvegarde` | `ghcr.io/djkix/organizer-sauvegarde` (Alpine, client PostgreSQL, rsync) | — | `audio` (lecture seule), `nas` (NFS) | `db`, NAS `<IP du NAS>` |
 | `db` | `pgvector/pgvector:0.8.0-pg17` | 5432 | `pgdata` | — |
 | `queue` | `valkey/valkey:8.1-alpine` | 6379 | `valkeydata` | — |
 
 Six services au lot 1 (api, worker, web, sortie, db, queue), plus le conteneur de migrations, contre neuf dans le plan initial : les conteneurs de transcription et de modèle local ont disparu, et avec eux 9 Go de modèles et les deux tiers de la RAM.
 
-Le `scheduler` rejoint la stack au lot 2-A, avec Google Agenda ; la rotation de l'audio le rejoint ensuite.
+Le `scheduler` rejoint la stack au lot 2-A, avec Google Agenda ; la `sauvegarde` en 1.11.0 (décision 28). Aucun service ne dépend de la sauvegarde : NAS éteint, seul ce conteneur ne démarre pas.
 
 ### Réseaux
 
 - `publication` : `web` seul, porte le seul port publié (7070, sur l'adresse de la VM), joint par le reverse proxy.
 - `edge` : `web` et `api`, interne.
-- `core` : `api`, `worker`, `scheduler`, `db`, `queue`, migrations. Aucune sortie Internet.
+- `core` : `api`, `worker`, `scheduler`, `sauvegarde`, `db`, `queue`. Aucune sortie Internet. Le NAS est monté par Docker sur l'hôte, pas joint par le réseau du conteneur.
 - `sortie` : `api`, `worker` et `scheduler` vers le proxy sortant `sortie`, interne.
 - `egress` : le proxy sortant seul. Il n'ouvre à chaque conteneur que sa liste fermée de domaines, en HTTPS.
 
@@ -648,8 +650,8 @@ L'API est le seul point d'envoi de messages vers L : le scheduler déclenche une
 
 | Volume | Contenu | Taille | Sauvegarde |
 | --- | --- | --- | --- |
-| `pgdata` | Base complète | 2 à 5 Go à 1 an | Lot 2 |
-| `audio` | Enregistrements d'origine | 40 Go maximum ; rotation reportée au lot 2, alerte administrateur à 30 Go d'ici là | Sous-lot ultérieur du lot 2 |
+| `pgdata` | Base complète | 2 à 5 Go à 1 an | Quotidienne, NAS (décision 28) |
+| `audio` | Enregistrements d'origine | 40 Go maximum, tenus par la rotation | Quotidienne, NAS, privé compris |
 | `valkeydata` | File de jobs | Moins de 1 Go | Aucune, reconstructible |
 
 La coquille de la PWA est dans l'image `web` : une mise à jour d'image la remplace.
@@ -722,8 +724,8 @@ Aucune inscription libre : les comptes sont créés en ligne de commande par l'a
 Le recours à Gemini change la nature de cette section : les pensées de L transitent désormais par un service tiers. C'est le seul arbitrage du projet qui ne relève pas de la technique, et il appartient à L.
 
 1. **Palier payé obligatoire, dès le premier appel.** Le palier gratuit utilise le contenu pour améliorer les produits Google et autorise la relecture humaine. La facturation Cloud est activée avant le premier test, y compris avec des énoncés fabriqués. Un contrôle au démarrage du worker vérifie que le projet est bien facturé et refuse de tourner sinon.
-2. **Trois conteneurs sortent, chacun vers une liste fermée.** Le `worker` vers l'API Gemini, le `scheduler` vers l'API Google Agenda et son serveur OAuth, l'`api` vers Telegram et FCM. La base et la file sont isolées.
-3. **Rien d'autre ne part.** Les embeddings sont calculés en local. Aucune donnée n'est envoyée à un service d'analyse, de télémétrie ou de journalisation externe.
+2. **Trois conteneurs sortent, chacun vers une liste fermée.** Le `worker` vers l'API Gemini, le `scheduler` vers l'API Google Agenda et son serveur OAuth, l'`api` vers Telegram et FCM. La base et la file sont isolées. La sauvegarde ne sort pas vers Internet : elle écrit sur le NAS du réseau local, monté en NFS (décision 28).
+3. **Rien d'autre ne part.** Hors la sauvegarde vers le NAS du réseau local (décision 28), rien ne quitte la VM. Les embeddings sont calculés en local. Aucune donnée n'est envoyée à un service d'analyse, de télémétrie ou de journalisation externe.
 4. **Pas de rétention côté modèle.** Aucun fichier n'est laissé sur l'API Files : l'audio est envoyé en ligne dans la requête et existe ensuite uniquement sur le volume local.
 5. **Mode privé par point d'entrée.** Une capture faite par le bouton privé est marquée privée avant même d'exister en base. Le code ne connaît pas de chemin qui envoie une capture privée vers Gemini.
 6. **Aucun contenu en clair dans les journaux**, même en mode debug, y compris les requêtes sortantes.
@@ -749,7 +751,7 @@ Séparer les deux captures par le point d'entrée, et non par le contenu, suppri
 | Capture ordinaire | Vocal envoyé au bot `@mon_organizer_bot` dans Telegram |
 | Capture privée | Bouton dédié dans la PWA, doublé d'un raccourci Android sur l'écran d'accueil qui ouvre directement l'enregistreur privé |
 | Distinction visuelle | Écran d'enregistrement privé de couleur distincte, cadenas permanent, mention « reste sur le serveur » avant et pendant l'enregistrement |
-| Traitement | Stockée telle quelle, jamais envoyée, jamais transcrite, jamais classée |
+| Traitement | Stockée telle quelle, jamais envoyée hors du réseau local, jamais transcrite, jamais classée ; copiée chaque nuit sur le NAS (décision 28) |
 | Restitution | Vue Privé : liste antichronologique groupée par jour, avec heure et durée, lecteur audio intégré, navigation par calendrier |
 | Étiquette facultative | L peut ajouter après coup quelques mots tapés pour se repérer, sans obligation |
 | Repli Telegram | Un bouton « prochaine capture privée » dans le clavier du bot, pour les moments où la PWA n'est pas à portée |
@@ -773,7 +775,7 @@ Décision 3 : se repérer par la date et l'heure suffit. C'est ce qui permet de 
 
 - En transit : TLS 1.2 minimum, 1.3 privilégié, sur toutes les surfaces publiques.
 - Au repos : chiffrement du disque qui porte les volumes de la stack sur l'hôte Docker.
-- Sauvegardes, au lot 2 : chiffrement GPG avant dépôt sur le NAS, clé conservée hors du serveur.
+- Sauvegardes : sans chiffrement, sur le NAS du réseau local (décision 28). Le NAS, son dossier partagé et ses comptes en portent la protection.
 - Chiffrement applicatif colonne par colonne écarté : il empêcherait la recherche vectorielle, pour un gain faible face au chiffrement disque.
 
 ### Données concernant des tiers
@@ -792,7 +794,7 @@ L'exploitation doit être nulle en régime normal : aucune action mensuelle, auc
 
 Décision 11 : aucune sauvegarde dédiée au démarrage, pour garder une stack simple. Seule protection : le snapshot hyperviseur de la VM N, s'il est en place. Une panne de disque avant le lot 2 peut donc perdre des données ; c'est un risque accepté pour démarrer.
 
-Prévu au lot 2 : dump PostgreSQL quotidien chiffré GPG vers le NAS (VM N), copie de l'audio, test de restauration complète. Les fichiers de configuration et les secrets sont conservés dans le gestionnaire de mots de passe dès maintenant.
+Depuis la 1.11.0 (décision 28) : un service `sauvegarde` copie chaque jour après 3 h, heure de Paris, la base (`pg_dump` complet), l'audio (privé compris) et la configuration de la stack (`compose.yaml`, `.env`, `secrets/`) dans un dossier daté du NAS `<IP du NAS>`, monté en NFS. Les fichiers audio inchangés sont des liens physiques vers la veille : sept jours tiennent à peu près dans la place d'un seul. Sept dossiers sont gardés ; une tentative ratée ne supprime rien. Sans chiffrement. Les fichiers de configuration et les secrets restent aussi dans le gestionnaire de mots de passe.
 
 Objectifs de reprise, à partir du lot 2 : RPO de 24 heures, RTO de 4 heures. Un test de restauration complète est réalisé au lot 2, puis une fois par an.
 
@@ -806,6 +808,7 @@ Objectifs de reprise, à partir du lot 2 : RPO de 24 heures, RTO de 4 heures. Un
 | Taille de la stack | Audio au-dessus de 40 Go malgré la rotation, ou base au-dessus de 8 Go | Réglages › Alertes techniques (admin) |
 | Latence de classification | Moyenne supérieure à 120 s sur 1 heure | Réglages › Alertes techniques (admin) |
 | Crédit Gemini épuisé | Première réponse HTTP 402 | Réglages › Alertes techniques (admin) |
+| Sauvegarde vers le NAS | Dernière tentative en échec, ou aucune réussie depuis 36 h | Réglages › Alertes techniques (admin) |
 | Aucune capture reçue | 10 jours | Information, sans alerte |
 
 La dernière ligne est volontairement passive : l'absence d'usage n'est pas un incident et ne doit jamais être signalée à L.
@@ -851,7 +854,7 @@ Le système est dimensionné pour deux utilisateurs et une cinquantaine de captu
 | RAM libre | 2 Go | 3 Go |
 | Espace pour les volumes | 50 Go | 50 Go |
 
-Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo pour le worker et son modèle d'embeddings, 256 Mo pour le scheduler, 128 Mo pour la file, 64 Mo pour le front, 64 Mo pour le proxy sortant, soit environ 2,7 Go au total. À ce volume, deux utilisatrices et une cinquantaine de captures par jour, c'est suffisant. Déporter l'intelligence sur Gemini évite les 16 Go qu'exigeraient des modèles locaux. La stack tourne sur l'hôte Docker existant (décision 13), sans VM dédiée : les limites mémoire par service et les réseaux Docker l'isolent des autres services de l'hôte.
+Limites mémoire par service : 1 Go pour PostgreSQL, 512 Mo pour l'API, 768 Mo pour le worker et son modèle d'embeddings, 256 Mo pour le scheduler, 128 Mo pour la file, 64 Mo pour le front, 64 Mo pour le proxy sortant, 128 Mo pour la sauvegarde, soit environ 2,9 Go au total. À ce volume, deux utilisatrices et une cinquantaine de captures par jour, c'est suffisant. Déporter l'intelligence sur Gemini évite les 16 Go qu'exigeraient des modèles locaux. La stack tourne sur l'hôte Docker existant (décision 13), sans VM dédiée : les limites mémoire par service et les réseaux Docker l'isolent des autres services de l'hôte.
 
 ### Performance
 
@@ -935,7 +938,7 @@ Critère de sortie : L se reconnecte par l'empreinte sur son téléphone, et le 
 - **Widget Home Assistant**, remonté du lot 3 : sans lui, plus rien ne rappelle quoi que ce soit.
 - Fils de pensées, rattachement vectoriel, vue Pensées avec filtres.
 - Question de désambiguïsation dans Telegram.
-- Sauvegarde vers le NAS et test de restauration complète.
+- Sauvegarde vers le NAS et test de restauration complète (version 1.11.0, décision 28).
 
 - **Lot 2-B** (décision 24) : bouton « Enregistrer » ordinaire dans la PWA à côté du bouton privé (`POST /api/captures`, canal `pwa`, même classement que Telegram), raccourci Android, file hors ligne typée : une capture privée en file ne part jamais vers la route ordinaire.
 

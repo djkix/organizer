@@ -6,8 +6,9 @@
 #
 # Réseaux : web seul est publié ; api, worker et scheduler n'ont aucune route vers Internet et sortent
 # par le proxy « sortie », qui n'ouvre que leur liste fermée de domaines (infra/sortie/squid.conf).
-# 50 Go maximum pour la stack (décision 12). Pas de sauvegarde avant le lot 2 (décision 11).
-# Le scheduler écrit dans Google Agenda (lot 2-A) ; la rotation de l'audio le rejoindra.
+# 50 Go maximum pour la stack (décision 12).
+# Le scheduler écrit dans Google Agenda (lot 2-A). La sauvegarde copie chaque nuit base, audio et configuration
+# vers le NAS (décision 28), sans chiffrement, sept jours gardés.
 
 name: organizer
 
@@ -145,6 +146,30 @@ services:
         limits:
           memory: 256m
 
+  # Sauvegarde vers le NAS (décision 28) : chaque jour après 3 h, sept jours gardés, sans chiffrement (infra/sauvegarde/).
+  # Aucun service n'en dépend : NAS éteint, seul ce conteneur ne démarre pas ; la veille de l'API alerte au bout de 36 h.
+  sauvegarde:
+    <<: *app
+    image: ghcr.io/djkix/organizer-sauvegarde:${ORGANIZER_VERSION:-latest}
+    # Ni proxy ni prompts : seulement la base, l'audio, la configuration de la stack et le NAS.
+    environment:
+      TZ: Europe/Paris
+      DATABASE_URL: postgresql://organizer:${POSTGRES_PASSWORD:?}@db:5432/organizer
+    volumes:
+      - audio:/data/audio:ro
+      - ./compose.yaml:/stack/compose.yaml:ro
+      - ./.env:/stack/.env:ro
+      - ./secrets:/stack/secrets:ro
+      - nas:/nas
+    networks: [core]
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
   # Coquille de la PWA, en-têtes, et passage vers l'API (infra/caddy/Caddyfile).
   web:
     image: ghcr.io/djkix/organizer-web:${ORGANIZER_VERSION:-latest}
@@ -239,7 +264,7 @@ networks:
     ipam:
       config:
         - subnet: 10.201.1.0/24
-  # api, worker, scheduler, migrations, base, file. Aucune sortie Internet.
+  # api, worker, scheduler, sauvegarde, base, file. Aucune sortie Internet.
   core:
     internal: true
   # api, worker et scheduler vers le proxy sortant ; adresses fixes reprises dans squid.conf.
@@ -255,6 +280,14 @@ volumes:
   pgdata:
   audio:
   valkeydata:
+  # NAS du réseau local, en NFS (squash total) ; adresse et chemin dans le .env, jamais dans le dépôt.
+  # L'essai de fumée le remplace par un dossier local (NAS_TYPE=none, NAS_OPTIONS=bind).
+  nas:
+    driver: local
+    driver_opts:
+      type: ${NAS_TYPE:-nfs}
+      o: ${NAS_OPTIONS:?NAS_OPTIONS vide, par exemple addr=<IP du NAS>,nfsvers=4.1,soft,timeo=150,retrans=3}
+      device: ${NAS_CHEMIN:?NAS_CHEMIN vide, par exemple :/volumeN/<partage>/<dossier>}
 
 secrets:
   telegram_bot_token:

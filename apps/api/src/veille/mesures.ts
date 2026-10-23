@@ -27,6 +27,8 @@ export async function mesurer(d: { prisma: PrismaClient; file: Queue; audioRacin
   const [latence] = await d.prisma.$queryRaw<{ moyenne: number | null }[]>`
     SELECT avg(extract(epoch FROM classe_le - recu_le))::float8 AS moyenne FROM capture WHERE classe_le > (${depuis}::timestamptz AT TIME ZONE 'UTC')`;
   const derniere = await d.prisma.capture.findFirst({ orderBy: { recuLe: 'desc' }, select: { recuLe: true } });
+  const sauvegarde = await d.prisma.sauvegarde.findFirst({ orderBy: { fin: 'desc' }, select: { fin: true, reussie: true, message: true } });
+  const reussie = await d.prisma.sauvegarde.findFirst({ where: { reussie: true }, orderBy: { fin: 'desc' }, select: { fin: true } });
   return {
     enAttente: Object.values(comptes).reduce((a, b) => a + b, 0),
     echecsHeure: echecs.filter((j) => (j.finishedOn ?? 0) > depuis.getTime()).length,
@@ -34,6 +36,8 @@ export async function mesurer(d: { prisma: PrismaClient; file: Queue; audioRacin
     baseOctets: Number(base?.taille ?? 0),
     latenceMoyenneS: latence?.moyenne ?? null,
     derniereCapture: derniere?.recuLe ?? null,
+    derniereSauvegarde: sauvegarde,
+    derniereSauvegardeReussie: reussie?.fin ?? null,
   };
 }
 
@@ -46,5 +50,6 @@ export function formaterMesures(m: Mesures): string {
     `base : ${go(m.baseOctets)}`,
     `latence moyenne sur une heure : ${m.latenceMoyenneS === null ? '-' : `${Math.round(m.latenceMoyenneS)} s`}`,
     `dernière capture : ${m.derniereCapture?.toISOString() ?? '-'}`,
+    `dernière sauvegarde réussie : ${m.derniereSauvegardeReussie?.toISOString() ?? '-'}`,
   ].join('\n');
 }

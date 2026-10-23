@@ -25,8 +25,22 @@ const reseaux = (s: Service): string[] => (Array.isArray(s.networks) ? [...s.net
 const ip = (n: string): string | undefined => (service(n).networks as Record<string, { ipv4_address?: string }>).sortie?.ipv4_address;
 
 describe('stack de production', () => {
-  it('services : proxy sortant et scheduler ; plus de conteneur de migrations (l\'API les joue)', () => {
-    expect(Object.keys(S).sort()).toEqual(['api', 'db', 'queue', 'scheduler', 'sortie', 'web', 'worker']);
+  it('services : proxy sortant, scheduler et sauvegarde ; plus de conteneur de migrations (l\'API les joue)', () => {
+    expect(Object.keys(S).sort()).toEqual(['api', 'db', 'queue', 'sauvegarde', 'scheduler', 'sortie', 'web', 'worker']);
+  });
+
+  it('sauvegarde (décision 28) : réseau core seul, aucun service n\'en dépend, NAS hors du dépôt', () => {
+    const sv = service('sauvegarde') as unknown as { volumes: string[]; networks: string[]; environment: Record<string, string>; secrets?: unknown };
+    expect(sv.networks).toEqual(['core']);
+    expect(sv.volumes).toEqual(['audio:/data/audio:ro', './compose.yaml:/stack/compose.yaml:ro', './.env:/stack/.env:ro', './secrets:/stack/secrets:ro', 'nas:/nas']);
+    expect(Object.keys(sv.environment).sort()).toEqual(['DATABASE_URL', 'TZ']);
+    expect(sv.secrets).toBeUndefined();
+    for (const [n, s] of Object.entries(S)) expect(Object.keys((s as { depends_on?: object }).depends_on ?? {}), n).not.toContain('sauvegarde');
+    const nas = (parse(texte, { merge: true }) as { volumes: Record<string, { driver_opts: Record<string, string> }> }).volumes.nas!.driver_opts;
+    expect(nas.type).toBe('${NAS_TYPE:-nfs}');
+    expect(nas.o).toMatch(/^\$\{NAS_OPTIONS:\?/);
+    expect(nas.device).toMatch(/^\$\{NAS_CHEMIN:\?/);
+    expect(texte).not.toMatch(/192\.168\./);
   });
 
   it('images tierces épinglées ; les nôtres en latest, sauf version fixée dans le .env', () => {
@@ -45,7 +59,7 @@ describe('stack de production', () => {
   });
 
   it('redémarrage, journaux JSON 10 Mo × 3, limites mémoire du cahier', () => {
-    const limites: Record<string, string> = { api: '512m', worker: '768m', scheduler: '256m', db: '1g', queue: '128m', web: '64m', sortie: '64m' };
+    const limites: Record<string, string> = { api: '512m', worker: '768m', scheduler: '256m', db: '1g', queue: '128m', web: '64m', sortie: '64m', sauvegarde: '128m' };
     for (const [n, s] of Object.entries(S)) {
       expect(s.restart, n).toBe('unless-stopped');
       expect(s.logging, n).toEqual({ driver: 'json-file', options: { 'max-size': '10m', 'max-file': '3' } });
@@ -157,10 +171,10 @@ describe('stack de production', () => {
   });
 
   it('tmpfs pour /tmp (applicatifs, sortie, web : Caddy y range son état) ; volumes nommés', () => {
-    for (const n of ['api', 'worker', 'scheduler', 'sortie']) expect((service(n) as unknown as { tmpfs: string[] }).tmpfs, n).toContain('/tmp');
+    for (const n of ['api', 'worker', 'scheduler', 'sortie', 'sauvegarde']) expect((service(n) as unknown as { tmpfs: string[] }).tmpfs, n).toContain('/tmp');
     expect((service('web') as unknown as { tmpfs: string[] }).tmpfs).toEqual(['/tmp']);
     const volumes = Object.keys((parse(texte, { merge: true }) as { volumes: object }).volumes).sort();
-    expect(volumes).toEqual(['audio', 'pgdata', 'valkeydata']);
+    expect(volumes).toEqual(['audio', 'nas', 'pgdata', 'valkeydata']);
     expect((service('worker') as unknown as { volumes: string[] }).volumes).toEqual(['audio:/data/audio:ro']);
   });
 

@@ -44,6 +44,28 @@ describe('mesurer', () => {
     }
   });
 
+  it('sauvegarde : dernière tentative et dernière réussite ; rien sans ligne', async () => {
+    const file = new Queue(`veille-test-${randomUUID()}`, { connection: connexion });
+    const racine = mkdtempSync(join(tmpdir(), 'audio-'));
+    try {
+      const t = new Date();
+      let m = await mesurer({ prisma, file, audioRacine: racine, maintenant: () => t });
+      expect(m.derniereSauvegarde).toBeNull();
+      expect(m.derniereSauvegardeReussie).toBeNull();
+      expect(formaterMesures(m)).toContain('dernière sauvegarde réussie : -');
+      const h = (n: number): Date => new Date(t.getTime() - n * 3600_000);
+      await prisma.sauvegarde.create({ data: { debut: h(2.1), fin: h(2), reussie: true, message: '' } });
+      await prisma.sauvegarde.create({ data: { debut: h(1.1), fin: h(1), reussie: false, message: 'x' } });
+      m = await mesurer({ prisma, file, audioRacine: racine, maintenant: () => t });
+      expect(m.derniereSauvegarde).toEqual({ fin: h(1), reussie: false, message: 'x' });
+      expect(m.derniereSauvegardeReussie?.getTime()).toBe(h(2).getTime());
+      expect(formaterMesures(m)).toContain(`dernière sauvegarde réussie : ${h(2).toISOString()}`);
+    } finally {
+      await file.obliterate({ force: true });
+      await file.close();
+    }
+  });
+
   it('un dossier audio absent pèse zéro', async () => {
     expect(await tailleDossier(join(tmpdir(), `absent-${randomUUID()}`))).toBe(0);
   });

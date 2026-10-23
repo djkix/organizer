@@ -189,9 +189,11 @@ describe('ci.yml', () => {
     expect(lire('infra/docker-compose.yml')).not.toMatch(/^\s+ORGANIZER_VERSION:/m);
     expect(y).toContain('-t "ghcr.io/djkix/organizer-$cible:latest"');
   });
-  it('les cinq images sont construites, analysées et publiées', () => {
+  it('les six images sont construites, analysées et publiées ; le script de sauvegarde est essayé', () => {
     const boucles = [...y.matchAll(/for cible in ([a-z ]+); do/g)].map((m) => m[1]);
-    expect(boucles).toEqual(['api worker scheduler web sortie', 'api worker scheduler web sortie', 'api worker scheduler web sortie']);
+    const six = 'api worker scheduler web sortie sauvegarde';
+    expect(boucles).toEqual([six, six, six]);
+    expect(y).toContain('docker run --rm --entrypoint sh ghcr.io/djkix/organizer-sauvegarde:essai /app/essai.sh');
   });
   it('actions tierces épinglées par SHA, délais et concurrence', () => {
     for (const m of y.matchAll(/^\s*- uses: (\S+)/gm)) expect(m[1], m[1]).toMatch(/@[0-9a-f]{40}$/);

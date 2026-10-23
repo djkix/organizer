@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Images d'Organizer : api, worker, scheduler, web, sortie. Contexte : la racine du dépôt (voir .dockerignore).
+# Images d'Organizer : api, worker, scheduler, web, sortie, sauvegarde. Contexte : la racine du dépôt (voir .dockerignore).
 # Construites par la CI (.github/workflows/ci.yml) ; publiées sur GHCR à chaque étiquette v*.
 
 ARG NODE_IMAGE=node:22.22-alpine3.22
@@ -98,3 +98,14 @@ LABEL org.opencontainers.image.source=https://github.com/djkix/organizer
 USER squid
 EXPOSE 3128
 CMD ["squid", "-N", "-d", "1", "-f", "/etc/squid/squid.conf"]
+
+# Sauvegarde vers le NAS (décision 28) : client PostgreSQL 17 et rsync ; aucun Node.
+FROM ${ALPINE_IMAGE} AS sauvegarde
+RUN apk upgrade --no-cache && apk add --no-cache postgresql17-client rsync tzdata tini
+COPY infra/sauvegarde/sauvegarder.sh infra/sauvegarde/planifier.sh infra/sauvegarde/essai.sh /app/
+ARG ORGANIZER_VERSION=dev
+ENV ORGANIZER_VERSION=${ORGANIZER_VERSION} TZ=Europe/Paris
+LABEL org.opencontainers.image.source=https://github.com/djkix/organizer
+USER 1000:1000
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/app/planifier.sh"]

@@ -104,6 +104,11 @@ Texte complet : [`CLAUDE.md`](CLAUDE.md) et [`docs/decisions.md`](docs/decisions
 - Reconnexion par **empreinte** (WebAuthn, décision 23) ; le mot de passe reste possible
 - Pas d'inscription : comptes créés en ligne de commande
 
+### 💾 Sauvegarde
+- Chaque nuit, base, audio (privé compris) et configuration de la stack copiés sur le NAS, dans un dossier daté
+- Sept jours gardés ; fichiers inchangés en liens physiques, sans chiffrement (décision 28)
+- Alerte admin si une sauvegarde échoue ou si aucune n'a réussi depuis 36 h
+
 ### ⚙️ Réglages
 - À revoir, Historique des envois, Éléments effacés (avec « Remettre »), connexion de l'agenda
 - Alertes techniques, pour l'admin seul ; L n'est jamais alertée
@@ -229,6 +234,7 @@ docker compose up -d --wait
 | `worker` | Classement Gemini | `generativelanguage.googleapis.com` |
 | `scheduler` | Google Agenda | `www.googleapis.com`, `oauth2.googleapis.com` |
 | `sortie` | Squid, seule route vers Internet | — |
+| `sauvegarde` | Copie quotidienne vers le NAS (NFS) | Aucune |
 | `db`, `queue` | PostgreSQL et Valkey | Aucune |
 
 Publication par le Nginx Proxy Manager existant sur `organizer.example.org`.
@@ -327,9 +333,9 @@ Toutes les routes `/api` exigent une session, sauf la connexion. L'élément d'u
 
 ## Roadmap & périmètre actuel
 
-**Inclus** : capture Telegram et PWA, tri Gemini, actions, pensées, privé, Google Agenda avec alarme item par item, empreinte, rotation de l'audio au-delà de 40 Go, Docker / Dockge.
+**Inclus** : capture Telegram et PWA, tri Gemini, actions, pensées, privé, Google Agenda avec alarme item par item, empreinte, rotation de l'audio au-delà de 40 Go, sauvegarde quotidienne vers le NAS, Docker / Dockge.
 
-**À venir (lot 2)** : widget Home Assistant, notifications push, fils de pensées par similarité, question de désambiguïsation dans Telegram, sauvegarde vers le NAS.
+**À venir (lot 2)** : widget Home Assistant, notifications push, fils de pensées par similarité, question de désambiguïsation dans Telegram.
 
 **Lot 3** : recherche sémantique, apprentissage par les corrections, lecture des créneaux de l'agenda.
 

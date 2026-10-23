@@ -7,13 +7,20 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ### Ajouté
 - Bandeau « Nouvelle version disponible » et bouton « Recharger » : la mise à jour est proposée, jamais imposée (décision 27). Deux signaux, une coquille téléchargée qui attend d'être activée et un écart avec la version annoncée par l'API, revérifiés toutes les 30 minutes et à chaque retour au premier plan. « Recharger » active la version en attente puis recharge la page dans tous les cas. Jamais sur l'écran de connexion, jamais pendant un enregistrement (2026-10-21).
+- Conception et plan de la sauvegarde quotidienne vers le NAS : `docs/superpowers/specs/2026-10-23-sauvegarde-nas-design.md`, `docs/superpowers/plans/2026-10-23-sauvegarde-nas.md` (2026-10-23).
+- Table `sauvegarde` (migration additive) et alertes admin de la veille : dernière sauvegarde en échec, aucune réussie depuis 36 h ; `cli veille` montre la dernière réussite (2026-10-23).
+- Image `organizer-sauvegarde` : chaque jour après 3 h, base, audio et configuration de la stack copiés dans un dossier daté, fichiers inchangés en liens physiques, sept jours gardés ; une tentative ratée ne supprime rien ; essai du script dans la CI (2026-10-23).
+- Service `sauvegarde` dans la stack, volume NFS vers le NAS (`NAS_OPTIONS` et `NAS_CHEMIN` obligatoires dans le `.env`, `NAS_TYPE` facultatif) ; l'essai de fumée fait une sauvegarde complète dans un dossier local (2026-10-23).
 
 ### Modifié
 - `GET /api/session/moi` donne `versionServeur` aux deux comptes, pas seulement à l'administrateur : la PWA la compare à la sienne. Réglages ne l'affiche toujours qu'à l'administrateur (2026-10-21).
+- Décision 28 : sauvegarde quotidienne vers le NAS, sans chiffrement, privé compris ; cahier des charges (CAP-09, confidentialité, services, volumes, supervision), `CLAUDE.md`, exploitation (restauration complète) et README à jour (2026-10-23).
 - README réécrit sur le modèle de wealthnexus : en-tête, aperçu de l'écran, fonctionnalités, architecture, déploiement, variables, API, historique résumé ; le détail reste dans `docs/exploitation.md` et `CHANGELOG.md` (2026-10-22).
 
 ### Corrigé
 - L'image `api` ne portait pas `ORGANIZER_VERSION` : l'API annonçait « dev » en production, et Réglages affichait « serveur dev » à côté du vrai numéro de la coquille (2026-10-21).
+- Sauvegarde : une seule à la fois (verrou), une deuxième s'arrête sans rien toucher ; l'essai de fumée vide son NAS d'essai même sur un runner d'un autre uid ; cahier des charges cohérent avec la décision 28 (capture privée, sorties) ; restauration documentée sur une VM reconstruite et relance après un NAS démarré trop tard (2026-10-23).
+- Chemin du NAS relevé sur place : export `/volumeN/<partage>`, dossier `<dossier>` ; écriture, liens physiques et symboliques, renommage et suppression essayés en NFS 4.1 depuis la VM, en uid 1000 (2026-10-23).
 
 ## [1.10.0] - 2026-10-15
 

@@ -15,7 +15,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 2. **Le système ne sollicite jamais de lui-même.** Pas de point du matin, pas de résumé hebdo, pas de relance sur une échéance floue. Une alarme ne sonne que si L l'a activée sur cet item précis.
 3. **Zéro culpabilisation.** Aucun compteur de retard, aucun pourcentage, aucune série, aucun graphique, aucune mention « en retard », aucune couleur d'alerte.
 4. **Aucun rouge dans l'interface.** Ni retard, ni urgence, ni suppression.
-5. **Rien ne se perd.** Une capture non classifiable va en « à revoir » sans déclencher de relance. La transcription est conservée sans limite. L'audio ordinaire tourne quand il dépasse 40 Go, pour tenir la stack sous 50 Go ; l'audio privé, seule trace de la capture, n'est jamais purgé.
+5. **Rien ne se perd.** Une capture non classifiable va en « à revoir » sans déclencher de relance. La transcription est conservée sans limite. L'audio ordinaire tourne quand il dépasse 40 Go, pour tenir la stack sous 50 Go ; l'audio privé, seule trace de la capture, n'est jamais purgé. Une sauvegarde quotidienne, sans chiffrement, va sur le NAS (décision 28).
 6. **Le mode privé est décidé par le point d'entrée, jamais par le contenu.** Une capture faite avec le bouton privé est marquée privée avant d'exister en base. Aucun chemin de code ne peut l'envoyer vers Gemini.
 7. **Pas d'emoji dans l'interface**, pas d'illustration de personnage, pas d'état vide félicitant.
 8. **Palier payé obligatoire sur l'API Gemini.** Le worker vérifie au démarrage que le projet Cloud est facturé et refuse de tourner sinon.
@@ -25,7 +25,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 Les fichiers de ce dépôt font foi. Il n'existe aucune version ailleurs qui les
 dépasse : le document de cadrage initial est archivé et n'est plus mis à jour.
 
-- @docs/decisions.md — 27 décisions fermées. Ne pas les rouvrir sans demander.
+- @docs/decisions.md — 28 décisions fermées. Ne pas les rouvrir sans demander.
 - @docs/cahier-des-charges.md — spécification complète.
 
 Quand une décision change : mettre à jour `docs/decisions.md`, répercuter dans
@@ -59,7 +59,7 @@ packages/shared   types et schémas Zod partagés
 packages/db       schéma Prisma, migrations, garde-fous SQL du mode privé
 prompts/          prompts Gemini versionnés + responseSchema
 fixtures/         énoncés FABRIQUÉS pour les tests
-infra/            docker-compose.yml, caddy/, image/, sortie/ (production)
+infra/            docker-compose.yml, caddy/, image/, sortie/, sauvegarde/ (production)
 scripts/          empaquetage esbuild
 infra/dev/        Postgres et Valkey de dev sur la VM Docker, tunnel SSH
 design/           tokens et maquettes
@@ -133,3 +133,7 @@ et bouton « Recharger », sur coquille en attente ou écart de version publiée
 
 Lot 2-A : Google Agenda et alarme item par item, par un service `apps/scheduler` (seul à joindre Google), en version 1.2.0.
 Plan : `docs/superpowers/plans/2026-10-05-lot2-a-agenda.md`.
+
+Sauvegarde vers le NAS (décision 28, 23 octobre 2026), en version 1.11.0 : un service `sauvegarde` copie
+chaque nuit base, audio et configuration dans un dossier daté du NAS, sept jours gardés, sans chiffrement.
+Plan : `docs/superpowers/plans/2026-10-23-sauvegarde-nas.md`.

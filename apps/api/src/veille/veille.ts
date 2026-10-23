@@ -7,11 +7,14 @@ export interface Mesures {
   baseOctets: number;
   latenceMoyenneS: number | null;
   derniereCapture: Date | null;
+  /** Dernière tentative de sauvegarde vers le NAS, réussie ou non ; null si la table est vide. */
+  derniereSauvegarde: { fin: Date; reussie: boolean; message: string } | null;
+  derniereSauvegardeReussie: Date | null;
 }
 
 /** Seuils du cahier (section Supervision) ; audio : la rotation (1.7.0) agit dès 40 Go, la veille n'alerte qu'à 42 Go. */
 export const SEUILS = {
-  enAttente: 50, echecsHeure: 3, audioOctets: 42 * GO, baseOctets: 8 * GO, latenceS: 120, silenceJours: 10,
+  enAttente: 50, echecsHeure: 3, audioOctets: 42 * GO, baseOctets: 8 * GO, latenceS: 120, silenceJours: 10, sauvegardeHeures: 36,
 } as const;
 
 export interface Constat { cle: string; message: string }
@@ -28,6 +31,13 @@ export function constater(m: Mesures, maintenant: Date, s: typeof SEUILS = SEUIL
   }
   if (m.derniereCapture && maintenant.getTime() - m.derniereCapture.getTime() > s.silenceJours * 86_400_000) {
     c.push({ cle: 'silence', message: 'Information : aucune capture depuis 10 jours.' });
+  }
+  const sv = m.derniereSauvegarde;
+  if (sv && !sv.reussie) c.push({ cle: 'sauvegarde-echec', message: `Sauvegarde en échec : ${sv.message}.` });
+  // Sans aucune réussite, on mesure depuis la dernière tentative ; table vide (jamais lancée) : rien.
+  const repere = m.derniereSauvegardeReussie ?? sv?.fin ?? null;
+  if (repere && maintenant.getTime() - repere.getTime() > s.sauvegardeHeures * 3600_000) {
+    c.push({ cle: 'sauvegarde-absente', message: 'Aucune sauvegarde réussie depuis 36 h.' });
   }
   return c;
 }

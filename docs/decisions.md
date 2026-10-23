@@ -12,7 +12,7 @@
 | 8 | Visibilité des pensées | ~~Visibles aussi par djkix~~ Remplacée par la décision 25 |
 | 9 | Compte de l'API Gemini | Compte Google personnel de djkix, facturation activée |
 | 10 | Agenda | Compte Google de L, OAuth porté par elle |
-| 11 | Sauvegarde | Aucune au démarrage. Sauvegarde vers le NAS au lot 2 |
+| 11 | Sauvegarde | Aucune au démarrage. Sauvegarde vers le NAS au lot 2 (décision 28) |
 | 12 | Disque et audio | 50 Go maximum pour la stack, en volumes Docker simples. Rotation de l'audio ordinaire déjà transcrit au-delà de 40 Go |
 | 13 | Hébergement | Hôte Docker existant du homelab, stack pilotée par Dockge |
 | 14 | Publication | organizer.example.org |
@@ -35,3 +35,4 @@
 | 25 | Données propres à chaque compte | Chaque compte ne voit et ne modifie que ses propres captures, items, actions, pensées, captures privées et éléments à revoir. Décidé par djkix le 6 octobre 2026 ; remplace la décision 8. |
 | 26 | Durée d'un enregistrement dans la PWA | 1 min 30 au plus, en ordinaire comme en privé : un minuteur affiche le temps écoulé sur 1:30, l'enregistrement s'arrête seul et garde ce qui a été dit. Telegram n'est pas limité. Décidé par djkix le 15 octobre 2026 |
 | 27 | Mise à jour de la PWA | Proposée, jamais imposée : un bandeau discret « Nouvelle version disponible », avec « Recharger », quand une nouvelle coquille attend ou que le serveur annonce un autre numéro publié. Jamais pendant un enregistrement ni sur l'écran de connexion. Ce n'est pas une sollicitation au sens de la décision 5 : rien ne sort de l'application, aucune notification, et le contenu de L n'est pas en cause. Décidé par djkix le 21 octobre 2026 |
+| 28 | Sauvegarde | Chaque jour après 3 h, vers le NAS `<IP du NAS>` (dossier partagé `<partage>`, `<dossier>`), en NFS. Base, audio (privé compris) et configuration de la stack (secrets compris), sept jours gardés, fichiers inchangés en liens physiques. Sans chiffrement ; L a accepté que ses enregistrements privés y soient copiés en clair. Décidé par djkix le 23 octobre 2026 |

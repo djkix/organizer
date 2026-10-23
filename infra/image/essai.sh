@@ -12,14 +12,21 @@ PROJET=organizer-essai
 URL=http://127.0.0.1:7070
 
 dc() { docker compose -p "$PROJET" --project-directory "$TRAVAIL" -f "$TRAVAIL/compose.yaml" -f "$TRAVAIL/essai.yaml" "$@"; }
-nettoyer() { dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$TRAVAIL"; }
+# Le NAS d'essai contient des dossiers de l'uid 1000 : un conteneur root les vide avant rm (runner CI en uid 1001).
+nettoyer() {
+  dc down -v --remove-orphans >/dev/null 2>&1 || true
+  docker run --rm -v "$TRAVAIL/nas:/n" alpine:3.22 sh -c 'rm -rf /n/* /n/.[!.]*' >/dev/null 2>&1 || true
+  rm -rf "$TRAVAIL" || true
+}
 trap nettoyer EXIT
 trap 'exit 130' INT TERM
 echec() { echo "ÉCHEC : $1" >&2; dc ps -a >&2 || true; dc logs --no-color --tail 40 >&2 || true; exit 1; }
 entete() { curl -sS -D - -o /dev/null "$URL$1" | tr -d '\r' | grep -i "^$2:" | head -1 | cut -d' ' -f2-; }
 statut() { curl -sS -o /dev/null -w '%{http_code}' "$@"; }
 
-mkdir -p "$TRAVAIL/secrets"
+mkdir -p "$TRAVAIL/secrets" "$TRAVAIL/nas"
+# Le NAS de l'essai est un dossier local, inscriptible par le conteneur de sauvegarde (uid 1000).
+chmod 777 "$TRAVAIL/nas"
 printf '0:faux' > "$TRAVAIL/secrets/telegram_bot_token"
 printf 'secret-essai' > "$TRAVAIL/secrets/telegram_webhook_secret"
 printf 'cle-essai' > "$TRAVAIL/secrets/gemini_api_key"
@@ -42,6 +49,9 @@ IP_PUBLICATION=127.0.0.1
 DOMAINE_BOT=bot.essai
 DOMAINE_APP=organizer.essai
 GOOGLE_CLIENT_ID=essai.apps.googleusercontent.com
+NAS_TYPE=none
+NAS_OPTIONS=bind
+NAS_CHEMIN=$TRAVAIL/nas
 EOF
 
 dc up -d || echec "démarrage de la stack"
@@ -58,6 +68,20 @@ until dc logs --no-color scheduler 2>/dev/null | grep -q 'Scheduler démarré'; 
   i=$((i + 1)); [ "$i" -lt 20 ] || echec "le scheduler ne démarre pas"; sleep 3
 done
 [ "$(dc exec -T scheduler id -u)" = 1000 ] || echec "scheduler en root"
+
+# Sauvegarde : planifiée, non root, puis une sauvegarde à la main dans le dossier d'essai
+i=0
+until dc logs --no-color sauvegarde 2>/dev/null | grep -q 'Sauvegarde planifiée'; do
+  i=$((i + 1)); [ "$i" -lt 20 ] || echec "la sauvegarde n'est pas planifiée"; sleep 3
+done
+[ "$(dc exec -T sauvegarde id -u)" = 1000 ] || echec "sauvegarde en root"
+dc exec -T sauvegarde /app/sauvegarder.sh || echec "sauvegarde à la main"
+JOUR="$(dc exec -T sauvegarde date +%F | tr -d '\r')"
+[ -s "$TRAVAIL/nas/$JOUR/base/organizer.dump" ] || echec "dump absent"
+[ -f "$TRAVAIL/nas/$JOUR/config/secrets/agenda_cle" ] || echec "secrets absents"
+[ "$(readlink "$TRAVAIL/nas/derniere")" = "$JOUR" ] || echec "lien derniere"
+dc exec -T db psql -U organizer -d organizer -tAc 'SELECT reussie FROM sauvegarde ORDER BY fin DESC LIMIT 1' | grep -q '^t' || echec "tentative non inscrite"
+dc exec -T sauvegarde sh -c 'wget -qT5 -O /dev/null https://example.com' && echec "sauvegarde : sortie vers Internet possible"
 dc exec -T scheduler sh -c 'touch /essai' 2>/dev/null && echec "scheduler : racine inscriptible"
 
 # Volume audio : inscriptible par l'API (uid 1000), lisible par le worker

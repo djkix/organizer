@@ -239,3 +239,15 @@ model Alerte {
   @@index([creeLe])
   @@map("alerte")
 }
+
+/// Une tentative de sauvegarde vers le NAS (1.11.0), écrite par le service sauvegarde ; lue par la veille.
+model Sauvegarde {
+  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  debut   DateTime
+  fin     DateTime
+  reussie Boolean
+  message String
+
+  @@index([fin])
+  @@map("sauvegarde")
+}
