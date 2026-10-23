@@ -25,7 +25,7 @@ Le classement est **différé** et fait par la machine, jamais par l'utilisatric
 Les fichiers de ce dépôt font foi. Il n'existe aucune version ailleurs qui les
 dépasse : le document de cadrage initial est archivé et n'est plus mis à jour.
 
-- @docs/decisions.md — 28 décisions fermées. Ne pas les rouvrir sans demander.
+- @docs/decisions.md — 29 décisions fermées. Ne pas les rouvrir sans demander.
 - @docs/cahier-des-charges.md — spécification complète.
 
 Quand une décision change : mettre à jour `docs/decisions.md`, répercuter dans
@@ -137,3 +137,6 @@ Plan : `docs/superpowers/plans/2026-10-05-lot2-a-agenda.md`.
 Sauvegarde vers le NAS (décision 28, 23 octobre 2026), en version 1.11.0 : un service `sauvegarde` copie
 chaque nuit base, audio et configuration dans un dossier daté du NAS, sept jours gardés, sans chiffrement.
 Plan : `docs/superpowers/plans/2026-10-23-sauvegarde-nas.md`.
+
+Connexion par Google (décision 29, 23 octobre 2026), en version 1.13.0 : bouton en tête de l'écran de connexion, à côté du mot de passe et de l'empreinte ;
+adresse reliée à un compte existant par la CLI, aucune inscription. Plan : `docs/superpowers/plans/2026-10-23-connexion-google.md`.

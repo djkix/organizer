@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Modifié
+- Décision 29 : connexion par Google à côté du mot de passe et de l'empreinte ; cahier des charges, `CLAUDE.md`, exploitation et README à jour (2026-10-23).
 - CSP ouverte à Google Identity Services, `Referrer-Policy: strict-origin-when-cross-origin` pour toute l'application, et `www.googleapis.com` dans la sortie de l'API, pour la connexion par Google (décision 29) (2026-10-23).
 
 ### Ajouté

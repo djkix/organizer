@@ -68,6 +68,7 @@ Le projet s'appelle **Organizer**, application et bot Telegram confondus.
 | 26 | Durée d'un enregistrement dans la PWA | **1 min 30 au plus**, en ordinaire comme en privé : un minuteur affiche le temps écoulé sur 1:30, l'enregistrement s'arrête seul et garde ce qui a été dit. Telegram n'est pas limité. Décidé par djkix le 15 octobre 2026 |
 | 27 | Mise à jour de la PWA | **Proposée, jamais imposée**, décidée par djkix le 21 octobre 2026. Un bandeau discret « Nouvelle version disponible » et son bouton « Recharger », affiché quand une nouvelle coquille attend d'être activée ou que le serveur annonce un autre numéro publié. Jamais sur l'écran de connexion ni pendant un enregistrement. Ce n'est pas une sollicitation au sens de la décision 5 : rien ne sort de l'application, aucune notification n'est émise, et le contenu de L n'est pas en cause |
 | 28 | Sauvegarde | **Chaque jour après 3 h, vers le NAS** `<IP du NAS>` (dossier partagé `<partage>`, `<dossier>`), en NFS : base, audio (privé compris) et configuration de la stack (secrets compris), sept jours gardés, fichiers inchangés en liens physiques. **Sans chiffrement** ; L a accepté que ses enregistrements privés y soient copiés en clair. Décidé par djkix le 23 octobre 2026 |
+| 29 | Connexion par Google | **Les deux comptes** se connectent aussi par Google (bouton en tête de l'écran de connexion) ; mot de passe et empreinte conservés. Adresse reliée à un compte existant par la CLI, aucune inscription ; adresse inconnue, non vérifiée ou au `sub` changé refusée. `Referrer-Policy: strict-origin-when-cross-origin` pour toute l'application, exigé par Google. Décidé par djkix le 23 octobre 2026 |
 
 ## Périmètre fonctionnel
 
@@ -189,7 +190,7 @@ Android rend toutefois la PWA nettement plus capable que sur iOS : notifications
 | Surface | Fonctions |
 | --- | --- |
 | Bot Telegram | Capture vocale et texte, accusé de réception, question de désambiguïsation unique, bouton « avec alarme », cochage par bouton inline |
-| PWA installée | Listes cochables, fils de pensées, recherche, correction d'un classement, réglages, deux boutons d'enregistrement (ordinaire « Enregistrer » et « Privé », décision 24), réception du partage Android |
+| PWA installée | Listes cochables, fils de pensées, recherche, correction d'un classement, réglages, deux boutons d'enregistrement (ordinaire « Enregistrer » et « Privé », décision 24), réception du partage Android, connexion (Google en tête, empreinte, mot de passe derrière un lien, décision 29) |
 | Home Assistant | Widget des urgences sur l'écran d'accueil, alarme sonore des rendez-vous |
 
 ### Le widget d'écran d'accueil
@@ -640,7 +641,7 @@ Le `scheduler` rejoint la stack au lot 2-A, avec Google Agenda ; la `sauvegarde`
 
 | Conteneur | Domaines autorisés | Usage |
 | --- | --- | --- |
-| `api` | `api.telegram.org`, `fcm.googleapis.com` | Accusé de réception, téléchargement de l'audio, messages du bot, repli Telegram ; envoi des notifications Web Push |
+| `api` | `api.telegram.org`, `fcm.googleapis.com`, `www.googleapis.com` | Accusé de réception, téléchargement de l'audio, messages du bot, repli Telegram ; envoi des notifications Web Push ; certificats publics de Google pour vérifier la connexion par Google |
 | `worker` | `generativelanguage.googleapis.com` | Appel Gemini |
 | `scheduler` | `www.googleapis.com`, `oauth2.googleapis.com` | Écriture dans Google Agenda, rafraîchissement du jeton OAuth |
 
@@ -713,6 +714,7 @@ Le système contient des pensées intimes de L sur elle-même et sur des tiers n
 | Comptes locaux | Identifiant et mot de passe, haché en Argon2id |
 | Session PWA | Jeton en cookie `HttpOnly`, `Secure`, `SameSite=Lax`, durée 90 jours |
 | Reconnexion | Empreinte digitale via WebAuthn et Credential Manager Android, au lot 1-D (décision 23). Le mot de passe reste toujours possible ; aucune invite ne précède un enregistrement |
+| Connexion Google | Bouton Google Identity Services en tête de l'écran de connexion (décision 29). Le serveur vérifie le jeton d'identité (signature, émetteur, expiration, audience, `email_verified`) et ouvre la même session de 90 jours. Adresse reliée à un compte existant par `cli lier-google`, sans inscription ; l'identifiant stable `sub` est mémorisé à la première connexion. Adresse inconnue, non vérifiée ou au `sub` changé : refus, même message |
 | Bot Telegram | Liaison du `chat_id` à un compte par code à usage unique, expirant en 10 minutes |
 | Webhook Telegram | Jeton secret dans l'en-tête, vérifié à chaque appel |
 | Flux iCalendar | URL signée, révocable, sans données du flux Pensées |
@@ -766,7 +768,7 @@ Décision 3 : se repérer par la date et l'heure suffit. C'est ce qui permet de 
 | Ports publics | Aucun ; seuls 80 et 443 du reverse proxy |
 | Limitation de débit | 60 requêtes par minute et par IP sur l'API, 10 sur l'authentification |
 | Webhook | Restreint aux plages d'adresses Telegram au niveau du proxy |
-| En-têtes | CSP stricte, `X-Content-Type-Options`, `Referrer-Policy: no-referrer` |
+| En-têtes | CSP stricte, `X-Content-Type-Options`, `Referrer-Policy: strict-origin-when-cross-origin` (décision 29 : Google Identity Services exige l'origine ; vers un autre site, jamais le chemin) |
 | Envois | Type MIME et taille vérifiés, audio réencodé par ffmpeg avant stockage |
 | Dépendances | Analyse automatisée des vulnérabilités à chaque build |
 | Accès administrateur | Uniquement par le réseau local ou le VPN du homelab |
@@ -998,6 +1000,7 @@ Tous les autres arbitrages sont fermés. Le cahier des charges est complet pour 
 | --- | --- | --- |
 | API Gemini | Facturée à l'usage, projet Cloud dédié | Classement à l'arrêt ; captures conservées et rejouées |
 | API Google Calendar | OAuth, portée limitée | Perte des alarmes natives ; repli sur le push et Telegram |
+| Google Identity Services | Script et jeton d'identité de la connexion par Google (décision 29) | Le bouton Google disparaît ; le mot de passe et l'empreinte restent |
 | API Bot Telegram | Gratuite, sans engagement | Perte du canal de capture principal |
 | FCM | Transport du Web Push Android | Perte des notifications ; repli sur Telegram |
 | Let's Encrypt | Certificats | Expiration du TLS sous 90 jours |

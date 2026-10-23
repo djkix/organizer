@@ -101,6 +101,7 @@ Texte complet : [`CLAUDE.md`](CLAUDE.md) et [`docs/decisions.md`](docs/decisions
 
 ### 🔐 Comptes
 - Mot de passe Argon2id, session de 90 jours en cookie `HttpOnly`
+- Connexion par **Google** (décision 29) : l'adresse est reliée à un compte existant en ligne de commande
 - Reconnexion par **empreinte** (WebAuthn, décision 23) ; le mot de passe reste possible
 - Pas d'inscription : comptes créés en ligne de commande
 
@@ -279,6 +280,7 @@ Comptes et maintenance en ligne de commande (`docker compose exec api node apps/
 | `mot-de-passe <nom>` | Pose ou change le mot de passe, révoque les sessions |
 | `code-liaison <nom>` | Code à usage unique pour lier Telegram (`/start <code>`) |
 | `lier-chat`, `delier` | Lie ou délie un chat Telegram |
+| `lier-google <nom> <adresse>`, `delier-google <nom>` | Relie ou retire l'adresse Google d'un compte |
 | `telegram-webhook poser\|retirer\|etat` | Gère le webhook |
 | `reclasser <nom> [--essai]` | Rejoue le tri avec le prompt courant |
 | `veille`, `alerte-essai`, `essai-sortie <url>` | Supervision et essais |
@@ -315,6 +317,7 @@ Toutes les routes `/api` exigent une session, sauf la connexion. L'élément d'u
 | `GET` | `/api/sante` | Base et file joignables *(public)* |
 | `POST` / `DELETE` | `/api/session` | Connexion / déconnexion |
 | `POST` | `/api/session/empreinte` | Connexion par empreinte |
+| `GET` / `POST` | `/api/session/google` | Identifiant du client Google / connexion par jeton Google |
 | `GET` | `/api/vues/aujourdhui`, `/semaine`, `/horizons`, `/a-revoir` | Listes d'actions |
 | `POST` / `DELETE` | `/api/items/:id/fait` | Cocher / décocher |
 | `PATCH` / `DELETE` | `/api/items/:id` | Corriger / effacer |
