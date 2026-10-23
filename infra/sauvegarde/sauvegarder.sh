@@ -26,7 +26,8 @@ echouer() { MESSAGE="étape $1 (code $2)"; return 1; }
 sauvegarder() {
   rm -rf "$TMP" && mkdir -p "$TMP/base" "$TMP/config" || echouer base $? || return
   # La base d'abord : tout fichier qu'elle référence sera dans l'audio copié ensuite.
-  pg_dump -Fc --dbname="$DATABASE_URL" -f "$TMP/base/organizer.dump" || echouer base $? || return
+  # Une table verrouillée ne bloque pas la nuit : pg_dump abandonne au bout de 10 minutes.
+  pg_dump -Fc --lock-wait-timeout=10min --dbname="$DATABASE_URL" -f "$TMP/base/organizer.dump" || echouer base $? || return
   # Sans propriétaire ni groupe : le NAS les écrase (squash) ; la restauration remet 1000.
   set -- -rlt
   [ -d "$CIBLE/derniere/audio" ] && set -- "$@" --link-dest="$CIBLE/derniere/audio"

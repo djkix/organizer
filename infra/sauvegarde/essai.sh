@@ -9,6 +9,7 @@ mkdir -p "$R/bin" "$R/nas" "$R/audio/prive/2026/10" "$R/pile/secrets"
 cat > "$R/bin/pg_dump" <<'EOF'
 #!/bin/sh
 [ "${FAUX_PG_ECHEC:-0}" = 1 ] && exit 1
+echo "$*" > "${0%/bin/pg_dump}/pg_dump.args"
 while [ $# -gt 0 ]; do
   if [ "$1" = -f ]; then echo dump > "$2"; exit 0; fi
   shift
@@ -42,6 +43,7 @@ for f in base/organizer.dump audio/a.ogg audio/prive/2026/10/p.ogg config/compos
 done
 [ "$(readlink "$R/nas/derniere")" = 2026-10-01 ] || echec "première nuit : lien derniere"
 grep -q true "$R/sql.log" || echec "première nuit : tentative non inscrite"
+grep -q -- '--lock-wait-timeout=10min' "$R/pg_dump.args" || echec "pg_dump sans délai d'attente des verrous"
 
 # fichier inchangé : lien physique
 echo b > "$R/audio/b.ogg"

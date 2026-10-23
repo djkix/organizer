@@ -155,6 +155,8 @@ services:
     environment:
       TZ: Europe/Paris
       DATABASE_URL: postgresql://organizer:${POSTGRES_PASSWORD:?}@db:5432/organizer
+      # Une base injoignable ne bloque pas la boucle de planifier.sh : 10 s pour se connecter.
+      PGCONNECT_TIMEOUT: "10"
     volumes:
       - audio:/data/audio:ro
       - ./compose.yaml:/stack/compose.yaml:ro
@@ -162,8 +164,9 @@ services:
       - ./secrets:/stack/secrets:ro
       - nas:/nas
     networks: [core]
+    # L'API saine a joué les migrations : la table sauvegarde existe avant la première inscription.
     depends_on:
-      db:
+      api:
         condition: service_healthy
     deploy:
       resources:

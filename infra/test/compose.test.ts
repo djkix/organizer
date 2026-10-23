@@ -33,7 +33,7 @@ describe('stack de production', () => {
     const sv = service('sauvegarde') as unknown as { volumes: string[]; networks: string[]; environment: Record<string, string>; secrets?: unknown };
     expect(sv.networks).toEqual(['core']);
     expect(sv.volumes).toEqual(['audio:/data/audio:ro', './compose.yaml:/stack/compose.yaml:ro', './.env:/stack/.env:ro', './secrets:/stack/secrets:ro', 'nas:/nas']);
-    expect(Object.keys(sv.environment).sort()).toEqual(['DATABASE_URL', 'TZ']);
+    expect(Object.keys(sv.environment).sort()).toEqual(['DATABASE_URL', 'PGCONNECT_TIMEOUT', 'TZ']);
     expect(sv.secrets).toBeUndefined();
     for (const [n, s] of Object.entries(S)) expect(Object.keys((s as { depends_on?: object }).depends_on ?? {}), n).not.toContain('sauvegarde');
     const nas = (parse(texte, { merge: true }) as { volumes: Record<string, { driver_opts: Record<string, string> }> }).volumes.nas!.driver_opts;
@@ -128,9 +128,9 @@ describe('stack de production', () => {
     }
   });
 
-  it('l\'API attend la base et joue les migrations ; worker et scheduler attendent l\'API saine ; sondes de santé', () => {
+  it('l\'API attend la base et joue les migrations ; worker, scheduler et sauvegarde attendent l\'API saine ; sondes de santé', () => {
     expect(service('api').depends_on?.db?.condition).toBe('service_healthy');
-    for (const n of ['worker', 'scheduler']) expect(service(n).depends_on?.api?.condition, n).toBe('service_healthy');
+    for (const n of ['worker', 'scheduler', 'sauvegarde']) expect(service(n).depends_on?.api?.condition, n).toBe('service_healthy');
     for (const n of ['api', 'db', 'queue', 'web']) expect(service(n).healthcheck, n).toBeDefined();
   });
 

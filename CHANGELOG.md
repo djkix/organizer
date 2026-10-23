@@ -8,6 +8,10 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ### Ajouté
 - `docs/exploitation.md` consigne l'essai de restauration de la 1.11.0 : base et audio restaurés depuis le NAS, identiques à la production (2026-10-23).
 
+### Corrigé
+- Le service `sauvegarde` attend l'API saine : la première sauvegarde ne part plus avant la migration qui crée sa table (2026-10-23).
+- `pg_dump` et `psql` de la sauvegarde ne peuvent plus bloquer la planification : 10 s pour se connecter (`PGCONNECT_TIMEOUT`), 10 minutes d'attente de verrou pour `pg_dump` (2026-10-23).
+
 ## [1.11.0] - 2026-10-23
 
 ### Ajouté
