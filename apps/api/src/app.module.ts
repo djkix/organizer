@@ -1,6 +1,6 @@
 import { Inject, Module, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { creerPrisma, type PrismaClient } from '@organizer/db';
-import { creerFetchSortant, FILE_AGENDA, FILE_ALERTES, FILE_CLASSEMENT, OPTIONS_JOB_ALERTE, type JobAgenda, type JobAlerte, type JobClassement } from '@organizer/shared';
+import { creerFetchSortant, lireVar, FILE_AGENDA, FILE_ALERTES, FILE_CLASSEMENT, OPTIONS_JOB_ALERTE, type JobAgenda, type JobAlerte, type JobClassement } from '@organizer/shared';
 import { Queue, type Worker } from 'bullmq';
 import type { Bot } from 'grammy';
 import { Redis } from 'ioredis';
@@ -12,6 +12,7 @@ import { MagasinEtatsValkey } from './agenda/etats.js';
 import { SignalAgendaFile } from './agenda/signal.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
+import { clesGoogle, creerVerificateurGoogle, type VerificateurGoogle } from './auth/google.js';
 import { EmpreintesController } from './auth/empreintes/empreintes.controller.js';
 import { MagasinDefisValkey } from './auth/empreintes/defis.js';
 import { EmpreintesService } from './auth/empreintes/empreintes.service.js';
@@ -21,7 +22,7 @@ import { FileClassementBullmq } from './ingestion/file.js';
 import { IngestionService } from './ingestion/ingestion.service.js';
 import { StockageAudio } from './ingestion/stockage.js';
 import { TelechargeurTelegram } from './ingestion/telechargeur.js';
-import { AGENDA, AUTH, BOT, CAPTURES, EMPREINTES, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, HISTORIQUE, PENSEES, QUEUE_AGENDA, REDIS, REENCODEUR, VUES } from './jetons.js';
+import { AGENDA, AUTH, BOT, CAPTURES, EMPREINTES, CLIENT_GOOGLE, CONFIG, INGESTION, ITEMS, PRISMA, PRIVEES, HISTORIQUE, PENSEES, QUEUE_AGENDA, REDIS, REENCODEUR, VERIFICATEUR_GOOGLE, VUES } from './jetons.js';
 import { ItemsController } from './items/items.controller.js';
 import { ItemsService } from './items/items.service.js';
 import { CapturesController } from './captures/captures.controller.js';
@@ -148,6 +149,14 @@ class Cycle implements OnApplicationBootstrap, OnApplicationShutdown {
       inject: [CONFIG, PRISMA, INGESTION, ITEMS],
       useFactory: (c: ConfigApi, prisma: PrismaClient, ingestion: IngestionService, items: ItemsService) =>
         creerBot(c.telegramToken, { liaison: new LiaisonService(prisma), ingestion, alarmes: new Alarmes(prisma, items) }, { client: optionsClientTelegram(c.telegramApiRoot) }),
+    },
+    // Sans GOOGLE_CLIENT_ID (dev, test) : pas de connexion par Google.
+    { provide: CLIENT_GOOGLE, useFactory: (): string | null => lireVar('GOOGLE_CLIENT_ID') ?? null },
+    {
+      provide: VERIFICATEUR_GOOGLE,
+      inject: [CLIENT_GOOGLE],
+      useFactory: (clientId: string | null): VerificateurGoogle | null =>
+        clientId ? creerVerificateurGoogle(clientId, clesGoogle(creerFetchSortant())) : null,
     },
     { provide: AUTH, inject: [PRISMA], useFactory: (prisma: PrismaClient) => new AuthService(prisma) },
     {

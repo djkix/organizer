@@ -6,6 +6,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ## [Non publié]
 
 ### Ajouté
+- `GET /api/session/google` et `POST /api/session/google` : identifiant du client et connexion par jeton Google, même session et même limiteur que le mot de passe (2026-10-23).
 - Connexion par Google, côté serveur : vérification du jeton d'identité, adresse reliée par `cli lier-google` et `cli delier-google`, sub mémorisé au premier passage ; aucune inscription (2026-10-23).
 - Conception et plan de la connexion par Google : `docs/superpowers/specs/2026-10-23-connexion-google-design.md`, `docs/superpowers/plans/2026-10-23-connexion-google.md` (2026-10-23).
 

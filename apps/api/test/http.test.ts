@@ -5,11 +5,11 @@ import { DELAI_ENVOI_PRIVE_MAX_MS } from '@organizer/shared';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AuthController } from '../src/auth/auth.controller.js';
 import { configurerServeur, lireConfianceProxy } from '../src/http.js';
-import { AUTH } from '../src/jetons.js';
+import { AUTH, CLIENT_GOOGLE, VERIFICATEUR_GOOGLE } from '../src/jetons.js';
 import { demarrerAppTest } from './aides-http.js';
 
 class ModuleTest {}
-Module({ controllers: [AuthController], providers: [{ provide: AUTH, useValue: { ouvrirSession: async () => null } }] })(ModuleTest);
+Module({ controllers: [AuthController], providers: [{ provide: AUTH, useValue: { ouvrirSession: async () => null } }, { provide: VERIFICATEUR_GOOGLE, useValue: null }, { provide: CLIENT_GOOGLE, useValue: null }] })(ModuleTest);
 
 afterEach(() => { delete process.env.TRUSTED_PROXY; });
 

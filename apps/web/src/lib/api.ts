@@ -24,6 +24,8 @@ export class HorsLigne extends Error {
 export interface ClientApi {
   connecter(c: CorpsConnexion): Promise<void>;
   deconnecter(): Promise<void>;
+  configGoogle(): Promise<{ clientId: string | null }>;
+  connecterGoogle(jeton: string): Promise<void>;
   moi(): Promise<{ nom: string; admin?: boolean; versionServeur?: string }>;
   optionsConnexionEmpreinte(): Promise<PublicKeyCredentialRequestOptionsJSON>;
   connecterParEmpreinte(r: AuthenticationResponseJSON): Promise<void>;
@@ -63,7 +65,7 @@ export interface ClientApi {
 
 export interface OptionsClient {
   fetch?: typeof fetch;
-  /** Appelé sur un 401, sauf pour connecter, deconnecter, moi et la connexion par empreinte. */
+  /** Appelé sur un 401, sauf pour connecter, deconnecter, moi et les connexions par empreinte et par Google. */
   surNonConnecte?: () => void;
 }
 
@@ -130,6 +132,8 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
 
   return {
     connecter: (c) => sansCorps(appeler('POST', '/api/session', c, false)),
+    configGoogle: () => json(appeler('GET', '/api/session/google', undefined, false)),
+    connecterGoogle: (jeton) => sansCorps(appeler('POST', '/api/session/google', { jeton }, false)),
     deconnecter: () => sansCorps(appeler('DELETE', '/api/session', undefined, false)),
     moi: () => json(appeler('GET', '/api/session/moi', undefined, false)),
     optionsConnexionEmpreinte: () => json(appeler('POST', '/api/session/empreinte/options', undefined, false)),

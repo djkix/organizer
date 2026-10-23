@@ -2,20 +2,34 @@ import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { creerPrisma } from '@organizer/db';
 import { viderBase } from '@organizer/db/test';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { Logger } from '@nestjs/common';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { VerificateurGoogle } from '../src/auth/google.js';
 import { AuthController } from '../src/auth/auth.controller.js';
 import { AuthService } from '../src/auth/auth.service.js';
 import { lireCookie, NOM_COOKIE } from '../src/auth/cookies.js';
 import { SessionGuard } from '../src/auth/session.guard.js';
-import { AUTH } from '../src/jetons.js';
+import { AUTH, CLIENT_GOOGLE, VERIFICATEUR_GOOGLE } from '../src/jetons.js';
 import { demarrerAppTest } from './aides-http.js';
 
 const prisma = creerPrisma();
 let horloge = new Date('2026-10-06T08:00:00Z');
 const auth = new AuthService(prisma, () => horloge);
 
+// Faux vérificateur : 'bon' vaut l'adresse reliée, 'autre' une adresse non reliée, le reste est invalide.
+const verificateur: VerificateurGoogle = {
+  async verifier(jeton) {
+    if (jeton === 'bon') return { sub: 'sub-1', email: 'l@exemple.org', emailVerifie: true };
+    if (jeton === 'autre') return { sub: 'sub-2', email: 'autre@exemple.org', emailVerifie: true };
+    return null;
+  },
+};
+
 class ModuleTest {}
-Module({ controllers: [AuthController], providers: [{ provide: AUTH, useValue: auth }, SessionGuard] })(ModuleTest);
+Module({
+  controllers: [AuthController],
+  providers: [{ provide: AUTH, useValue: auth }, { provide: VERIFICATEUR_GOOGLE, useValue: verificateur }, { provide: CLIENT_GOOGLE, useValue: 'client-essai' }, SessionGuard],
+})(ModuleTest);
 
 let app: { url: string; fermer(): Promise<void> };
 beforeAll(async () => { app = await demarrerAppTest(ModuleTest); });
@@ -24,6 +38,7 @@ beforeEach(async () => {
   horloge = new Date('2026-10-06T08:00:00Z');
   await viderBase(prisma);
   await prisma.utilisateur.create({ data: { nom: 'l' } });
+  await prisma.utilisateur.update({ where: { nom: 'l' }, data: { googleEmail: 'l@exemple.org' } });
   await auth.definirMotDePasse('l', 'un mot de passe assez long');
 });
 
@@ -203,5 +218,76 @@ describe('connexion Google', () => {
   });
   it('le mot de passe marche toujours après une liaison Google', async () => {
     expect(await auth.ouvrirSession('l', 'un mot de passe assez long')).not.toBeNull();
+  });
+});
+
+describe('/api/session/google', () => {
+  const poster = (url: string, corps: unknown) =>
+    fetch(`${url}/api/session/google`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(corps) });
+  const MESSAGE = "Ce compte Google n'est pas reconnu.";
+
+  it('GET : identifiant du client, sans session', async () => {
+    const r = await fetch(`${app.url}/api/session/google`);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ clientId: 'client-essai' });
+  });
+
+  it('POST : cookie de session pour une adresse reliée', async () => {
+    const r = await poster(app.url, { jeton: 'bon' });
+    expect(r.status).toBe(204);
+    const cookie = r.headers.get('set-cookie') ?? '';
+    const jeton = lireCookie(cookie, NOM_COOKIE);
+    expect(cookie).toMatch(/HttpOnly/);
+    const moi = await fetch(`${app.url}/api/session/moi`, { headers: { cookie: `${NOM_COOKIE}=${jeton}` } });
+    expect((await moi.json()).nom).toBe('l');
+  });
+
+  it('POST : 401 et message unique sinon', async () => {
+    for (const jeton of ['mauvais', 'autre']) {
+      const r = await poster(app.url, { jeton });
+      expect(r.status).toBe(401);
+      expect(await r.json()).toMatchObject({ message: MESSAGE });
+    }
+  });
+
+  it('POST : corps invalide → 401, jamais 500', async () => {
+    // Application à part : le limiteur est partagé, les autres tests l'ont entamé.
+    const seule = await demarrerAppTest(ModuleTest);
+    try {
+      for (const corps of [{}, { jeton: '' }, { jeton: 'x'.repeat(4097) }, { jeton: 5 }, [], { jeton: ['bon'] }]) {
+        const r = await poster(seule.url, corps);
+        expect(r.status).toBe(401);
+        expect(await r.json()).toMatchObject({ message: MESSAGE });
+      }
+    } finally { await seule.fermer(); }
+  });
+
+  it('le limiteur est commun aux deux connexions', async () => {
+    const seule = await demarrerAppTest(ModuleTest);
+    try {
+      const statuts: number[] = [];
+      for (let i = 0; i < 11; i++) {
+        const r = i % 2 === 0 ? await poster(seule.url, { jeton: 'mauvais' }) : await fetch(`${seule.url}/api/session`, {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nom: 'l', motDePasse: 'mauvais mot de passe !' }),
+        });
+        statuts.push(r.status);
+      }
+      expect(statuts.slice(0, 10)).toEqual(Array(10).fill(401));
+      expect(statuts[10]).toBe(429);
+    } finally { await seule.fermer(); }
+  });
+
+  it('aucun jeton ni adresse dans les journaux', async () => {
+    const espions = [
+      ...(['log', 'info', 'warn', 'error', 'debug'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => {})),
+      ...(['log', 'warn', 'error', 'debug', 'verbose'] as const).map((m) => vi.spyOn(Logger.prototype, m).mockImplementation(() => {})),
+    ];
+    try {
+      await poster(app.url, { jeton: 'bon' });
+      await poster(app.url, { jeton: 'jeton-secret-mauvais' });
+      await poster(app.url, { jeton: 'autre' });
+      const tout = JSON.stringify(espions.flatMap((e) => e.mock.calls));
+      for (const interdit of ['bon', 'jeton-secret-mauvais', 'l@exemple.org', 'autre@exemple.org']) expect(tout).not.toContain(interdit);
+    } finally { espions.forEach((e) => e.mockRestore()); }
   });
 });

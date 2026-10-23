@@ -18,6 +18,22 @@ const vide = (status = 204) => new Response(null, { status });
 const entetes = (init: RequestInit) => new Headers(init.headers);
 
 describe('client API', () => {
+  it('connexion Google : identifiant lu, jeton posté, jamais de renvoi vers la connexion', async () => {
+    const surNonConnecte = vi.fn();
+    const { f, appels } = fauxFetch([
+      new Response(JSON.stringify({ clientId: 'client-essai' }), { status: 200, headers: { 'content-type': 'application/json' } }),
+      vide(),
+      new Response(JSON.stringify({ message: "Ce compte Google n'est pas reconnu." }), { status: 401, headers: { 'content-type': 'application/json' } }),
+    ]);
+    const api = creerClientApi({ fetch: f, surNonConnecte });
+    expect(await api.configGoogle()).toEqual({ clientId: 'client-essai' });
+    await api.connecterGoogle('j');
+    expect(appels.map((a) => `${a.init.method} ${a.url}`)).toEqual(['GET /api/session/google', 'POST /api/session/google']);
+    expect(JSON.parse(appels[1]!.init.body as string)).toEqual({ jeton: 'j' });
+    await expect(api.connecterGoogle('k')).rejects.toMatchObject({ statut: 401, message: "Ce compte Google n'est pas reconnu." });
+    expect(surNonConnecte).not.toHaveBeenCalled();
+  });
+
   it('alertes : liste et « vues » sur les bonnes routes', async () => {
     const { f, appels } = fauxFetch([new Response(JSON.stringify({ alertes: [], nonVues: false }), { status: 200, headers: { 'content-type': 'application/json' } }), vide()]);
     const api = creerClientApi({ fetch: f });

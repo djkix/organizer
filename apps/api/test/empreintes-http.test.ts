@@ -10,7 +10,7 @@ import { DelaiDepasse, type MagasinDefis, type TypeDefi } from '../src/auth/empr
 import { EmpreintesController, MESSAGE_INDISPONIBLE, MESSAGE_REFUS, MESSAGE_TROP } from '../src/auth/empreintes/empreintes.controller.js';
 import { EmpreintesService } from '../src/auth/empreintes/empreintes.service.js';
 import { SessionGuard } from '../src/auth/session.guard.js';
-import { AUTH, EMPREINTES } from '../src/jetons.js';
+import { AUTH, CLIENT_GOOGLE, EMPREINTES, VERIFICATEUR_GOOGLE } from '../src/jetons.js';
 import { AuthentificateurLogiciel, CONFIG_ESSAI, MagasinDefisMemoire } from './aides-webauthn.js';
 import { demarrerAppTest } from './aides-http.js';
 
@@ -33,7 +33,7 @@ const empreintes = new EmpreintesService(prisma, magasin, CONFIG_ESSAI, undefine
 class ModuleTest {}
 Module({
   controllers: [AuthController, EmpreintesController],
-  providers: [{ provide: AUTH, useValue: auth }, { provide: EMPREINTES, useValue: empreintes }, SessionGuard],
+  providers: [{ provide: AUTH, useValue: auth }, { provide: VERIFICATEUR_GOOGLE, useValue: null }, { provide: CLIENT_GOOGLE, useValue: null }, { provide: EMPREINTES, useValue: empreintes }, SessionGuard],
 })(ModuleTest);
 
 // Une application par test : le limiteur (10 par minute) appartient à l'instance du contrôleur.
