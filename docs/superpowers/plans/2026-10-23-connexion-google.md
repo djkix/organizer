@@ -27,7 +27,7 @@
 ## Review Focus
 
 1. **Script Google lent à charger** : le lien « Me connecter avec un mot de passe » est utilisable tout de suite, sans attendre le bouton. → test e2e `lien du mot de passe sans attendre Google` (tâche 4).
-2. **Adresse en majuscules** (`L@Gmail.com` reliée, jeton en minuscules ou l'inverse) : reconnue. → test `adresse comparée en minuscules` (tâche 1).
+2. **Adresse en majuscules** (`L@Exemple.org` reliée, jeton en minuscules ou l'inverse) : reconnue. → test `adresse comparée en minuscules` (tâche 1).
 3. **Jeton valide mais `email_verified` faux** : refusé comme une adresse inconnue. → test `adresse non vérifiée : refusée` (tâche 1).
 4. **Même `sub` déjà sur un autre compte** (adresse déplacée) : refus 401, jamais une erreur 500. → test `sub déjà pris : refusé sans erreur` (tâche 1).
 5. **Jeton pour un autre client, expiré, ou mal signé** : refusé. → tests `mauvaise audience`, `expiré`, `autre clé` (tâche 1).
