@@ -6,6 +6,7 @@
   import { CHEMINS } from '$lib/config';
   import { connecterParEmpreinte, memoLocal } from '$lib/empreinte';
   import { ceremoniesNavigateur } from '$lib/empreinte-navigateur';
+  import BoutonGoogle from '$lib/composants/BoutonGoogle.svelte';
   import { MESSAGES } from '$lib/messages';
   import { filePrivee, videur } from '$lib/prive/demarrage';
 
@@ -17,7 +18,13 @@
   let enAttente = $state(false);
   // Bouton seulement si ce téléphone a une clé ; jamais d'invite ouverte d'elle-même.
   let empreinte = $state(false);
+  // undefined : réponse en attente. null : pas de Google ici, formulaire déplié d'office.
+  let clientId = $state<string | null | undefined>(undefined);
+  let googleKo = $state(false);
+  let deplie = $state(false);
+  const formulaire = $derived(deplie || clientId === null || googleKo);
   onMount(async () => {
+    api.configGoogle().then((c) => { clientId = c.clientId; }, () => { clientId = null; });
     empreinte = memo.lire() !== null && ceremoniesNavigateur.disponible();
     try {
       enAttente = (await filePrivee.lister()).some((c) => !c.refuse);
@@ -50,6 +57,27 @@
     }
   }
 
+  async function parGoogle(jeton: string): Promise<void> {
+    envoi = true;
+    message = null;
+    try {
+      await api.connecterGoogle(jeton);
+      await entrer();
+    } catch (err) {
+      if (err instanceof ErreurApi && err.statut === 401) message = MESSAGES.googleInconnu;
+      else if (err instanceof ErreurApi && err.statut === 429) message = MESSAGES.tropDeRequetes;
+      else if (err instanceof ErreurApi) message = MESSAGES.serveurIndisponible;
+      else message = MESSAGES.horsLigne;
+    } finally {
+      envoi = false;
+    }
+  }
+
+  function sansGoogle(): void {
+    googleKo = true;
+    message = MESSAGES.googleIndisponible;
+  }
+
   async function parEmpreinte(): Promise<void> {
     envoi = true;
     message = null;
@@ -65,18 +93,21 @@
 
 <main class="connexion">
   <h1>Organizer</h1>
-  <form onsubmit={connecter}>
-    <label>Nom<input bind:value={nom} name="nom" autocomplete="username" autocapitalize="none" required /></label>
-    <label>Mot de passe<input bind:value={motDePasse} name="motDePasse" type="password" autocomplete="current-password" required /></label>
-    <p aria-live="polite">{message ?? ''}</p>
-    {#if enAttente}<p class="discret">{MESSAGES.partiraApresConnexion}</p>{/if}
-    {#if empreinte}
-      <button class="bouton-principal" type="button" onclick={parEmpreinte} disabled={envoi}>{MESSAGES.connecterEmpreinte}</button>
-      <button class="bouton" type="submit" disabled={envoi}>Me connecter</button>
-    {:else}
-      <button class="bouton-principal" type="submit" disabled={envoi}>Me connecter</button>
-    {/if}
-  </form>
+  {#if clientId && !googleKo}<BoutonGoogle {clientId} onjeton={parGoogle} onindisponible={sansGoogle} />{/if}
+  {#if empreinte}
+    <button class="bouton-principal" type="button" onclick={parEmpreinte} disabled={envoi}>{MESSAGES.connecterEmpreinte}</button>
+  {/if}
+  <p aria-live="polite">{message ?? ''}</p>
+  {#if enAttente}<p class="discret">{MESSAGES.partiraApresConnexion}</p>{/if}
+  {#if formulaire}
+    <form onsubmit={connecter}>
+      <label>Nom<input bind:value={nom} name="nom" autocomplete="username" autocapitalize="none" required /></label>
+      <label>Mot de passe<input bind:value={motDePasse} name="motDePasse" type="password" autocomplete="current-password" required /></label>
+      <button class={empreinte ? 'bouton' : 'bouton-principal'} type="submit" disabled={envoi}>Me connecter</button>
+    </form>
+  {:else}
+    <button class="lien" type="button" onclick={() => (deplie = true)}>{MESSAGES.connecterMotDePasse}</button>
+  {/if}
 </main>
 
 <style>

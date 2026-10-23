@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { json, simuler, type Table } from './simul';
+import { corpsDe, GIS, json, SANS_SESSION_GOOGLE as SANS_SESSION, servirGis, simuler, type Table } from './simul';
 
 test('sans session, la connexion ; un mauvais mot de passe le dit ; le bon ouvre Aujourd\'hui', async ({ page }) => {
   let connecte = false;
@@ -70,4 +70,68 @@ test('depuis la connexion, le bouton violet mène à l\'enregistreur privé', as
   await page.getByRole('link', { name: 'Enregistrement privé' }).click();
   await expect(page).toHaveURL(/\/prive\/enregistrer$/);
   await expect(page.getByText('Ça reste à la maison.')).toBeVisible();
+});
+
+
+test('Google : le jeton part à l\'API et ouvre Aujourd\'hui', async ({ page }) => {
+  let connecte = false;
+  await servirGis(page);
+  const appels = await simuler(page, {
+    ...SANS_SESSION,
+    'GET /api/session/moi': (r) => (connecte ? r.fulfill({ json: { nom: 'test' } }) : r.fulfill({ status: 401, json: { message: 'Connecte-toi pour continuer.' } })),
+    'POST /api/session/google': (r) => { connecte = true; return r.fulfill({ status: 204 }); },
+    'GET /api/vues/aujourdhui': json(200, { jour: '2026-10-06', actions: [], suggestions: [] }),
+  });
+  await page.goto('/connexion');
+  await page.getByRole('button', { name: 'Continuer avec Google' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: "Aujourd'hui" })).toBeVisible();
+  expect(corpsDe(appels, 'POST /api/session/google')).toEqual({ jeton: 'jeton-essai' });
+});
+
+test('Google : compte non reconnu, le message unique', async ({ page }) => {
+  await servirGis(page);
+  await simuler(page, { ...SANS_SESSION, 'POST /api/session/google': json(401, { message: "Ce compte Google n'est pas reconnu." }) });
+  await page.goto('/connexion');
+  await expect(page.getByLabel('Nom')).toBeHidden();
+  await page.getByRole('button', { name: 'Continuer avec Google' }).click();
+  await expect(page.getByText("Ce compte Google n'est pas reconnu.")).toHaveCount(1);
+  await expect(page).toHaveURL(/\/connexion$/);
+});
+
+test('Google indisponible : formulaire déplié et message', async ({ page }) => {
+  await page.route(GIS, (r) => r.abort());
+  await simuler(page, SANS_SESSION);
+  await page.goto('/connexion');
+  await expect(page.getByLabel('Nom')).toBeVisible();
+  await expect(page.getByText('Google indisponible. Utilise ton mot de passe.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toHaveCount(0);
+});
+
+test('sans identifiant client : formulaire déplié, pas de bouton Google', async ({ page }) => {
+  let gis = false;
+  await page.route(GIS, (r) => { gis = true; return r.abort(); });
+  await simuler(page, { 'GET /api/session/moi': json(401, { message: 'Connecte-toi pour continuer.' }) });
+  await page.goto('/connexion');
+  await expect(page.getByLabel('Nom')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Me connecter', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Me connecter avec un mot de passe' })).toHaveCount(0);
+  await expect(page.getByText('Google indisponible. Utilise ton mot de passe.')).toHaveCount(0);
+  expect(gis).toBe(false);
+});
+
+test('lien du mot de passe sans attendre Google', async ({ page }) => {
+  await page.route(GIS, async (r) => { await new Promise((ok) => setTimeout(ok, 5_000)); await r.abort().catch(() => undefined); });
+  await simuler(page, SANS_SESSION);
+  await page.goto('/connexion');
+  await page.getByRole('button', { name: 'Me connecter avec un mot de passe' }).click({ timeout: 2_000 });
+  await expect(page.getByLabel('Nom')).toBeVisible({ timeout: 1_000 });
+});
+
+test('le cadenas privé reste sur l\'écran de connexion', async ({ page }) => {
+  await servirGis(page);
+  await simuler(page, SANS_SESSION);
+  await page.goto('/connexion');
+  await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Enregistrement privé' })).toBeVisible();
 });

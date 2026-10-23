@@ -7,6 +7,9 @@ export const MESSAGES = {
   tropDeRequetes: 'Trop de demandes. Réessaie dans une minute.',
   horsLigne: 'Pas de réseau pour le moment.',
   serveurIndisponible: 'Le serveur ne répond pas.',
+  connecterMotDePasse: 'Me connecter avec un mot de passe',
+  googleInconnu: "Ce compte Google n'est pas reconnu.",
+  googleIndisponible: 'Google indisponible. Utilise ton mot de passe.',
   enregistrementTropLong: 'Enregistrement trop long.',
   listeIndisponible: 'Pas de réseau. La liste reviendra.',
   // À faire

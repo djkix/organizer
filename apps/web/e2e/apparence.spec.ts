@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { CONNECTE, json, ligne, simuler } from './simul';
+import { CONNECTE, json, ligne, SANS_SESSION_GOOGLE, servirGis, simuler } from './simul';
 
 // Textes fabriqués, longs exprès : rien ne doit déborder à 360 px, en clair comme en sombre.
 const longue = ligne(1, 'Penser à rappeler la mutuelle pour le remboursement des lunettes et demander le formulaire de prise en charge avant la fin du mois', {
@@ -80,6 +80,23 @@ for (const schema of ['light', 'dark'] as const) {
       await sansDebordement(page);
       await page.getByRole('button', { name: /12:05/ }).click();
       await expect(page.getByText('Effacé')).toBeVisible();
+      await sansDebordement(page);
+    });
+  }
+}
+
+for (const schema of ['light', 'dark'] as const) {
+  for (const taille of [{ width: 360, height: 780 }, { width: 390, height: 844 }]) {
+    test(`connexion ${schema} à ${taille.width} px : Google, lien, puis formulaire déplié`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: schema });
+      await page.setViewportSize(taille);
+      await servirGis(page);
+      await simuler(page, SANS_SESSION_GOOGLE);
+      await page.goto('/connexion');
+      await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
+      await sansDebordement(page);
+      await page.getByRole('button', { name: 'Me connecter avec un mot de passe' }).click();
+      await expect(page.getByLabel('Nom')).toBeVisible();
       await sansDebordement(page);
     });
   }

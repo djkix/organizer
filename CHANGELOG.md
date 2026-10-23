@@ -9,6 +9,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - CSP ouverte à Google Identity Services, `Referrer-Policy: strict-origin-when-cross-origin` pour toute l'application, et `www.googleapis.com` dans la sortie de l'API, pour la connexion par Google (décision 29) (2026-10-23).
 
 ### Ajouté
+- Écran de connexion : « Continuer avec Google » en tête, l'empreinte dessous, le mot de passe derrière « Me connecter avec un mot de passe » ; formulaire déplié d'office si Google est indisponible (2026-10-23).
 - `GET /api/session/google` et `POST /api/session/google` : identifiant du client et connexion par jeton Google, même session et même limiteur que le mot de passe (2026-10-23).
 - Connexion par Google, côté serveur : vérification du jeton d'identité, adresse reliée par `cli lier-google` et `cli delier-google`, sub mémorisé au premier passage ; aucune inscription (2026-10-23).
 - Conception et plan de la connexion par Google : `docs/superpowers/specs/2026-10-23-connexion-google-design.md`, `docs/superpowers/plans/2026-10-23-connexion-google.md` (2026-10-23).
