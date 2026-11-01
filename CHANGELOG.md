@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.14.0] - 2026-11-01
+
 ### Ajouté
 - À faire : onglet « Un jour », pour les actions sans échéance, jusqu'ici visibles seulement dans l'Historique. Les plus récentes d'abord, 20 au plus, jamais poussées ; `GET /api/vues/un-jour` (2026-11-01).
 
