@@ -2,7 +2,7 @@ import type { Prisma, PrismaClient } from '@organizer/db';
 import {
   ajouterJours, debutJour, jourLocal,
   type CaptureARevoir, type ItemARevoir, type LigneAction,
-  type VueARevoir, type VueAujourdhui, type VueHorizons, type VueSemaine,
+  type VueARevoir, type VueAujourdhui, type VueHorizons, type VueSemaine, type VueUnJour,
 } from '@organizer/shared';
 
 const MAX_AUJOURDHUI = 7;
@@ -82,6 +82,15 @@ export class VuesService {
       bornes.set(fin, b);
     }
     return { bornes: [...bornes].map(([fin, b]) => ({ fin, ...b })) };
+  }
+
+  /** Actions sans échéance : jamais poussées, les plus récentes d'abord. */
+  async unJour(utilisateurId: string): Promise<VueUnJour> {
+    const items = await this.prisma.item.findMany({
+      where: { ...ouvertes(utilisateurId), action: { is: { faitLe: null, OR: [{ echeanceType: 'aucune' }, { echeanceType: null }] } } },
+      include: inclure, orderBy: [{ capture: { emisLe: 'desc' } }, { id: 'asc' }], take: MAX_LISTE,
+    });
+    return { actions: items.map(ligne) };
   }
 
   async aRevoir(utilisateurId: string): Promise<VueARevoir> {

@@ -16,6 +16,7 @@ export const MESSAGES = {
   videAujourdhui: "Rien pour aujourd'hui.",
   videSemaine: 'Rien cette semaine.',
   videHorizons: 'Rien en attente.',
+  videUnJour: 'Rien pour plus tard.',
   bientot: 'Bientôt',
   fait: 'Fait.',
   annuler: 'Annuler',

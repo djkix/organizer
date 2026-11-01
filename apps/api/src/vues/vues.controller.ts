@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Req, UseGuards } from '@nestjs/common';
-import type { VueARevoir, VueAujourdhui, VueHorizons, VueSemaine } from '@organizer/shared';
+import type { VueARevoir, VueAujourdhui, VueHorizons, VueSemaine, VueUnJour } from '@organizer/shared';
 import { SessionGuard, type RequeteAuthentifiee } from '../auth/session.guard.js';
 import { VUES } from '../jetons.js';
 import type { VuesService } from './vues.service.js';
@@ -22,6 +22,11 @@ export class VuesController {
   @Get('horizons')
   horizons(@Req() req: RequeteAuthentifiee): Promise<VueHorizons> {
     return this.vues.horizons(req.utilisateur.id, new Date(), req.utilisateur.fuseau);
+  }
+
+  @Get('un-jour')
+  unJour(@Req() req: RequeteAuthentifiee): Promise<VueUnJour> {
+    return this.vues.unJour(req.utilisateur.id);
   }
 
   @Get('a-revoir')

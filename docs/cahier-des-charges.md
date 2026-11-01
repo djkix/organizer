@@ -96,7 +96,7 @@ Deux utilisatrices, deux flux de contenu, un périmètre volontairement étroit 
 - [ ] Envoyer un vocal d'une phrase depuis le téléphone, écran verrouillé, sans ouvrir d'application
 - [ ] Obtenir la transcription et le classement automatique en moins de deux minutes
 - [ ] Découper un vocal contenant plusieurs sujets en plusieurs entrées
-- [ ] Consulter les listes Aujourd'hui, Cette semaine, Horizons, Rapide
+- [ ] Consulter les listes Aujourd'hui, Cette semaine, Horizons, Un jour, Rapide
 - [ ] Cocher une action d'un geste, depuis la liste ou depuis une notification
 - [ ] Recevoir une alarme uniquement sur les rendez-vous où elle l'a demandée
 - [ ] Voir les urgences sur l'écran d'accueil du téléphone sans ouvrir l'application
@@ -394,7 +394,7 @@ erDiagram
 | `jour` | « jeudi, appeler le garage » | date, sans heure | Vue Aujourd'hui le jour dit, et widget |
 | `fenetre` | « avant Noël », « avant mars » | borne début + borne fin | Vue Horizons, et widget quand la borne approche |
 | `relative` | « sous quinze jours » | date calculée à la capture | Comme `jour` |
-| `aucune` | « penser aux cadeaux » | nul | Vue Rapide ou Un jour, jamais poussée |
+| `aucune` | « penser aux cadeaux » | nul | Vue Un jour, jamais poussée |
 
 ### Cycle de vie d'une action
 
@@ -453,6 +453,7 @@ La règle de restitution est de montrer peu. Une vue qui dépasse cinq lignes su
 | Aujourd'hui | Actions datées du jour, plus 1 à 3 suggestions issues des fenêtres qui approchent | 7 lignes maximum |
 | Cette semaine | Actions datées des 7 prochains jours | Groupées par jour |
 | Horizons | Échéances floues, groupées par borne (avant mars, avant Noël) | Tri par borne croissante |
+| Un jour | Actions sans échéance (« penser aux cadeaux », une idée pour plus tard) | Les plus récentes d'abord, 20 lignes maximum, jamais poussée |
 | Rapide | Actions estimées à moins de 5 minutes, toutes échéances confondues | 10 lignes maximum |
 | Fils | Regroupements par thème ou projet (Noël, Halloween, maison) | Fils actifs d'abord |
 | Pensées | Journal antichronologique, filtres par personne et par thème ; rapprochements proposés à la lecture, jamais en notification | Jamais de case à cocher |

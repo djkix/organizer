@@ -89,6 +89,26 @@ describe('semaine et horizons', () => {
   });
 });
 
+describe('un jour', () => {
+  it('liste les actions ouvertes sans échéance, les plus récentes d\'abord, du seul compte', async () => {
+    await creerAction(prisma, { texte: 'ancienne', type: 'aucune', emisLe: '2026-10-01T08:00:00Z' });
+    await creerAction(prisma, { texte: 'récente', type: 'aucune', emisLe: '2026-10-03T08:00:00Z' });
+    await creerAction(prisma, { texte: 'sans type', type: null, emisLe: '2026-10-02T08:00:00Z' });
+    await creerAction(prisma, { texte: 'faite', type: 'aucune', faitLe: '2026-10-04T08:00:00Z' });
+    await creerAction(prisma, { texte: 'datée', type: 'jour', date: '2026-10-06T00:00:00+02:00' });
+    await creerAction(prisma, { texte: 'fenêtre', type: 'fenetre', fin: '2026-12-24T23:59:00+01:00' });
+    await creerAction(prisma, { texte: 'pensée', type: null, nature: 'pensee' });
+    await creerAction(prisma, { texte: 'autre compte', type: 'aucune', compte: 'autre' });
+    const v = await vues.unJour(await compteTest(prisma));
+    expect(v.actions.map((a) => a.texte)).toEqual(['récente', 'sans type', 'ancienne']);
+  });
+
+  it('ne dépasse jamais 20 lignes', async () => {
+    for (let i = 0; i < 25; i++) await creerAction(prisma, { type: 'aucune' });
+    expect((await vues.unJour(await compteTest(prisma))).actions).toHaveLength(20);
+  });
+});
+
 describe('a revoir', () => {
   it('liste les items ambigus et les captures ordinaires à revoir, jamais les privées', async () => {
     await creerAction(prisma, { texte: 'vendredi ou samedi', type: null, nature: 'ambigu' });

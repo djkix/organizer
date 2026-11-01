@@ -79,6 +79,21 @@ test('les onglets Semaine et Horizons, et un état vide neutre', async ({ page }
   await expect(page.getByText('Rien en attente.')).toBeVisible();
 });
 
+test('l\'onglet Un jour montre les actions sans échéance, cochables', async ({ page }) => {
+  const idee = { ...garage, itemId: 'i9', texte: 'Ajouter un export', echeanceType: 'aucune', echeanceDate: null };
+  await simuler(page, { ...table(), 'GET /api/vues/un-jour': json(200, { actions: [idee] }) });
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Un jour' }).click();
+  await expect(page.getByRole('heading', { name: 'Un jour', level: 1 })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Cocher : Ajouter un export' })).toBeVisible();
+});
+
+test('l\'onglet Un jour vide reste neutre', async ({ page }) => {
+  await simuler(page, { ...table(), 'GET /api/vues/un-jour': json(200, { actions: [] }) });
+  await page.goto('/?vue=un-jour');
+  await expect(page.getByText('Rien pour plus tard.')).toBeVisible();
+});
+
 test('cibles de 48 px, texte de 16 px, actions principales dans le tiers bas', async ({ page }) => {
   await simuler(page, table());
   await page.goto('/');

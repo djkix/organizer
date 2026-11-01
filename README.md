@@ -16,8 +16,9 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │  Organizer                                                       │
 ├──────────────────────────────────────────────────────────────────┤
-│  Aujourd'hui · Semaine · Horizons        ◯ Appeler le garage     │
-│  ───────────────────────────────         ◯ Dermato 10:00  alarme │
+│  Aujourd'hui · Semaine · Horizons ·      ◯ Appeler le garage     │
+│  Un jour                                 ◯ Dermato 10:00  alarme │
+│  ───────────────────────────────                                 │
 │  Actions cochables, sans retard          ◯ Acheter du lait       │
 │                                                                  │
 │  Pensées      journal par mois, filtres thème / personne         │
@@ -81,7 +82,7 @@ Texte complet : [`CLAUDE.md`](CLAUDE.md) et [`docs/decisions.md`](docs/decisions
 - Confiance basse ou date passée → « À revoir » ; `cli reclasser` rejoue une capture après un changement de prompt
 
 ### ✅ Actions
-- Vues **Aujourd'hui**, **Semaine** (bande des 7 jours), **Horizons** (échéances floues)
+- Vues **Aujourd'hui**, **Semaine** (bande des 7 jours), **Horizons** (échéances floues), **Un jour** (sans échéance)
 - Cocher avec annulation ; corriger nature ou échéance en deux gestes ; réécouter l'audio et lire ce qui a été dit
 - Effacer en glissant vers la gauche : confirmation, puis 5 s pour annuler
 

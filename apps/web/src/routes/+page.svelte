@@ -41,7 +41,8 @@
     try {
       const d: DonneesVue = nom === 'aujourdhui'
         ? { nom, vue: await api.aujourdhui() }
-        : nom === 'semaine' ? { nom, vue: await api.semaine() } : { nom, vue: await api.horizons() };
+        : nom === 'semaine' ? { nom, vue: await api.semaine() }
+          : nom === 'horizons' ? { nom, vue: await api.horizons() } : { nom, vue: await api.unJour() };
       if (demande === numero) donnees = d;
     } catch {
       if (demande === numero) { donnees = null; erreur = true; }
@@ -248,11 +249,12 @@
 <style>
   h1:focus { outline: none; }
   .onglets {
-    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; margin: 4px 20px 16px;
+    /* Quatre onglets à 360 px : chaque case prend la largeur de son texte, le reste se partage. */
+    display: flex; gap: 2px; padding: 4px; margin: 4px 16px 16px;
     background: var(--surface-alt); border-radius: 12px;
   }
   .puce {
-    min-height: var(--touch-min); display: flex; align-items: center; justify-content: center; padding: 0 6px; white-space: nowrap;
+    flex: 1 1 auto; min-height: var(--touch-min); display: flex; align-items: center; justify-content: center; padding: 0 4px; white-space: nowrap;
     border-radius: 9px; color: var(--muted); text-decoration: none; font-size: var(--font-meta); font-weight: 500;
   }
   .puce[aria-current='page'] { background: var(--surface); color: var(--accent-ink); font-weight: 600; outline: 1px solid var(--line); }

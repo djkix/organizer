@@ -18,6 +18,7 @@ export interface LigneAction {
 export interface VueAujourdhui { jour: string; actions: LigneAction[]; suggestions: LigneAction[] }
 export interface VueSemaine { jours: { jour: string; actions: LigneAction[] }[] }
 export interface VueHorizons { bornes: { fin: string; libelle: string | null; actions: LigneAction[] }[] }
+export interface VueUnJour { actions: LigneAction[] }
 export interface ItemARevoir { itemId: string; captureId: string; texte: string; emisLe: string; aAudio: boolean }
 export interface CaptureARevoir { captureId: string; texte: string | null; emisLe: string; aAudio: boolean }
 export interface VueARevoir { items: ItemARevoir[]; captures: CaptureARevoir[] }

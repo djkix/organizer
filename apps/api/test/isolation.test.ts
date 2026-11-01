@@ -45,7 +45,7 @@ afterEach(async () => { await app?.fermer(); });
 
 async function donnees(compte: string) {
   const midi = new Date(); midi.setUTCHours(12, 0, 0, 0);
-  const a = await creerAction(prisma, { compte, texte: `action ${compte}`, type: 'jour', date: midi.toISOString() });
+  const a = await creerAction(prisma, { compte, texte: `action ${compte}`, type: 'jour', date: midi.toISOString(), emisLe: new Date().toISOString() });
   const amb = await creerAction(prisma, { compte, texte: `ambigu ${compte}`, type: null, nature: 'ambigu' });
   const u = await prisma.utilisateur.findUniqueOrThrow({ where: { nom: compte } });
   await prisma.capture.update({ where: { id: a.captureId }, data: { audioPath: `ordinaire/${compte}.oga`, audioMime: 'audio/ogg' } });

@@ -5,6 +5,15 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Ajouté
+- À faire : onglet « Un jour », pour les actions sans échéance, jusqu'ici visibles seulement dans l'Historique. Les plus récentes d'abord, 20 au plus, jamais poussées ; `GET /api/vues/un-jour` (2026-11-01).
+
+### Modifié
+- Onglets de liste : chaque case prend la largeur de son texte, pour que les quatre tiennent à 360 px (2026-11-01).
+
+### Corrigé
+- Test d'isolation de l'historique : la capture fabriquée est datée du jour, il ne casse plus au changement de mois (2026-11-01).
+
 ## [1.13.1] - 2026-10-23
 
 ### Modifié

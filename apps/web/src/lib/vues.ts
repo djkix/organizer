@@ -1,9 +1,9 @@
-import type { LigneAction, VueAujourdhui, VueHorizons, VueSemaine } from '@organizer/shared/api';
+import type { LigneAction, VueAujourdhui, VueHorizons, VueSemaine, VueUnJour } from '@organizer/shared/api';
 import { libelleBorne, libelleJour, metaLigne } from './format.js';
 import { MESSAGES } from './messages.js';
 import { pastillesAction, type Pastille } from './pastilles.js';
 
-export const NOMS_VUES = ['aujourdhui', 'semaine', 'horizons'] as const;
+export const NOMS_VUES = ['aujourdhui', 'semaine', 'horizons', 'un-jour'] as const;
 export type NomVue = (typeof NOMS_VUES)[number];
 
 export const nomVue = (v: string | null): NomVue =>
@@ -13,12 +13,14 @@ export const TITRES: Record<NomVue, { onglet: string; titre: string; sous: strin
   aujourdhui: { onglet: "Aujourd'hui", titre: "Aujourd'hui", sous: null },
   semaine: { onglet: 'Semaine', titre: 'Cette semaine', sous: 'Les 7 prochains jours' },
   horizons: { onglet: 'Horizons', titre: 'Horizons', sous: 'Sans date précise' },
+  'un-jour': { onglet: 'Un jour', titre: 'Un jour', sous: 'Sans échéance' },
 };
 
 export const VIDES: Record<NomVue, string> = {
   aujourdhui: MESSAGES.videAujourdhui,
   semaine: MESSAGES.videSemaine,
   horizons: MESSAGES.videHorizons,
+  'un-jour': MESSAGES.videUnJour,
 };
 
 export interface LigneAffichee { itemId: string; texte: string; meta: string; alarme: boolean; pastilles: Pastille[]; source: LigneAction }
@@ -26,7 +28,8 @@ export interface Groupe { titre: string | null; lignes: LigneAffichee[]; ancre?:
 export type DonneesVue =
   | { nom: 'aujourdhui'; vue: VueAujourdhui }
   | { nom: 'semaine'; vue: VueSemaine }
-  | { nom: 'horizons'; vue: VueHorizons };
+  | { nom: 'horizons'; vue: VueHorizons }
+  | { nom: 'un-jour'; vue: VueUnJour };
 
 /** Ce que l'écran affiche, dans l'ordre de l'API, sans les lignes cochées dont l'annulation est close. */
 export function groupes(d: DonneesVue, aujourdhui: string, fuseau: string, retires: ReadonlySet<string>): Groupe[] {
@@ -39,7 +42,9 @@ export function groupes(d: DonneesVue, aujourdhui: string, fuseau: string, retir
       ? [{ titre: null, lignes: lignes(d.vue.actions) }, { titre: MESSAGES.bientot, lignes: lignes(d.vue.suggestions) }]
       : d.nom === 'semaine'
         ? d.vue.jours.map((j) => ({ titre: libelleJour(j.jour, aujourdhui), lignes: lignes(j.actions), ancre: ancreJour(j.jour) }))
-        : d.vue.bornes.map((b) => ({ titre: libelleBorne(b.fin, b.libelle, fuseau), lignes: lignes(b.actions, false) }));
+        : d.nom === 'horizons'
+          ? d.vue.bornes.map((b) => ({ titre: libelleBorne(b.fin, b.libelle, fuseau), lignes: lignes(b.actions, false) }))
+          : [{ titre: null, lignes: lignes(d.vue.actions) }];
   return tous.filter((g) => g.lignes.length > 0);
 }
 

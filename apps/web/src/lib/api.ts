@@ -1,6 +1,6 @@
 import type {
   CorpsConnexion, CorpsCorrection, CorpsEtiquette, DetailEnvoi, ElementEfface, PriveeEffacee, JourHistorique, JourPrive, ReponseAgenda, ReponseAlertes, ReponseSauvegarde, VuePensees, ReponseConnexionAgenda, ReponseErreur,
-  ResumeEmpreinte, VueARevoir, VueAujourdhui, VueHorizons, VueSemaine,
+  ResumeEmpreinte, VueARevoir, VueAujourdhui, VueHorizons, VueSemaine, VueUnJour,
 } from '@organizer/shared/api';
 import type {
   AuthenticationResponseJSON, PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON, RegistrationResponseJSON,
@@ -36,6 +36,7 @@ export interface ClientApi {
   aujourdhui(): Promise<VueAujourdhui>;
   semaine(): Promise<VueSemaine>;
   horizons(): Promise<VueHorizons>;
+  unJour(): Promise<VueUnJour>;
   aRevoir(): Promise<VueARevoir>;
   cocher(itemId: string): Promise<void>;
   decocher(itemId: string): Promise<void>;
@@ -145,6 +146,7 @@ export function creerClientApi(o: OptionsClient = {}): ClientApi {
     aujourdhui: () => json(appeler('GET', '/api/vues/aujourdhui')),
     semaine: () => json(appeler('GET', '/api/vues/semaine')),
     horizons: () => json(appeler('GET', '/api/vues/horizons')),
+    unJour: () => json(appeler('GET', '/api/vues/un-jour')),
     aRevoir: () => json(appeler('GET', '/api/vues/a-revoir')),
     agenda: () => json(appeler('GET', '/api/agenda')),
     connecterAgenda: () => json(appeler('POST', '/api/agenda/connexion')),
