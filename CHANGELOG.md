@@ -5,6 +5,8 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+## [1.14.1] - 2026-11-11
+
 ### Sécurité
 - Décision 25 : le prompt envoyé à Gemini ne contient plus que les thèmes et prénoms du compte de la capture, éléments effacés exclus ; ceux de l'autre compte en partaient (2026-11-11).
 - Décision 25 : une capture gardée sur le téléphone porte le dernier compte connecté (`X-Capture-Compte`) ; un autre compte la refuse (409) et elle reste sur le téléphone, au lieu d'entrer dans son espace (2026-11-11).
