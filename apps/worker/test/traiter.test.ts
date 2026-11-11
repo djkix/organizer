@@ -38,13 +38,37 @@ describe('traiterCapture', () => {
   });
 
   it('transmet la date d\'émission locale et les thèmes connus au prompt', async () => {
-    await prisma.theme.create({ data: { libelle: 'maison' } });
+    await elementDe('test', { theme: 'maison', personnes: [] });
     const { id } = await creerCaptureTexte(prisma);
     const p = new FauxProvider();
     await traiterCapture(id, deps(p));
     expect(p.appels[0]!.systeme).toContain('2026-10-06T08:12:00+02:00 (mardi)');
     expect(p.appels[0]!.systeme).toContain('maison');
     expect(p.appels[0]!.texte).toBe('rappeler le garage jeudi');
+  });
+
+  it('décision 25 : ni thème ni prénom d\'un autre compte, ni d\'un élément effacé, dans le prompt', async () => {
+    await elementDe('autre', { theme: 'theme-de-autre', personnes: ['Prenomautre'] });
+    await elementDe('test', { theme: 'theme-efface', personnes: ['Prenomefface'], efface: true });
+    await elementDe('test', { theme: 'theme-du-compte', personnes: ['Prenomducompte'] });
+    const { id } = await creerCaptureTexte(prisma);
+    const p = new FauxProvider();
+    await traiterCapture(id, deps(p));
+    const systeme = p.appels[0]!.systeme;
+    expect(systeme).toContain('theme-du-compte');
+    expect(systeme).toContain('Prenomducompte');
+    for (const absent of ['theme-de-autre', 'Prenomautre', 'theme-efface', 'Prenomefface']) expect(systeme).not.toContain(absent);
+  });
+
+  it('un élément touché pendant le reclassement est gardé : le nouveau classement est abandonné', async () => {
+    const { id } = await creerCaptureTexte(prisma);
+    await traiterCapture(id, deps(new FauxProvider()));
+    const [coche] = await prisma.item.findMany({ where: { captureId: id, nature: 'action' } });
+    await prisma.action.update({ where: { itemId: coche!.id }, data: { faitLe: new Date() } });
+    await prisma.capture.update({ where: { id }, data: { etat: 'en_file' } });
+    expect(await traiterCapture(id, deps(new FauxProvider()))).toBe('deja_traitee');
+    expect((await prisma.item.findUnique({ where: { id: coche!.id }, include: { action: true } }))?.action?.faitLe).not.toBeNull();
+    expect((await prisma.capture.findUniqueOrThrow({ where: { id } })).etat).toBe('classee');
   });
 
   it('envoie l\'audio stocké quand la capture en a un', async () => {
@@ -121,3 +145,16 @@ describe('traiterCapture', () => {
     expect((await prisma.capture.findUniqueOrThrow({ where: { id } })).etat).toBe('en_file');
   });
 });
+
+/** Un élément classé d'un compte, avec son thème et ses prénoms. Données fabriquées. */
+async function elementDe(nom: string, o: { theme: string; personnes: string[]; efface?: boolean }): Promise<void> {
+  const u = await prisma.utilisateur.upsert({ where: { nom }, create: { nom }, update: {} });
+  const c = await prisma.capture.create({ data: { utilisateurId: u.id, canal: 'telegram', prive: false, etat: 'classee', texteEcrit: 'x', emisLe: new Date() } });
+  const theme = await prisma.theme.upsert({ where: { libelle: o.theme }, create: { libelle: o.theme }, update: {} });
+  await prisma.item.create({
+    data: {
+      captureId: c.id, position: 1, texte: 'x', nature: 'pensee', confiance: {}, personnes: o.personnes, versionPrompt: 'tri/v1', modele: 'test',
+      archiveLe: o.efface ? new Date() : null, themeId: theme.id,
+    },
+  });
+}

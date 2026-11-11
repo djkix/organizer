@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import { goto } from '$app/navigation';
   import type { AlerteTechnique, ReponseSauvegarde, ResumeEmpreinte } from '@organizer/shared/api';
   import { etatAlertes } from '$lib/alertes.svelte';
   import { attendreIssue, lireRetour, messageRetour, vueAgenda, type VueAgenda } from '$lib/agenda';
@@ -177,7 +176,8 @@
     try {
       await api.deconnecter();
       garde.oublier();
-      await goto(CHEMINS.connexion);
+      // Vrai chargement : rien de la session (listes, états en mémoire) ne survit pour le compte suivant.
+      location.assign(CHEMINS.connexion);
     } catch {
       message = MESSAGES.horsLigne;
     }

@@ -19,13 +19,20 @@ export class LiaisonService {
   async creerCode(nom: string): Promise<string> {
     const u = await this.prisma.utilisateur.findUniqueOrThrow({ where: { nom } });
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
-    await this.prisma.codeLiaison.create({
-      data: { code, utilisateurId: u.id, expireLe: new Date(this.maintenant().getTime() + VALIDITE_MS) },
-    });
+    // Un seul code vivant par compte : le nouveau remplace les précédents.
+    await this.prisma.$transaction([
+      this.prisma.codeLiaison.deleteMany({ where: { utilisateurId: u.id } }),
+      this.prisma.codeLiaison.create({
+        data: { code, utilisateurId: u.id, expireLe: new Date(this.maintenant().getTime() + VALIDITE_MS) },
+      }),
+    ]);
     return code;
   }
 
-  /** Échecs récents, tous chats confondus : borne la force brute sur un code à six chiffres. */
+  /**
+   * Échecs récents, tous chats confondus : borne la force brute sur un code à six chiffres. Volontairement global :
+   * un compteur par chat se contournerait en changeant de chat. Un blocage n'empêche que la liaison, rare.
+   */
   private echecs: number[] = [];
 
   private bloque(): boolean {
@@ -40,6 +47,10 @@ export class LiaisonService {
   }
 
   async lier(code: string, chatId: number): Promise<'lie' | 'invalide'> {
+    // Groupe ou canal (identifiant négatif) : jamais lié, ses membres écriraient dans le compte.
+    if (!Number.isSafeInteger(chatId) || chatId <= 0) return 'invalide';
+    // Pas un code : ni requête, ni échec compté.
+    if (!/^\d{6}$/.test(code)) return 'invalide';
     if (this.bloque()) return 'invalide';
     const c = await this.prisma.codeLiaison.findUnique({ where: { code } });
     if (!c || c.expireLe <= this.maintenant()) return this.echec();

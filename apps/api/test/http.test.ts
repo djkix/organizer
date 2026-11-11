@@ -13,14 +13,14 @@ Module({ controllers: [AuthController], providers: [{ provide: AUTH, useValue: {
 
 afterEach(() => { delete process.env.TRUSTED_PROXY; });
 
-async function essais(xff: (i: number) => string): Promise<number[]> {
+async function essais(xff: (i: number) => string, nom: (i: number) => string = () => 'l'): Promise<number[]> {
   const app = await demarrerAppTest(ModuleTest);
   try {
     const statuts: number[] = [];
     for (let i = 0; i < 11; i++) {
       const r = await fetch(`${app.url}/api/session`, {
         method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': xff(i) },
-        body: JSON.stringify({ nom: 'l', motDePasse: 'x' }),
+        body: JSON.stringify({ nom: nom(i), motDePasse: 'x' }),
       });
       statuts.push(r.status);
     }
@@ -38,8 +38,29 @@ it('un X-Forwarded-For venu d\'un appelant non fiable ne change pas la clé du l
 
 it('un proxy de confiance fait foi : chaque client a son budget', async () => {
   process.env.TRUSTED_PROXY = '127.0.0.1';
-  const statuts = await essais((i) => `1.2.3.${i}`);
+  const statuts = await essais((i) => `1.2.3.${i}`, (i) => `compte${i}`);
   expect(statuts.every((s) => s === 401)).toBe(true);
+});
+
+it('dix essais sur un même compte, depuis onze adresses : le onzième est refusé', async () => {
+  process.env.TRUSTED_PROXY = '127.0.0.1';
+  const statuts = await essais((i) => `1.2.3.${i}`);
+  expect(statuts.slice(0, 10).every((s) => s === 401)).toBe(true);
+  expect(statuts[10]).toBe(429);
+});
+
+it('une écriture venue d\'un autre site (Sec-Fetch-Site) est refusée ; la PWA elle-même passe', async () => {
+  const app = await demarrerAppTest(ModuleTest);
+  try {
+    const envoyer = (site: string) => fetch(`${app.url}/api/session`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'sec-fetch-site': site }, body: JSON.stringify({ nom: 'l', motDePasse: 'x' }),
+    });
+    expect((await envoyer('same-site')).status).toBe(403);
+    expect((await envoyer('cross-site')).status).toBe(403);
+    expect((await envoyer('same-origin')).status).toBe(401);
+  } finally {
+    await app.fermer();
+  }
 });
 
 describe('production', () => {

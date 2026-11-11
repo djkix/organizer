@@ -15,7 +15,7 @@
   import { creerEffaceur, effacementsEnVol } from '$lib/effacement';
   import { MESSAGES } from '$lib/messages';
   import { filePrivee, videur } from '$lib/prive/demarrage';
-  import { plusRecentesDAbord, type BilanVidage, type CapturePrivee } from '$lib/prive/file';
+  import { compteDuTelephone, duCompte, plusRecentesDAbord, type BilanVidage, type CapturePrivee } from '$lib/prive/file';
 
   const aujourdhui = jourLocal(new Date(), FUSEAU);
   const moisCourant = aujourdhui.slice(0, 7);
@@ -37,7 +37,7 @@
 
   async function lireAttente(): Promise<void> {
     try {
-      attente = plusRecentesDAbord((await filePrivee.lister()).filter((c) => c.mode !== 'ordinaire'));
+      attente = plusRecentesDAbord((await filePrivee.lister()).filter((c) => c.mode !== 'ordinaire' && duCompte(c, compteDuTelephone.lire())));
     } catch {
       attente = [];
     }

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
-  BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpException, Inject, NotFoundException,
+  BadRequestException, Body, ConflictException, Controller, Delete, Get, HttpCode, HttpException, Inject, NotFoundException,
   Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
 import { EN_TETES_CAPTURE_PRIVEE, jourLocal, type JourPrive, type ReponseDepotPrive } from '@organizer/shared';
@@ -53,6 +53,9 @@ export class PriveesController {
     // Présent mais invalide : refus net, un identifiant aléatoire rendrait le rejeu non idempotent.
     if (idDemande !== undefined && !UUID.test(idDemande)) throw new BadRequestException('Identifiant refusé.');
     const id = idDemande ? idDemande.toLowerCase() : randomUUID();
+    // Une capture gardée sur le téléphone sous un autre compte n'entre jamais dans celui-ci (décision 25).
+    const compte = entete(req, EN_TETES_CAPTURE_PRIVEE.compte.toLowerCase());
+    if (compte !== undefined && compte !== encodeURIComponent(req.utilisateur.nom)) throw new ConflictException("Enregistrement d'un autre compte.");
     const mime = (entete(req, 'content-type') ?? '').split(';')[0]!.trim().toLowerCase();
     try {
       const r = await this.privees.enregistrer(req.utilisateur.id, {

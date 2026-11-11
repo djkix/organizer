@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, Controller, HttpException, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, ConflictException, Controller, HttpException, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { EN_TETES_CAPTURE_PRIVEE, type ReponseDepotPrive } from '@organizer/shared';
 import type { Response } from 'express';
 import { SessionGuard, type RequeteAuthentifiee } from '../auth/session.guard.js';
@@ -24,6 +24,9 @@ export class CapturesController {
     const idDemande = entete(req, EN_TETES_CAPTURE_PRIVEE.id.toLowerCase());
     if (idDemande !== undefined && !UUID.test(idDemande)) throw new BadRequestException('Identifiant refusé.');
     const id = idDemande ? idDemande.toLowerCase() : randomUUID();
+    // Une capture gardée sur le téléphone sous un autre compte n'entre jamais dans celui-ci (décision 25).
+    const compte = entete(req, EN_TETES_CAPTURE_PRIVEE.compte.toLowerCase());
+    if (compte !== undefined && compte !== encodeURIComponent(req.utilisateur.nom)) throw new ConflictException("Enregistrement d'un autre compte.");
     const mime = (entete(req, 'content-type') ?? '').split(';')[0]!.trim().toLowerCase();
     try {
       const r = await this.captures.enregistrer(req.utilisateur.id, {

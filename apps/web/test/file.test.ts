@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  creerVideur, EnregistrementVide, envoyerCapture, garderPuisEnvoyer, ouvrirFilePrivee, plusRecentesDAbord, type CapturePrivee,
+  compteDuTelephone, creerVideur, duCompte, EnregistrementVide, envoyerCapture, garderPuisEnvoyer, ouvrirFilePrivee, plusRecentesDAbord, type CapturePrivee,
 } from '../src/lib/prive/file.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -131,6 +131,38 @@ describe('videur', () => {
     arret();
     await v.vider();
     expect(recus).toEqual([0]);
+  });
+});
+
+describe('compte du téléphone (décision 25)', () => {
+  it('une capture d\'un autre compte (409) reste sur le téléphone, les suivantes partent', async () => {
+    const file = base();
+    await file.ajouter({ ...capture(1), compte: 'a' });
+    await file.ajouter({ ...capture(2), compte: 'b' });
+    const { f, envois } = serveur([409, 201]);
+    const b = await creerVideur(file, f).vider();
+    expect(b).toEqual({ livrees: 1, restantes: 0, refusees: 0, nonConnecte: false, horsLigne: false });
+    expect(envois.map((e) => e.entetes.get('X-Capture-Compte'))).toEqual(['a', 'b']);
+    expect((await file.lister()).map((c) => c.id)).toEqual([capture(1).id]);
+  });
+
+  it('garderPuisEnvoyer note le dernier compte connecté, encodé dans l\'en-tête', async () => {
+    const memoire = new Map<string, string>();
+    vi.stubGlobal('localStorage', { getItem: (k: string) => memoire.get(k) ?? null, setItem: (k: string, v: string) => { memoire.set(k, v); } });
+    compteDuTelephone.poser('é l');
+    const file = base();
+    const { f, envois } = serveur([201]);
+    const c = await garderPuisEnvoyer(file, creerVideur(file, f), { blob: new Blob(['a']), mime: 'audio/webm', dureeS: 1, emisLe: capture(1).emisLe }, 'prive');
+    expect(c.compte).toBe('é l');
+    await expect.poll(() => envois.length).toBe(1);
+    expect(envois[0]!.entetes.get('X-Capture-Compte')).toBe('%C3%A9%20l');
+  });
+
+  it('sans compte noté (entrée ancienne) : à tout compte ; sinon au sien seulement', () => {
+    expect(duCompte({}, 'a')).toBe(true);
+    expect(duCompte({ compte: 'a' }, 'a')).toBe(true);
+    expect(duCompte({ compte: 'a' }, 'b')).toBe(false);
+    expect(duCompte({ compte: 'a' }, null)).toBe(false);
   });
 });
 

@@ -3,6 +3,18 @@ import { Prisma, PrismaClient } from '@prisma/client';
 export * from '@prisma/client';
 
 /**
+ * Élément que la personne a touché (coché, effacé, corrigé) ou envoyé à son agenda : jamais réécrit par un
+ * reclassement, ni à la mise en file (reclasser) ni à l'écriture du worker, pour une capture touchée entre les deux.
+ */
+export const ITEM_TOUCHE: Prisma.ItemWhereInput = {
+  OR: [
+    { archiveLe: { not: null } },
+    { corrections: { some: {} } },
+    { action: { is: { OR: [{ faitLe: { not: null } }, { evenementId: { not: null } }] } } },
+  ],
+};
+
+/**
  * Une erreur de validation Prisma recopie les arguments de la requête (texte de capture compris),
  * quel que soit `errorFormat`. On ne garde que la dernière phrase, qui nomme le champ fautif.
  */

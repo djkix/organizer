@@ -14,7 +14,8 @@ DEBUT="$(date +%s)"
 DEBUT_LISIBLE="$(date -Iseconds)"
 TMP="$CIBLE/.en-cours"
 MESSAGE=""
-umask 022
+# Lisible du seul compte qui écrit sur le NAS : secrets et vocaux privés n'y sont pas chiffrés (décision 28).
+umask 077
 
 # Une seule sauvegarde à la fois (planifiée et à la main partagent le /tmp du conteneur) ; rien n'est inscrit.
 exec 9> "${VERROU:-/tmp/sauvegarde.verrou}"

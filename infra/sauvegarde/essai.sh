@@ -42,6 +42,11 @@ nuit 2026-10-01 || echec "première nuit : code $?"
 for f in base/organizer.dump audio/a.ogg audio/prive/2026/10/p.ogg config/compose.yaml config/.env config/secrets/s sauvegarde.txt; do
   [ -f "$R/nas/2026-10-01/$f" ] || echec "première nuit : $f absent"
 done
+# Ni groupe ni autres : secrets, base et vocaux privés ne sont lisibles que du compte qui écrit (décision 28, umask 077).
+for f in base/organizer.dump audio/prive/2026/10/p.ogg config/.env config/secrets/s; do
+  case "$(stat -c %a "$R/nas/2026-10-01/$f")" in ?00) ;; *) echec "première nuit : $f lisible par d'autres" ;; esac
+done
+[ "$(stat -c %a "$R/nas/2026-10-01/config/secrets")" = 700 ] || echec "première nuit : dossier des secrets ouvert"
 [ "$(readlink "$R/nas/derniere")" = 2026-10-01 ] || echec "première nuit : lien derniere"
 grep -q true "$R/sql.log" || echec "première nuit : tentative non inscrite"
 grep -q -- '--lock-wait-timeout=10min' "$R/pg_dump.args" || echec "pg_dump sans délai d'attente des verrous"

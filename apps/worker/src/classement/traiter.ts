@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { PrismaClient } from '@organizer/db';
+import { ITEM_TOUCHE, type Prisma, type PrismaClient } from '@organizer/db';
 import { ecarterPassees, isoLocal, jourSemaine, rendrePrompt, type Prompt } from '@organizer/shared';
 import { SortieNonConforme, type ClassificationProvider, type ResultatClassement } from './provider.js';
 
@@ -43,8 +43,14 @@ export async function traiterCapture(id: string, d: DepsTraitement): Promise<Iss
     emis_le: isoLocal(c.emisLe, fuseau),
     jour_semaine: jourSemaine(c.emisLe, fuseau),
     fuseau,
-    themes_connus: (await d.prisma.theme.findMany({ orderBy: { libelle: 'asc' }, select: { libelle: true } })).map((t) => t.libelle),
-    prenoms_connus: (await d.prisma.$queryRaw<{ prenom: string }[]>`SELECT DISTINCT unnest(personnes) AS prenom FROM item ORDER BY 1`).map((r) => r.prenom),
+    // Thèmes et prénoms du seul compte de la capture, éléments non effacés : rien d'un autre compte ne part (décision 25).
+    themes_connus: (await d.prisma.theme.findMany({
+      where: { items: { some: { archiveLe: null, capture: { utilisateurId: c.utilisateurId, prive: false } } } },
+      orderBy: { libelle: 'asc' }, select: { libelle: true },
+    })).map((t) => t.libelle),
+    prenoms_connus: (await d.prisma.$queryRaw<{ prenom: string }[]>`
+      SELECT DISTINCT unnest(i.personnes) AS prenom FROM item i JOIN capture c ON c.id = i.capture_id
+      WHERE c.utilisateur_id = ${c.utilisateurId}::uuid AND NOT c.prive AND i.archive_le IS NULL ORDER BY 1`).map((r) => r.prenom),
     exemples: '',
   });
 
@@ -62,26 +68,38 @@ export async function traiterCapture(id: string, d: DepsTraitement): Promise<Iss
   r = { ...r, sortie: ecarterPassees(r.sortie, c.emisLe) };
   if (r.sortie.items.length === 0) {
     // Vocal vide ou inaudible : non classifiable, donc visible en « à revoir » (règle n° 5).
-    await d.prisma.$transaction([
-      d.prisma.item.deleteMany({ where: { captureId: id } }),
-      d.prisma.capture.update({
+    return d.prisma.$transaction(async (tx) => {
+      if (await gardee(tx, id)) return 'deja_traitee';
+      await tx.item.deleteMany({ where: { captureId: id } });
+      await tx.capture.update({
         where: { id },
         data: {
           etat: 'a_revoir', erreur: 'aucun_item', texteBrut: r.sortie.transcription, versionPrompt: d.prompt.version,
           modele: r.modele, tokensEntree: r.tokensEntree, tokensSortie: r.tokensSortie,
         },
-      }),
-    ]);
-    return 'a_revoir';
+      });
+      return 'a_revoir';
+    });
   }
 
-  await enregistrer(d.prisma, id, r, d.prompt.version, (d.maintenant ?? (() => new Date()))());
-  return 'classee';
+  return enregistrer(d.prisma, id, r, d.prompt.version, (d.maintenant ?? (() => new Date()))());
+}
+
+/**
+ * Un élément touché pendant le reclassement (coché, corrigé, effacé, envoyé à l'agenda) : la capture garde ses
+ * éléments, le nouveau classement est abandonné. Vrai si c'est le cas.
+ * ponytail: vérifié dans la transaction, sans verrou ; un cochage commis dans la même milliseconde passerait.
+ */
+async function gardee(tx: Prisma.TransactionClient, captureId: string): Promise<boolean> {
+  if ((await tx.item.count({ where: { captureId, ...ITEM_TOUCHE } })) === 0) return false;
+  await tx.capture.update({ where: { id: captureId }, data: { etat: 'classee', erreur: null } });
+  return true;
 }
 
 /** Réécrit tous les items de la capture d'un bloc : un rejeu ne double rien. */
-async function enregistrer(p: PrismaClient, captureId: string, r: ResultatClassement, version: string, maintenant: Date): Promise<void> {
-  await p.$transaction(async (tx) => {
+async function enregistrer(p: PrismaClient, captureId: string, r: ResultatClassement, version: string, maintenant: Date): Promise<Issue> {
+  return p.$transaction(async (tx) => {
+    if (await gardee(tx, captureId)) return 'deja_traitee';
     await tx.item.deleteMany({ where: { captureId } });
     for (const it of r.sortie.items) {
       const theme = it.theme
@@ -123,5 +141,6 @@ async function enregistrer(p: PrismaClient, captureId: string, r: ResultatClasse
         modele: r.modele, tokensEntree: r.tokensEntree, tokensSortie: r.tokensSortie, classeLe: maintenant,
       },
     });
+    return 'classee';
   });
 }

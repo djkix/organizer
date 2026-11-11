@@ -42,7 +42,15 @@ export function configurerApp(app: NestExpressApplication): void {
     res.setHeader('Cache-Control', 'no-store');
     suite();
   });
-  const limiteur = new LimiteurDebit(60, 60_000);
+  // Le cookie est SameSite=Lax : un site voisin (même domaine, autre sous-domaine) l'enverrait encore.
+  // Toute écriture vient de la PWA elle-même ; le navigateur le dit dans Sec-Fetch-Site. Absent (curl, tests) : accepté.
+  app.use('/api', (req: Request, res: Response, suite: NextFunction) => {
+    const site = req.headers['sec-fetch-site'];
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || site === undefined || site === 'same-origin' || site === 'none') return suite();
+    res.status(403).json({ message: 'Demande refusée.' });
+  });
+  // 120 par minute : deux téléphones derrière la même box partagent l'adresse publique.
+  const limiteur = new LimiteurDebit(120, 60_000);
   app.use('/api', (req: Request, res: Response, suite: NextFunction) => {
     if (limiteur.autoriser(req.ip ?? 'inconnue')) return suite();
     res.status(429).json({ message: 'Trop de requêtes. Réessaie dans une minute.' });

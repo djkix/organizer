@@ -24,7 +24,24 @@ export interface CapturePrivee extends Enregistrement {
   mode?: ModeCapture;
   /** Refus définitif du serveur : la copie reste, mais les vidages automatiques l'ignorent. */
   refuse?: { statut: number; le: string };
+  /** Dernier compte connecté sur ce téléphone à l'enregistrement : la capture n'ira que dans ce compte. */
+  compte?: string;
 }
+
+const CLE_COMPTE = 'organizer.compte';
+
+/** Dernier compte connecté sur ce téléphone. Fenêtre seulement : le service worker n'a pas de localStorage. */
+export const compteDuTelephone = {
+  lire(): string | null {
+    try { return globalThis.localStorage?.getItem(CLE_COMPTE) ?? null; } catch { return null; }
+  },
+  poser(nom: string): void {
+    try { globalThis.localStorage?.setItem(CLE_COMPTE, nom); } catch { /* stockage bloqué : les captures partent sans compte */ }
+  },
+};
+
+/** Une capture en attente appartient-elle au compte connecté ? Sans compte noté (entrée ancienne), oui. */
+export const duCompte = (c: Pick<CapturePrivee, 'compte'>, nom: string | null): boolean => !c.compte || c.compte === nom;
 
 export interface FilePrivee {
   ajouter(c: CapturePrivee): Promise<void>;
@@ -143,6 +160,7 @@ export async function envoyerCapture(c: CapturePrivee, f: typeof fetch = (e, i) 
           [EN_TETES_CAPTURE_PRIVEE.id]: c.id,
           [EN_TETES_CAPTURE_PRIVEE.emisLe]: c.emisLe,
           [EN_TETES_CAPTURE_PRIVEE.dureeS]: String(Math.round(c.dureeS)),
+          ...(c.compte ? { [EN_TETES_CAPTURE_PRIVEE.compte]: encodeURIComponent(c.compte) } : {}),
         },
       }),
       delai,
@@ -195,6 +213,8 @@ export function creerVideur(file: FilePrivee, f?: typeof fetch): Videur {
         b.livrees++;
         continue;
       }
+      // 409 : enregistrée sous un autre compte. Elle reste sur le téléphone, pour ce compte-là.
+      if (r.issue === 'refuse' && r.statut === 409) continue;
       if (r.issue === 'refuse' && REFUS_DEFINITIFS.has(r.statut)) {
         await file.marquerRefusee(c.id, { statut: r.statut, le: new Date().toISOString() });
         b.refusees++;
@@ -259,7 +279,8 @@ export async function garderPuisEnvoyer(
 ): Promise<CapturePrivee> {
   // Vide, l'API répondrait 400 à chaque essai : la capture resterait en file pour toujours.
   if (e.blob.size === 0) throw new EnregistrementVide();
-  const c: CapturePrivee = { id, mode, ...e };
+  const compte = compteDuTelephone.lire();
+  const c: CapturePrivee = { id, mode, ...e, ...(compte ? { compte } : {}) };
   await file.ajouter(c);
   void videur.vider().catch(() => undefined);
   return c;

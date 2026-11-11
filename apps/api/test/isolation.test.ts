@@ -216,6 +216,19 @@ describe('décision 25 : captures privées', () => {
   });
 });
 
+describe('décision 25 : capture gardée sur le téléphone sous un autre compte', () => {
+  it('X-Capture-Compte d\'un autre compte : 409, rien n\'est créé ; le sien : accepté', async () => {
+    const dep = (chemin: string, compte: string) => fetch(`${app.url}${chemin}`, {
+      method: 'POST', headers: { cookie: cA, 'content-type': 'audio/webm', 'x-capture-compte': compte, 'x-capture-id': crypto.randomUUID() }, body: Buffer.from('webm'),
+    });
+    const avant = await prisma.capture.count();
+    expect((await dep('/api/captures/privees', 'b')).status).toBe(409);
+    expect((await dep('/api/captures', 'b')).status).toBe(409);
+    expect(await prisma.capture.count()).toBe(avant);
+    expect((await dep('/api/captures/privees', 'a')).status).toBe(201);
+  });
+});
+
 describe('décision 25 : historique des envois', () => {
   it('chacun ne voit que ses envois, jamais une capture privée', async () => {
     const ids = async (c: string) => (await json(c, `/api/historique?mois=${jourIso}`)).flatMap((j: { envois: { id: string }[] }) => j.envois.map((e) => e.id));

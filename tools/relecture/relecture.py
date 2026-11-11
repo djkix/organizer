@@ -125,7 +125,15 @@ class Gestionnaire(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/api/annotation":
             return self.envoyer(404, b"{}")
-        corps = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        # JSON exigé : un autre site ouvert dans le navigateur ne peut l'envoyer sans prévol CORS, que ce serveur refuse.
+        if not self.headers.get("Content-Type", "").startswith("application/json"):
+            return self.envoyer(415, b"{}")
+        if self.headers.get("Sec-Fetch-Site") not in (None, "same-origin"):
+            return self.envoyer(403, b"{}")
+        longueur = int(self.headers.get("Content-Length") or 0)
+        if not 0 < longueur <= 1_000_000:
+            return self.envoyer(413, b"{}")
+        corps = json.loads(self.rfile.read(longueur))
         try:
             enregistrer(corps["capture"], corps["items"])
         except (KeyError, ValueError) as e:

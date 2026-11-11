@@ -302,7 +302,7 @@ L'API regarde par quel point d'entrée la capture est arrivée. Privée : elle e
 - Modèle : `gemini-3.1-flash-lite` par défaut, `gemini-3.8-flash` en repli sur échec de schéma.
 - Entrée : l'audio d'origine, sans réencodage préalable, plus un prompt système versionné.
 - Sortie : JSON contraint par `responseSchema`, contenant la transcription intégrale et la liste des items classés.
-- Contexte injecté : date du jour, fuseau `Europe/Paris`, thèmes connus, prénoms connus, dix exemples de corrections passées.
+- Contexte injecté : date du jour, fuseau `Europe/Paris`, thèmes et prénoms connus du seul compte de la capture (éléments non effacés, décision 25), dix exemples de corrections passées.
 - Réflexion réduite au minimum (`thinkingLevel`, réglé par `GEMINI_THINKING_LEVEL`) : la tâche est une extraction, pas un raisonnement.
 - Aucun paramètre d'échantillonnage (`temperature`, `top_p`, `top_k`) : sans effet sur les modèles récents et bientôt refusés par l'API (1.4.2).
 
@@ -733,7 +733,7 @@ Le recours à Gemini change la nature de cette section : les pensées de L trans
 5. **Mode privé par point d'entrée.** Une capture faite par le bouton privé est marquée privée avant même d'exister en base. Le code ne connaît pas de chemin qui envoie une capture privée vers Gemini.
 6. **Aucun contenu en clair dans les journaux**, même en mode debug, y compris les requêtes sortantes.
 7. **Les pensées n'apparaissent** ni dans l'agenda, ni dans les widgets, ni dans les notifications, dont le libellé reste générique.
-8. **Chaque compte ne voit que ses données.** Captures, items, actions, pensées, captures privées, audio et éléments à revoir sont filtrés par le compte de la session ; l'accès à l'élément d'un autre compte répond 404, comme un élément introuvable (décision 25, qui remplace la décision 8).
+8. **Chaque compte ne voit que ses données.** Captures, items, actions, pensées, captures privées, audio et éléments à revoir sont filtrés par le compte de la session ; l'accès à l'élément d'un autre compte répond 404, comme un élément introuvable (décision 25, qui remplace la décision 8). Une capture gardée sur le téléphone porte le dernier compte connecté à l'enregistrement : un autre compte la refuse (409) et elle reste sur le téléphone. Le prompt envoyé à Gemini ne contient que les thèmes et prénoms du compte de la capture.
 
 ### Les trois positions possibles
 
@@ -767,9 +767,10 @@ Décision 3 : se repérer par la date et l'heure suffit. C'est ce qui permet de 
 | Mesure | Détail |
 | --- | --- |
 | Ports publics | Aucun ; seuls 80 et 443 du reverse proxy |
-| Limitation de débit | 60 requêtes par minute et par IP sur l'API, 10 sur l'authentification |
+| Limitation de débit | 120 requêtes par minute et par IP sur l'API ; à la connexion, 10 par IP et 10 par compte visé |
 | Webhook | Restreint aux plages d'adresses Telegram au niveau du proxy |
 | En-têtes | CSP stricte, `X-Content-Type-Options`, `Referrer-Policy: strict-origin-when-cross-origin` (décision 29 : Google Identity Services exige l'origine ; vers un autre site, jamais le chemin) |
+| Écritures d'un autre site | Toute écriture sur `/api` dont `Sec-Fetch-Site` n'est ni `same-origin` ni `none` est refusée (403) : un sous-domaine voisin ne profite pas du cookie `SameSite=Lax` |
 | Envois | Type MIME et taille vérifiés, audio réencodé par ffmpeg avant stockage |
 | Dépendances | Analyse automatisée des vulnérabilités à chaque build |
 | Accès administrateur | Uniquement par le réseau local ou le VPN du homelab |
@@ -797,7 +798,7 @@ L'exploitation doit être nulle en régime normal : aucune action mensuelle, auc
 
 Décision 11 : aucune sauvegarde dédiée au démarrage, pour garder une stack simple. Seule protection : le snapshot hyperviseur de la VM N, s'il est en place. Une panne de disque avant le lot 2 peut donc perdre des données ; c'est un risque accepté pour démarrer.
 
-Depuis la 1.11.0 (décision 28) : un service `sauvegarde` copie chaque jour après 3 h, heure de Paris, la base (`pg_dump` complet), l'audio (privé compris) et la configuration de la stack (`compose.yaml`, `.env`, `secrets/`) dans un dossier daté du NAS `<IP du NAS>`, monté en NFS. Les fichiers audio inchangés sont des liens physiques vers la veille : sept jours tiennent à peu près dans la place d'un seul. Sept dossiers sont gardés ; une tentative ratée ne supprime rien. Sans chiffrement. Les fichiers de configuration et les secrets restent aussi dans le gestionnaire de mots de passe.
+Depuis la 1.11.0 (décision 28) : un service `sauvegarde` copie chaque jour après 3 h, heure de Paris, la base (`pg_dump` complet), l'audio (privé compris) et la configuration de la stack (`compose.yaml`, `.env`, `secrets/`) dans un dossier daté du NAS `<IP du NAS>`, monté en NFS. Les fichiers audio inchangés sont des liens physiques vers la veille : sept jours tiennent à peu près dans la place d'un seul. Sept dossiers sont gardés ; une tentative ratée ne supprime rien. Sans chiffrement, mais fichiers en `0600` et dossiers en `0700` : seul le compte qui écrit sur le NAS les lit. Les fichiers de configuration et les secrets restent aussi dans le gestionnaire de mots de passe.
 
 Depuis la 1.12.0 : Réglages › Sauvegarde, pour l'administrateur seul, montre la dernière sauvegarde réussie et propose « Sauvegarder maintenant ». L'API n'écrit qu'une demande ; le service `sauvegarde` la prend dans les 5 minutes et remplace la sauvegarde du jour. L ne voit rien de tout cela.
 

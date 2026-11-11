@@ -9,6 +9,7 @@
   import { etatAlertes, rafraichirAlertes } from '$lib/alertes.svelte';
   import { etatMaj } from '$lib/maj.svelte';
   import { demarrerPrive } from '$lib/prive/demarrage';
+  import { compteDuTelephone } from '$lib/prive/file';
   import type { LayoutProps } from './$types';
 
   let { children }: LayoutProps = $props();
@@ -24,7 +25,10 @@
     const s = page.data.session;
     if (!s) return;
     // Version du serveur déjà lue par la garde : le bandeau de mise à jour part de là.
-    if (s.etat === 'connecte') etatMaj.versionServeur = s.versionServeur;
+    if (s.etat === 'connecte') {
+      etatMaj.versionServeur = s.versionServeur;
+      compteDuTelephone.poser(s.nom);
+    }
     if (s.etat !== 'connecte' || !s.admin) { etatAlertes.nonVues = false; return; }
     void rafraichirAlertes();
   });

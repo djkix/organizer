@@ -40,6 +40,23 @@ describe('LiaisonService', () => {
     expect(await service().utilisateurDuChat(999)).toBeNull();
   });
 
+  it('un groupe (identifiant négatif) n\'est jamais lié ; un texte qui n\'est pas un code ne compte pas comme échec', async () => {
+    const s = service();
+    const code = await s.creerCode('a');
+    expect(await s.lier(code, -100123456)).toBe('invalide');
+    for (let i = 0; i < 20; i++) expect(await s.lier('bonjour', 100 + i)).toBe('invalide');
+    expect(await s.lier(code, 7)).toBe('lie');
+  });
+
+  it('un nouveau code remplace le précédent du même compte', async () => {
+    const s = service();
+    const ancien = await s.creerCode('a');
+    const nouveau = await s.creerCode('a');
+    expect(await prisma.codeLiaison.count()).toBe(1);
+    if (ancien !== nouveau) expect(await s.lier(ancien, 7)).toBe('invalide');
+    expect(await s.lier(nouveau, 7)).toBe('lie');
+  });
+
   it('dix échecs bloquent toute liaison jusqu\'à la fin de la fenêtre', async () => {
     horloge = new Date('2026-10-06T08:00:00Z');
     const code = await service().creerCode('a');

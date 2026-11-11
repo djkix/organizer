@@ -5,6 +5,22 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
+### Sécurité
+- Décision 25 : le prompt envoyé à Gemini ne contient plus que les thèmes et prénoms du compte de la capture, éléments effacés exclus ; ceux de l'autre compte en partaient (2026-11-11).
+- Décision 25 : une capture gardée sur le téléphone porte le dernier compte connecté (`X-Capture-Compte`) ; un autre compte la refuse (409) et elle reste sur le téléphone, au lieu d'entrer dans son espace (2026-11-11).
+- Toute écriture sur `/api` venue d'un autre site (`Sec-Fetch-Site` ni `same-origin` ni `none`) est refusée : un sous-domaine voisin ne profite plus du cookie `SameSite=Lax` (2026-11-11).
+- Connexion par mot de passe limitée aussi par compte visé (10 par minute), en plus de l'adresse (2026-11-11).
+- Liaison Telegram : un groupe n'est jamais lié, un texte qui n'est pas un code ne compte plus comme échec, un nouveau code remplace le précédent (2026-11-11).
+- Sauvegarde vers le NAS en `umask 077` : fichiers en `0600`, dossiers en `0700`, lisibles du seul compte qui écrit ; l'essai le vérifie (2026-11-11).
+- Outil de relecture : JSON exigé, requêtes d'un autre site et corps démesurés refusés (2026-11-11).
+
+### Corrigé
+- Reclassement : un élément coché, corrigé, effacé ou envoyé à l'agenda entre la mise en file et le passage du worker est gardé ; le nouveau classement est abandonné au lieu de l'écraser (2026-11-11).
+- Limiteur de débit : au-delà de 10 000 adresses, la plus anciennement servie est oubliée, sans parcourir toute la table à chaque requête ; 120 requêtes par minute et par adresse au lieu de 60 (2026-11-11).
+- Audio écrit à côté puis renommé : un arrêt en cours d'écriture ne laisse jamais un fichier tronqué (2026-11-11).
+- Déconnexion : vrai rechargement de la page, rien de la session ne reste en mémoire pour le compte suivant (2026-11-11).
+- Banc d'essai : un fichier Telegram sans extension ne fait plus planter l'enregistrement de l'audio (2026-11-11).
+
 ## [1.14.0] - 2026-11-01
 
 ### Ajouté

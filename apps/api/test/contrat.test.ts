@@ -13,6 +13,6 @@ describe('contrat des requêtes de la PWA', () => {
   });
 
   it('les en-têtes de dépôt privé sont figés', () => {
-    expect(EN_TETES_CAPTURE_PRIVEE).toEqual({ id: 'X-Capture-Id', emisLe: 'X-Emis-Le', dureeS: 'X-Duree-S' });
+    expect(EN_TETES_CAPTURE_PRIVEE).toEqual({ id: 'X-Capture-Id', emisLe: 'X-Emis-Le', dureeS: 'X-Duree-S', compte: 'X-Capture-Compte' });
   });
 });

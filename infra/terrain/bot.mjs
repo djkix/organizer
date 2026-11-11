@@ -138,7 +138,10 @@ async function handle(u) {
   if (voice) {
     const f = await tg('getFile', { file_id: voice.file_id });
     const buf = Buffer.from(await (await fetch(TG_FILE + f.file_path)).arrayBuffer());
-    capture.audio = 'audio/' + id + '.' + (f.file_path.split('.').pop() || 'ogg');
+    // Extension du seul nom de fichier ; absente ou bizarre (« voice/file_10 ») : ogg.
+    const nom = f.file_path.split('/').pop();
+    const ext = nom.includes('.') ? nom.split('.').pop().toLowerCase() : '';
+    capture.audio = 'audio/' + id + '.' + (ext.length >= 1 && ext.length <= 5 && !/[^a-z0-9]/.test(ext) ? ext : 'ogg');
     await writeFile(DATA + '/' + capture.audio, buf);
     parts = [{ inlineData: { mimeType: voice.mime_type || 'audio/ogg', data: buf.toString('base64') } }, { text: 'Voici le vocal.' }];
   } else {

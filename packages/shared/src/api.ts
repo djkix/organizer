@@ -59,7 +59,8 @@ export interface ResumeEmpreinte { id: string; identifiant: string; creeLe: stri
  * L'identifiant (UUID) rend le rejeu idempotent ; sans lui, un rejeu crée un doublon.
  * Réponses : 201 nouvelle, 200 déjà reçue, 415 format, 422 illisible, 400 vide ou identifiant refusé.
  */
-export const EN_TETES_CAPTURE_PRIVEE = { id: 'X-Capture-Id', emisLe: 'X-Emis-Le', dureeS: 'X-Duree-S' } as const;
+/** compte : nom du compte connecté à l'enregistrement, encodé (encodeURIComponent) ; un autre compte reçoit 409. */
+export const EN_TETES_CAPTURE_PRIVEE = { id: 'X-Capture-Id', emisLe: 'X-Emis-Le', dureeS: 'X-Duree-S', compte: 'X-Capture-Compte' } as const;
 
 /** Taille maximale d'une capture privée envoyée par la PWA : 30 Mio (une heure à 48 kbit/s en fait environ 22). */
 export const TAILLE_MAX_CAPTURE_PRIVEE = 30 * 1024 * 1024;

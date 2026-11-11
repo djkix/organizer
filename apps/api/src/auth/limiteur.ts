@@ -1,4 +1,9 @@
-/** Fenêtre glissante en mémoire : un seul processus API. Un refus ne compte pas comme un appel. */
+/**
+ * Fenêtre glissante en mémoire : un seul processus API. Un refus ne compte pas comme un appel.
+ * Au plus MAX_CLES clés : au-delà, la plus anciennement servie est oubliée (la Map garde l'ordre d'insertion).
+ */
+const MAX_CLES = 10_000;
+
 export class LimiteurDebit {
   private readonly appels = new Map<string, number[]>();
 
@@ -17,12 +22,10 @@ export class LimiteurDebit {
       return false;
     }
     recents.push(t);
+    // Retirée puis remise : la clé passe en fin d'ordre, la plus ancienne reste en tête.
+    this.appels.delete(cle);
     this.appels.set(cle, recents);
-    if (this.appels.size > 10_000) this.purger(debut);
+    if (this.appels.size > MAX_CLES) this.appels.delete(this.appels.keys().next().value!);
     return true;
-  }
-
-  private purger(debut: number): void {
-    for (const [cle, liste] of this.appels) if (!liste.some((x) => x > debut)) this.appels.delete(cle);
   }
 }

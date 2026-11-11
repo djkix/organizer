@@ -16,6 +16,8 @@ export const schemaConnexion = z.object({ nom: z.string().min(1).max(100), motDe
 @Controller('api/session')
 export class AuthController {
   private readonly limiteur = new LimiteurDebit(10, 60_000);
+  /** Par compte visé, en plus de l'adresse : des essais venus de mille adresses buttent aussi. */
+  private readonly limiteurCompte = new LimiteurDebit(10, 60_000);
   private readonly journal = new Logger('AuthController');
 
   constructor(
@@ -52,6 +54,9 @@ export class AuthController {
   async ouvrir(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() corps: unknown): Promise<void> {
     if (!this.limiteur.autoriser(req.ip ?? 'inconnue')) throw new HttpException({ message: "Trop d'essais. Réessaie dans une minute." }, 429);
     const p = schemaConnexion.safeParse(corps);
+    if (p.success && !this.limiteurCompte.autoriser(p.data.nom.trim().toLowerCase())) {
+      throw new HttpException({ message: "Trop d'essais. Réessaie dans une minute." }, 429);
+    }
     const s = p.success ? await this.auth.ouvrirSession(p.data.nom, p.data.motDePasse) : null;
     if (!s) throw new UnauthorizedException('Identifiants invalides.');
     res.setHeader('Set-Cookie', cookieSession(s.jeton, s.expireLe, this.auth.maintenant()));
