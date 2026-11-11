@@ -5,7 +5,14 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ## [Non publié]
 
-## [1.14.1] - 2026-11-11
+## [1.14.2] - 2026-11-11
+
+### Corrigé
+- Essai de fumée de la CI : la sauvegarde est lue depuis son conteneur, l'utilisateur du runner n'entrant plus dans un dossier en `0700` ; il vérifie aussi que les secrets restent fermés (2026-11-11).
+
+## [1.14.1] - 2026-11-11 [NON PUBLIÉE]
+
+Étiquetée mais jamais publiée : l'essai de fumée de la CI a échoué. Son contenu part avec la 1.14.2.
 
 ### Sécurité
 - Décision 25 : le prompt envoyé à Gemini ne contient plus que les thèmes et prénoms du compte de la capture, éléments effacés exclus ; ceux de l'autre compte en partaient (2026-11-11).
